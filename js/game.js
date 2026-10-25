@@ -50,7 +50,7 @@ function officeStatus() {
 /* ---------------- 資料 ---------------- */
 const deadlines = D.deadlines.map((x) => ({ ...x, at: parse(x.due) })).filter((x) => x.at).sort((a, b) => a.at - b.at);
 const upcoming = () => deadlines.filter((x) => x.at >= new Date());
-const anns = D.announcements.slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || parse(b.date) - parse(a.date));
+const anns = D.announcements.slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)); // 其餘依 data.js 的順序（最新在上）
 let read = LS.get("read", []);
 let stamps = LS.get("stamps", {});
 let tasks = LS.get("tasks", {});
@@ -901,7 +901,7 @@ function dlItems(list, showIsle, openFirst) {
 function newsItems(list) {
   if (!list.length) return '<p class="empty">目前沒有公告。</p>';
   return '<ul class="items">' + list.map((a) => { const d = isleOf(a.tag), nw = !read.includes(a.id);
-    return `<li class="item ${nw ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="${nw}"><span class="dot"></span><span class="nm">${E(a.title)}<small>${E(a.date)}${d ? "・" + E(d.name) : ""}</small></span><span class="meta ${nw ? "hot" : ""}">${a.pinned ? "置頂" : nw ? "NEW" : ""}</span><span class="chev">›</span></button><div class="more" ${nw ? "" : "hidden"}><p>${E(a.body)}</p></div></li>`; }).join("") + "</ul>";
+    return `<li class="item ${nw ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="${nw}"><span class="dot"></span><span class="nm">${E(a.title)}<small>${[a.date, d && d.name].filter(Boolean).map(E).join("・")}</small></span><span class="meta ${nw ? "hot" : ""}">${a.pinned ? "置頂" : nw ? "NEW" : ""}</span><span class="chev">›</span></button><div class="more" ${nw ? "" : "hidden"}>${a.body ? `<p>${E(a.body)}</p>` : ""}${a.link ? `<div class="acts"><a class="btn t" target="_blank" rel="noopener" href="${E(a.link)}">查看公告 ↗</a></div>` : ""}</div></li>`; }).join("") + "</ul>";
 }
 function markRead(list) { let ch = false; list.forEach((a) => { if (!read.includes(a.id)) { read.push(a.id); ch = true; } }); if (ch) { LS.set("read", read); updHud(); updMarkers(); buildLabels(); } }
 
@@ -987,13 +987,13 @@ function renderLinks() {
     <div class="sec"><h4>常用連結</h4><ul class="items">${row("課外組網站", "activity.thu.edu.tw", D.links.office)}${row("體能性社團各項作業期程", "整學期的正式時程表", D.links.schedule)}${row("體能性社團 Linktree", "表單、雲端資料夾與常用連結", D.links.linktree)}${row("本站文字版", "不顯示 3D，內容相同", "list.html", false)}</ul></div>`;
   showSheet("links", html);
 }
-const isleHits = (d, q) => d.name.includes(q) || ["s1", "s2"].some((sem) => todoList(sem).some((x) => x.island === d.key && (x.title + (x.note || "")).includes(q))) || d.guides.some((g) => [g.topic, g.title, g.summary, ...g.steps].some((s) => s.includes(q))) || isleDl(d).some((x) => (x.title + (x.detail || "")).includes(q)) || isleNews(d).some((a) => (a.title + a.body).includes(q));
+const isleHits = (d, q) => d.name.includes(q) || ["s1", "s2"].some((sem) => todoList(sem).some((x) => x.island === d.key && (x.title + (x.note || "")).includes(q))) || d.guides.some((g) => [g.topic, g.title, g.summary, ...g.steps].some((s) => s.includes(q))) || isleDl(d).some((x) => (x.title + (x.detail || "")).includes(q)) || isleNews(d).some((a) => (a.title + (a.body || "")).includes(q));
 function listResults(q) {
   const res = [];
   ISL.forEach((d) => {
     d.guides.forEach((g) => { const hit = [g.topic, g.title, g.summary, ...g.steps].find((s) => s.includes(q)); if (hit) res.push({ d, t: g.title, s: hit }); });
     isleDl(d).forEach((x) => { if ((x.title + (x.detail || "")).includes(q)) res.push({ d, t: x.title, s: `截止日・${fmt(x.at)}` }); });
-    isleNews(d).forEach((a) => { if ((a.title + a.body).includes(q)) res.push({ d, t: a.title, s: "公告・" + a.body }); });
+    isleNews(d).forEach((a) => { if ((a.title + (a.body || "")).includes(q)) res.push({ d, t: a.title, s: "公告" + (a.body ? "・" + a.body : "") }); });
     ["s1", "s2"].forEach((sem) => todoList(sem).filter((x) => x.island === d.key && (sem === "s1" || x.sem !== "common")).forEach((x) => { if ((x.title + (x.note || "")).includes(q)) res.push({ d, t: x.title, s: `${x.sem === "common" ? "每學期" : SEM_NAME[sem]}待辦${x.note ? "・" + x.note : ""}` }); }));
   });
   const hl = (s) => E(s).split(E(q)).join(`<mark>${E(q)}</mark>`);

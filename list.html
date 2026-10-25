@@ -545,17 +545,17 @@ footer a { color: var(--band-fg); }
   $("allIcs").addEventListener("click", function () { download("東海體能性社團截止日.ics", icsFor(deadlines.filter(function (x) { return x.at >= new Date(); }))); });
 
   // ---------- 公告 ----------
-  var anns = D.announcements.slice().sort(function (a, b) { return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (parse(b.date) - parse(a.date)); });
+  var anns = D.announcements.slice().sort(function (a, b) { return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0); });
   var read = store.get("read", []);
   function renderNews(filter) {
     var q = (filter || "").trim();
-    var list = anns.filter(function (a) { return !q || (a.title + a.body + a.tag).indexOf(q) >= 0; });
+    var list = anns.filter(function (a) { return !q || (a.title + (a.body || "") + a.tag).indexOf(q) >= 0; });
     $("newsList").innerHTML = list.length ? list.map(function (a) {
       var unread = read.indexOf(a.id) < 0;
       return '<li class="' + (unread ? "unread" : "") + '"><button type="button" aria-expanded="false" data-id="' + esc(a.id) + '">' +
         '<span class="t">' + hl(a.title, q) + '</span><span class="chev" aria-hidden="true">›</span>' +
-        '<span class="d">' + (a.pinned ? '<span class="pin">置頂</span>' : "") + "<span>" + esc(a.date) + '</span><span class="tag">' + esc(a.tag) + "</span></span>" +
-        '</button><div class="body" hidden>' + hl(a.body, q) + "</div></li>";
+        '<span class="d">' + (a.pinned ? '<span class="pin">置頂</span>' : "") + (a.date ? "<span>" + esc(a.date) + "</span>" : "") + '<span class="tag">' + esc(a.tag) + "</span></span>" +
+        '</button><div class="body" hidden>' + (a.body ? "<p style=\"margin:0 0 8px\">" + hl(a.body, q) + "</p>" : "") + (a.link ? '<a class="btn small" target="_blank" rel="noopener" href="' + esc(a.link) + '">查看公告 ↗</a>' : "") + "</div></li>";
     }).join("") : '<li class="empty">沒有符合的公告。</li>';
     var n = anns.filter(function (a) { return read.indexOf(a.id) < 0; }).length;
     $("unreadDot").hidden = !n; $("unreadDot").textContent = n;

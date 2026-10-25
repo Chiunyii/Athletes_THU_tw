@@ -157,8 +157,28 @@ var SITE_DATA = {
    * 行政公告：pinned=true 會置頂；date 為公告日期
    * --------------------------------------------------------- */
   announcements: [
-    // 目前沒有公告。新增時複製下面的格式（拿掉 //）：
-    // { id: "a-001", date: "2026-11-01", pinned: false, tag: "行政", title: "公告標題", body: "公告內容" },
+    // 格式：{ id, date（可省略，YYYY-MM-DD）, pinned, tag（對應島的 key，例如 "經費"）, title, body（可省略）, link（課外組公告網址）}
+    // 列表依這裡的順序顯示（置頂的排最前面），最新的請加在最上面
+    {
+      id: "a-1151-1854", tag: "經費",
+      title: "115學年度第1學期「大專校院帶動中小學社團發展」計畫補助審查結果公告",
+      link: "https://activity.thu.edu.tw/web/news/detail.php?cid=1&id=1854",
+    },
+    {
+      id: "a-1151-1853", tag: "經費",
+      title: "115學年度第1學期第1階段社團器材審查結果公告",
+      link: "https://activity.thu.edu.tw/web/news/detail.php?cid=1&id=1853",
+    },
+    {
+      id: "a-1151-1852", tag: "經費",
+      title: "115學年度第1學期第2階段社團器材申請及第1階段核定社團簡報公告",
+      link: "https://activity.thu.edu.tw/web/news/detail.php?cid=1&id=1852",
+    },
+    {
+      id: "a-1151-1851", tag: "經費",
+      title: "115學年度第1學期第1階段社團活動審查結果公告",
+      link: "https://activity.thu.edu.tw/web/news/detail.php?cid=1&id=1851",
+    },
   ],
 
   /* ---------------------------------------------------------
