@@ -1053,7 +1053,7 @@ function shoot() {
   const c = cv.getContext("2d");
   c.drawImage(src, 0, 0, W, H);
   c.fillStyle = "#FBF6EE"; c.fillRect(0, H, W, 150);
-  c.fillStyle = "#C8623F"; c.font = "900 54px Archivo, sans-serif"; c.fillText("GAME ON.", 40, H + 72);
+  c.fillStyle = "#C8623F"; c.font = "900 54px Archivo, sans-serif"; c.fillText("CLUB ON.", 40, H + 72);
   c.fillStyle = "#2A211C"; c.font = `900 34px ${FONT}`; c.fillText(`${me.name || "我"}・${me.club || "體能性社團"}・${me.role}`, 40, H + 124);
   c.textAlign = "right"; c.fillStyle = "#7A6B60"; c.font = `700 24px ${FONT}`;
   const p = tw(); c.fillText(`東海體能社團行政群島・集章 ${Object.keys(stamps).length}/${STAMPS.length}・${p.y}/${p.m}/${p.d}`, W - 40, H + 124);
