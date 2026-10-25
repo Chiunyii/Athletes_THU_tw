@@ -916,7 +916,7 @@ function renderIsle(d, keepScroll) {
     <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span><span class="tag">${dl.length} 項截止</span><span class="tag">${steps} 個步驟</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
     <div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>
     ${d.guides.map((g) => `<div class="sec"><h4>${E(g.topic)}・辦事步驟</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 步</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
-    ${isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政待辦</h4>${todoItems(isleTodos(d), false)}</div>` : ""}
+    ${isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政待辦</h4>${todoItems(isleTodos(d))}</div>` : ""}
     <div class="sec"><h4>相關公告</h4>${newsItems(news)}</div>
     <div class="sec"><h4>這一島在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
     <p class="foot">還有問題？請在辦公時間到中心島的課外組詢問。</p>`;
@@ -954,11 +954,11 @@ function renderDeadlines() {
   renderNotifyBtn();
 }
 const isleTodos = (d) => todoList(curSem()).filter((x) => x.island === d.key);
-function todoItems(list, showIsle) {
+function todoItems(list) {
   if (!list.length) return '<p class="empty">沒有待辦項目。</p>';
   return '<ul class="items">' + list.map((x) => {
     const done = !!todoDone[x.key], d = isleOf(x.island);
-    const btns = (x.links || []).map((l) => (l[1] ? `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>` : `<span class="btn g pend" aria-disabled="true">${E(l[0])}・連結待補</span>`)).join("") + (showIsle && d ? `<button class="btn" type="button" data-isle="${d.i}">去${E(d.name)}</button>` : "");
+    const btns = (x.links || []).map((l) => (l[1] ? `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>` : `<span class="btn g pend" aria-disabled="true">${E(l[0])}・連結待補</span>`)).join("");
     return `<li class="item todo ${done ? "done" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><label class="row"><input type="checkbox" data-todo="${E(x.key)}" ${done ? "checked" : ""} aria-label="完成：${E(x.title)}"><span class="nm">${E(x.title)}${x.note ? `<small>${E(x.note)}</small>` : ""}</span><span class="meta">${x.when ? E(x.when) : ""}</span><span></span></label>${btns ? `<div class="more"><div class="acts">${btns}</div></div>` : ""}</li>`;
   }).join("") + "</ul>";
 }
@@ -971,8 +971,8 @@ function renderTodo(sem) {
     <div class="tabs two" role="tablist">${["s1", "s2"].map((s) => `<button type="button" role="tab" data-sem="${s}" aria-selected="${todoSem === s}">${SEM_NAME[s]}${s === curSem() ? "・本學期" : ""}</button>`).join("")}</div>
     <div class="sec"><h4>完成進度・<span id="todoProg">${n}/${list.length}</span></h4><div class="prog"><i id="todoBar" style="width:${list.length ? (n / list.length) * 100 : 0}%"></i></div></div>
     <div class="tags">${stampTag("todo")}</div>
-    <div class="sec"><h4>每學期共同項目</h4>${todoItems(list.filter((x) => x.sem === "common"), true)}</div>
-    <div class="sec"><h4>${SEM_NAME[todoSem]}待辦</h4>${todoItems(list.filter((x) => x.sem !== "common"), true)}</div>
+    <div class="sec"><h4>每學期共同項目</h4>${todoItems(list.filter((x) => x.sem === "common"))}</div>
+    <div class="sec"><h4>${SEM_NAME[todoSem]}待辦</h4>${todoItems(list.filter((x) => x.sem !== "common"))}</div>
     <p class="foot">打勾紀錄只存在你自己的手機或電腦。標示「連結待補」的按鈕，課外組補上連結後就能點。</p>`;
   showSheet("todo", html);
 }
