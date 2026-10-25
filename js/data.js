@@ -43,7 +43,8 @@ var SITE_DATA = {
   /* ---------------------------------------------------------
    * 群島：每個行政分類是一座島，中心島是課外組
    * key 要和截止日的 category、公告的 tag、資訊站的 island 一致
-   * building 可用：hall、track、tent、bank、gym、aid、store、podium、house
+   * islet：填同一個名稱的分類會放到本島旁邊的獨立小島（以橋相連），例如場地借用、器材借用都在「借用島」
+ * building 可用：hall、track、tent、bank、gym、aid、store、podium、house
    * --------------------------------------------------------- */
   islands: [
     {
@@ -86,9 +87,9 @@ var SITE_DATA = {
         },
       ],
     },
-    { key: "場地", name: "場地島", icon: "🏟", color: "#6FA38C", building: "gym", tagline: "練習場地借用與使用規範。" },
+    { key: "場地", name: "場地借用", islet: "借用島", icon: "🏟", color: "#6FA38C", building: "gym", tagline: "練習場地借用與使用規範。" },
     { key: "安全", name: "安全島", icon: "⛑", color: "#C8623F", building: "aid", tagline: "保險、急救、校外活動安全，體能性社團最重要的事。" },
-    { key: "器材", name: "器材島", icon: "🏐", color: "#9C83B5", building: "store", tagline: "器材清冊、借用與保管。" },
+    { key: "器材", name: "器材借用", islet: "借用島", icon: "🏐", color: "#9C83B5", building: "store", tagline: "器材清冊、借用與保管。" },
     { key: "評鑑", name: "評鑑島", icon: "🏆", color: "#C97A8F", building: "podium", tagline: "成果與評鑑資料，平常就要存。" },
   ],
 

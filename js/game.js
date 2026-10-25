@@ -113,14 +113,34 @@ const front = Math.atan2(FACE_DIR.z, FACE_DIR.x);
 const R_ISLE = 21;           // 大島半徑
 const RW = 3.9, RO = 12.3;   // 角色走的路線：中央圓環、外圈環狀道路（車道中心）
 const R_LOT = 16.4;          // 各分類建築區的中心
-ISL.forEach((d, i) => {
-  d.a = front + Math.PI / NI + (i * 2 * Math.PI) / NI;
+const MAIN = ISL.filter((d) => !d.islet), OFF = ISL.filter((d) => d.islet);
+const NM = MAIN.length;
+MAIN.forEach((d, i) => {
+  d.a = front + Math.PI / NM + (i * 2 * Math.PI) / NM;
   d.dir = new V3(Math.cos(d.a), 0, Math.sin(d.a));
   d.pos = d.dir.clone().multiplyScalar(R_LOT);
 });
 // 圓環到外圈的連絡道路：每隔一個建築區一條
-const SPOKES = ISL.filter((d, i) => i % 2 === 0).map((d) => d.a);
-const WORLD_R = R_ISLE + 1;
+const SPOKES = MAIN.filter((d, i) => i % 2 === 0).map((d) => d.a);
+// 獨立小島（例如借用島）：放在本島右前方兩個建築區之間，以橋相連
+const ISLET = OFF.length ? (() => {
+  const a = front - Math.PI / NM * 2, dir = new V3(Math.cos(a), 0, Math.sin(a)), r = 8;
+  const pos = dir.clone().multiplyScalar(R_ISLE + r + 5.5);
+  return { a, dir, r, pos, name: OFF[0].islet, coast: dir.clone().multiplyScalar(R_ISLE * 0.92), entry: pos.clone().sub(dir.clone().multiplyScalar(r * 0.88)) };
+})() : null;
+if (ISLET) {
+  const perp = new V3(-ISLET.dir.z, 0, ISLET.dir.x);
+  OFF.forEach((d, i) => {
+    const side = OFF.length === 1 ? 0 : (i / (OFF.length - 1)) * 2 - 1; // 小島上左右排開
+    d.dir = perp.clone().multiplyScalar(side || 1).add(ISLET.dir.clone().multiplyScalar(0.35)).normalize();
+    d.a = Math.atan2(d.dir.z, d.dir.x);
+    d.pos = ISLET.pos.clone().add(perp.clone().multiplyScalar(side * 3.6)).add(ISLET.dir.clone().multiplyScalar(1.2));
+  });
+}
+const WORLD_R = ISLET ? R_ISLE + 2 * ISLET.r + 6 : R_ISLE + 1;
+// 鏡頭取景：以本島為主，往小島方向偏一點，讓兩座島都放得進畫面
+const CAM_R = ISLET ? R_ISLE + 10 : R_ISLE + 1;
+const HOME_C = ISLET ? ISLET.dir.clone().multiplyScalar(8.5) : new V3(0, 0, 0);
 
 const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, -300, 500);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -138,9 +158,9 @@ controls.addEventListener("change", () => {
   if (l > WORLD_R) { const f = WORLD_R / l, dx = t.x * f - t.x, dz = t.z * f - t.z; t.x += dx; t.z += dz; camera.position.x += dx; camera.position.z += dz; }
 });
 const HOME = { phi: 0.98, theta: FACE };
-const homeZoom = () => (innerWidth >= 900 ? 0.84 : 1);
+const homeZoom = () => (innerWidth >= 900 ? 0.84 : innerWidth < 600 ? 0.86 : 1);
 
-const hemi = new THREE.HemisphereLight(0xe8f8ff, 0x7cc850, 1.35);
+const hemi = new THREE.HemisphereLight(0xfff6ea, 0x8a9a72, 1.2);
 const sun = new THREE.DirectionalLight(0xfff0dc, 2);
 sun.position.set(25, 40, 12);
 sun.castShadow = true;
@@ -153,7 +173,7 @@ scene.add(hemi, sun);
 let night = 0;
 function applySky() {
   const h = tw().h;
-  const s = h >= 6 && h < 17 ? { bg: 0x9fdcf5, sun: 2.3, hemi: 1.35, n: 0 } : h >= 17 && h < 19 ? { bg: 0xf7c9a0, sun: 1.6, hemi: 1.05, n: 0.5 } : h === 5 ? { bg: 0xc9def5, sun: 1.3, hemi: 1, n: 0.4 } : { bg: 0x2f4a7a, sun: 0.8, hemi: 0.85, n: 1 };
+  const s = h >= 6 && h < 17 ? { bg: 0xe6eadf, sun: 2, hemi: 1.2, n: 0 } : h >= 17 && h < 19 ? { bg: 0xf1d6bd, sun: 1.4, hemi: 0.95, n: 0.5 } : h === 5 ? { bg: 0xdcdfe6, sun: 1.2, hemi: 0.9, n: 0.4 } : { bg: 0x3b4763, sun: 0.7, hemi: 0.75, n: 1 };
   scene.background = new THREE.Color(s.bg);
   document.body.style.background = "#" + s.bg.toString(16).padStart(6, "0");
   sun.intensity = s.sun; hemi.intensity = s.hemi; night = s.n;
@@ -187,23 +207,24 @@ function textPlane(w, h, draw) {
   return m;
 }
 const rr = (c, x, y, w, h, r) => { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); };
-const C = { grass: 0x78c850, sand: 0xf8e3a3, cliff: 0xe3cfa2, plaza: 0xf6ecd4, path: 0x9aa4b0, road: 0x8d97a5, wall: 0xfff6e8, roof: 0xff7a59, wood: 0xd99a5b, dark: 0x8a5a33, tree1: 0x4fb83f, tree2: 0x6fcf4a, tree3: 0x8ddc5a, pine: 0x3fa64a, shallow: 0x8fe6ef };
+const C = { grass: 0x78c850, sand: 0xf8e3a3, cliff: 0xe3cfa2, plaza: 0xf6ecd4, path: 0x9aa4b0, road: 0x8d97a5, wall: 0xfff6e8, roof: 0xff7a59, wood: 0xd99a5b, dark: 0x8a5a33, tree1: 0x4fb83f, tree2: 0x6fcf4a, tree3: 0x8ddc5a, pine: 0x3fa64a, shallow: 0xa9d3cf };
 
 /* ---- 海、遠山 ---- */
 const seaGeo = new THREE.PlaneGeometry(360, 360, 80, 80);
 seaGeo.rotateX(-Math.PI / 2);
 const seaBase = seaGeo.attributes.position.array.slice();
-const sea = mesh(seaGeo, mat(0x34bfdc, { roughness: 0.35, flatShading: false }), 0, -1.15, 0);
+const sea = mesh(seaGeo, mat(0x86b7b8, { roughness: 0.5 }), 0, -1.15, 0);
 sea.castShadow = false;
 scene.add(sea);
-// 遠方的綠色小島：平行投影下會出現在畫面上方，讓群島像浮在大海中
-for (let i = 0; i < 12; i++) {
-  const a = front + Math.PI + (i / 11 - 0.5) * 2.8, r = 70 + hash("mr" + i) * 26, rad = 4.5 + hash("md" + i) * 4.5;
-  const x = Math.cos(a) * r, z = Math.sin(a) * r;
-  cyl(scene, rad * 1.15, rad * 1.25, 0.4, C.sand, x, -1.2, z, 20).castShadow = false;
-  const hill = mesh(new THREE.SphereGeometry(rad, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), soft(i % 2 ? 0x5fbf45 : 0x72c955), x, -1, z, scene);
-  hill.scale.y = 0.45 + hash("mh" + i) * 0.35; hill.castShadow = false;
-  for (let k = 0; k < 4; k++) { const ta = hash("ta" + i + k) * 6.28, tr = rad * 0.5 * hash("tr" + i + k); mesh(new THREE.SphereGeometry(1.4, 10, 8), soft(C.tree1), x + Math.cos(ta) * tr, -1 + rad * hill.scale.y * 0.85, z + Math.sin(ta) * tr, scene).castShadow = false; }
+// 島後方的山：平行投影下會出現在畫面上方，像政策島背後的山林
+for (let i = 0; i < 16; i++) {
+  const a = front + Math.PI + (i / 15 - 0.5) * 2.6, r = 70 + hash("mr" + i) * 22, h = 10 + hash("mh" + i) * 14, rad = 12 + hash("md" + i) * 10;
+  const m = cone(scene, rad, h, [0xa9b98c, 0x9fb083, 0xb4c299][i % 3], Math.cos(a) * r, -1.3, Math.sin(a) * r, 7);
+  m.castShadow = false; m.rotation.y = hash("mo" + i) * 3;
+  for (let k = 0; k < 5; k++) {
+    const ta = a + (hash("ta" + i + k) - 0.5) * 0.18, tr = r - rad * (0.3 + hash("tr" + i + k) * 0.5);
+    cone(scene, 1.2, 3.4, 0x6d8c55, Math.cos(ta) * tr, -1.2 + h * 0.2 + hash("ty" + i + k) * h * 0.3, Math.sin(ta) * tr, 5).castShadow = false;
+  }
 }
 
 /* ---- 島 ---- */
@@ -433,15 +454,15 @@ flatRoad(world, new THREE.RingGeometry(RO - 0.7, RO + 0.7, 120), 0, 0);
 for (let k = 0; k < 64; k++) { const a = (k / 64) * Math.PI * 2; dashAt(world, Math.cos(a) * RO, Math.sin(a) * RO, -a); }
 SPOKES.forEach((a) => radialRoad(a, 4.6, RO - 0.7));
 // 中央區的地點放在兩條建築區方位之間（mid(k)），避開連絡道路
-const mid = (k) => front + (k * 2 * Math.PI) / NI;
+const mid = (k) => front + (k * 2 * Math.PI) / NM;
 const SPOT = {
-  office: { a: mid(3), r: 7.4, build: bOffice },
-  deadlines: { a: mid(4), r: 7.2, build: bClock },
-  news: { a: mid(2), r: 7, build: bBoard },
-  todo: { a: mid(6), r: 7, build: bTodo },
-  links: { a: mid(0), r: R_ISLE * 0.95, build: bDock },
+  office: { a: mid(NM / 2), r: 7.4, build: bOffice },
+  deadlines: { a: mid(NM / 2 + 1), r: 7.2, build: bClock },
+  news: { a: mid(NM / 2 - 1), r: 7, build: bBoard },
+  todo: { a: mid(NM - 1) + Math.PI / NM * 0.6, r: 7, build: bTodo },
+  links: { a: front, r: R_ISLE * 0.95, build: bDock },
 };
-radialRoad(mid(0), RO + 0.7, R_ISLE * 0.93); // 通往碼頭的路
+radialRoad(front, RO + 0.7, R_ISLE * 0.93); // 通往碼頭的路
 const centerObj = {};
 Object.entries(SPOT).forEach(([id, s]) => {
   const g = new THREE.Group();
@@ -466,8 +487,8 @@ ISL.forEach((d) => {
   const lot = cyl(g, 2.7, 2.7, 0.07, new THREE.Color(d.color).lerp(new THREE.Color(0xfbf3e6), 0.6).getHex(), 0, 0, 0, 24);
   lot.castShadow = false;
   tag(lot, { t: "isle", i: d.i });
-  // 從外圈道路接到建築區的短車道
-  radialRoad(d.a, RO + 0.7, R_LOT - 1.6, 1.3);
+  // 從外圈道路接到建築區的短車道（小島上的建築區另外鋪路）
+  if (!d.islet) radialRoad(d.a, RO + 0.7, R_LOT - 1.6, 1.3);
   const b = new THREE.Group();
   (BUILD[d.building] || bHouse)(b, col);
   b.position.copy(d.dir).multiplyScalar(0.9); // 建築在車道的另一側，正面朝鏡頭
@@ -480,11 +501,43 @@ ISL.forEach((d) => {
   lampPost(g, perp.x * 2.4 - d.dir.x * 1.6, perp.z * 2.4 - d.dir.z * 1.6);
 });
 
+/* ---- 獨立小島與橋 ---- */
+if (ISLET) {
+  const g = new THREE.Group(); g.position.copy(ISLET.pos); world.add(g);
+  const L = landmass(g, ISLET.r, 4.2);
+  tag(L.top, { t: "isle", i: OFF[0].i });
+  // 本島外圈道路 → 海岸、小島入口 → 小島中央 → 各建築區
+  const seg = (p, q, w = 1.4) => { const len = p.distanceTo(q), m = p.clone().add(q).multiplyScalar(0.5), a = Math.atan2(q.z - p.z, q.x - p.x);
+    const road = box(world, len, 0.05, w, C.road, m.x, 0, m.z); road.rotation.y = -a; road.castShadow = false;
+    for (let s = 0.6; s < len - 0.3; s += 1.1) { const pt = p.clone().lerp(q, s / len); dashAt(world, pt.x, pt.z, -a + Math.PI / 2); } };
+  seg(ISLET.dir.clone().multiplyScalar(RO + 0.7), ISLET.coast);
+  seg(ISLET.entry, ISLET.pos);
+  OFF.forEach((d) => seg(ISLET.pos, d.pos.clone().sub(d.dir.clone().multiplyScalar(1.6)), 1.3));
+  // 木橋
+  const p0 = ISLET.coast, p1 = ISLET.entry, len = p0.distanceTo(p1), m = p0.clone().add(p1).multiplyScalar(0.5);
+  const bg = new THREE.Group(); bg.position.copy(m); bg.rotation.y = -ISLET.a; world.add(bg);
+  const plank = mat(0xe0a866), rail = mat(0xa86a3a), n = Math.round(len / 0.5);
+  for (let k = 0; k < n; k++) { const x = -len / 2 + (k + 0.5) * (len / n), y = Math.sin(((k + 0.5) / n) * Math.PI) * 0.35; mesh(new THREE.BoxGeometry(len / n - 0.06, 0.14, 1.6), plank, x, y - 0.05, 0, bg); }
+  [-0.82, 0.82].forEach((z) => { for (let k = 0; k <= 4; k++) { const x = -len / 2 + (k * len) / 4, y = Math.sin((k / 4) * Math.PI) * 0.35; cyl(bg, 0.07, 0.07, 0.7, rail, x, y - 0.05, z, 5); } mesh(new THREE.BoxGeometry(len, 0.08, 0.08), rail, 0, 0.6, z, bg); });
+  [-len / 2 + 0.6, len / 2 - 0.6].forEach((x) => cyl(bg, 0.12, 0.12, 1.4, rail, x, -1.5, 0, 6));
+  ISLET.bridge = { p0, p1, len };
+  // 小島入口的島名招牌
+  const sign = textPlane(2.6, 0.7, (c, w, h) => { rr(c, 4, 4, w - 8, h - 8, 20); c.fillStyle = "#2A211C"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.5}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(ISLET.name, w / 2, h / 2 + 2); });
+  const sg = new THREE.Group(); sg.position.copy(ISLET.entry.clone().lerp(ISLET.pos, 0.35)).add(new V3(-ISLET.dir.z, 0, ISLET.dir.x).multiplyScalar(1.4)); sg.rotation.y = FACE;
+  cyl(sg, 0.07, 0.07, 1.4, C.dark, -1, 0, 0, 5); cyl(sg, 0.07, 0.07, 1.4, C.dark, 1, 0, 0, 5); sign.position.set(0, 1.5, 0.05); sg.add(sign); world.add(sg);
+  for (let i = 0, k = 0; i < 120 && k < 10; i++) {
+    const a = hash("it" + i) * Math.PI * 2, r = 2 + hash("ir" + i) * (ISLET.r * 0.82 - 2), x = ISLET.pos.x + Math.cos(a) * r, z = ISLET.pos.z + Math.sin(a) * r;
+    if (OFF.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.4) || Math.hypot(ISLET.pos.x - x, ISLET.pos.z - z) < 1.8) continue;
+    const toE = new V3(x, 0, z).sub(ISLET.pos), along = toE.dot(ISLET.dir.clone().negate()); if (along > 0 && Math.abs(toE.clone().cross(ISLET.dir).y) < 1.4) continue;
+    tree(world, x, z, 0.65 + hash("is" + i) * 0.4, hash("ik" + i)); k++;
+  }
+}
+
 /* ---- 樹：避開道路、建築區與中央地點 ---- */
 {
-  const roadAngles = [...SPOKES, mid(0)];
+  const roadAngles = [...SPOKES, front, ...(ISLET ? [ISLET.a] : [])];
   const nearRadial = (x, z, r) => roadAngles.some((a) => { const along = x * Math.cos(a) + z * Math.sin(a), side = Math.abs(-x * Math.sin(a) + z * Math.cos(a)); return along > 4 && side < 1.6; }) ||
-    ISL.some((d) => { const along = x * Math.cos(d.a) + z * Math.sin(d.a), side = Math.abs(-x * Math.sin(d.a) + z * Math.cos(d.a)); return along > RO && along < R_LOT && side < 1.5; });
+    MAIN.some((d) => { const along = x * Math.cos(d.a) + z * Math.sin(d.a), side = Math.abs(-x * Math.sin(d.a) + z * Math.cos(d.a)); return along > RO && along < R_LOT && side < 1.5; });
   let n = 0;
   for (let i = 0; i < 900 && n < 70; i++) {
     const a = hash("ta" + i) * Math.PI * 2, r = 5.2 + hash("tr" + i) * (R_ISLE - 5.2);
@@ -648,18 +701,29 @@ function arc(a0, a1, r = RW) {
 const nearestSpoke = (a) => SPOKES.reduce((b, s) => (angOff(a, s) < angOff(a, b) ? s : b), SPOKES[0]);
 const isleSpot = (d) => d.pos.clone().add(d.spot);
 // 路線：建築區 ⇄ 外圈道路 ⇄（連絡道路）⇄ 中央圓環
+// 外圈道路 ⇄ 海岸 ⇄ 橋 ⇄ 小島中央
+function isletPath(outbound) {
+  const b = ISLET.bridge, m = Math.ceil(b.len / 0.4), br = [];
+  for (let k = 0; k <= m; k++) { const t = k / m, p = b.p0.clone().lerp(b.p1, t); p.y = Math.sin(t * Math.PI) * 0.35; br.push(p); }
+  const pts = [ringPt(ISLET.a, RO), ...br, ISLET.pos.clone()];
+  return outbound ? pts : pts.reverse();
+}
 function route(to) {
   const pts = [], curA = Math.atan2(av.position.z, av.position.x);
   let posA, onOuter;
-  if (avAt !== "C") { posA = ISL[avAt].a; pts.push(ringPt(posA, RO)); onOuter = true; }
+  const from = avAt !== "C" ? ISL[avAt] : null;
+  if (from && from.islet) { pts.push(ISLET.pos.clone()); if (ISL[to] && ISL[to].islet) { pts.push(isleSpot(ISL[to])); return pts; } pts.push(...isletPath(false)); posA = ISLET.a; onOuter = true; }
+  else if (from) { posA = from.a; pts.push(ringPt(posA, RO)); onOuter = true; }
   else { posA = curA; pts.push(ringPt(curA, RW)); onOuter = false; }
   if (to === "C") {
     if (onOuter) { const s = nearestSpoke(posA); pts.push(...arc(posA, s, RO), ringPt(s, RW)); posA = s; }
     pts.push(...arc(posA, front, RW), AV_HOME.clone());
   } else {
-    const d = ISL[to];
-    if (!onOuter) { const s = nearestSpoke(d.a); pts.push(...arc(posA, s, RW), ringPt(s, RO)); posA = s; }
-    pts.push(...arc(posA, d.a, RO), isleSpot(d));
+    const d = ISL[to], ta = d.islet ? ISLET.a : d.a;
+    if (!onOuter) { const s = nearestSpoke(ta); pts.push(...arc(posA, s, RW), ringPt(s, RO)); posA = s; }
+    pts.push(...arc(posA, ta, RO));
+    if (d.islet) pts.push(...isletPath(true));
+    pts.push(isleSpot(d));
   }
   return pts;
 }
@@ -686,7 +750,7 @@ const sph = new THREE.Spherical();
 function resize() {
   const w = innerWidth, h = innerHeight, a = w / h;
   renderer.setSize(w, h, false);
-  const base = WORLD_R * (a < 0.8 ? 1.12 : 0.95);
+  const base = CAM_R * (a < 0.8 ? 1.12 : 0.95);
   const hh = a >= 1 ? base : (base / a) * 0.9, hw = hh * a;
   camera.left = -hw; camera.right = hw; camera.top = hh; camera.bottom = -hh;
   camera.updateProjectionMatrix();
@@ -720,7 +784,7 @@ function goHome() {
   closeSheet(true);
   sph.set(camera.position.distanceTo(controls.target), HOME.phi, HOME.theta);
   camera.position.copy(controls.target).add(new V3().setFromSpherical(sph));
-  flyTo(framed(new V3(0, 0, 0), homeZoom()), homeZoom());
+  flyTo(framed(HOME_C, homeZoom()), homeZoom());
   setSel(null);
 }
 
@@ -1232,7 +1296,7 @@ function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000), t = now / 1000; last = now;
   if (!RM) {
     const a = seaGeo.attributes.position;
-    for (let i = 0; i < a.count; i++) { const x = seaBase[i * 3], z = seaBase[i * 3 + 2]; a.setY(i, Math.sin(x * 0.16 + t * 0.9) * 0.08 + Math.cos(z * 0.2 + t * 0.7) * 0.07); }
+    for (let i = 0; i < a.count; i++) { const x = seaBase[i * 3], z = seaBase[i * 3 + 2]; a.setY(i, Math.sin(x * 0.16 + t * 0.9) * 0.16 + Math.cos(z * 0.2 + t * 0.7) * 0.14); }
     a.needsUpdate = true; seaGeo.computeVertexNormals();
     clouds.forEach((c, i) => { const ang = c.userData.a0 + Math.sin(t * 0.03 * c.userData.s + i) * 0.25; c.position.x = Math.cos(ang) * c.userData.r; c.position.z = Math.sin(ang) * c.userData.r; });
     boats.forEach((b) => { b.userData.a += b.userData.s * dt; b.position.set(Math.cos(b.userData.a) * b.userData.r, -1.1 + Math.sin(t * 1.3) * 0.08, Math.sin(b.userData.a) * b.userData.r); b.rotation.y = -b.userData.a; });
@@ -1263,7 +1327,7 @@ async function start() {
   refreshTimed();
   $("splash").classList.add("out");
   requestAnimationFrame(loop);
-  setTimeout(() => flyTo(framed(new V3(0, 0, 0), homeZoom()), homeZoom(), 1600), 50);
+  setTimeout(() => flyTo(framed(HOME_C, homeZoom()), homeZoom(), 1600), 50);
   tick(); setInterval(tick, 6000);
   setInterval(refreshTimed, 60000);
   checkNotify();
