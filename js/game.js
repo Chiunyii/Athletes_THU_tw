@@ -1,6 +1,6 @@
 /* 體能社團行政群島：Three.js
  * 中心島 = 課外組（辦公室、截止日鐘塔、公告欄、碼頭），外圍一圈島 = 行政分類（數量由 data.js 的 islands 決定）。
- * 玩家先建立角色（所屬體能性社團、職位、外觀），角色會走過橋到各島蓋章。
+ * 玩家可以（選填）建立角色：身份、職位、外觀；角色會走過橋到各島蓋章。
  * 內容全部來自 js/data.js；這個檔案只負責群島、角色與資訊卡。 */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -582,10 +582,15 @@ function addNpc(i, home, rad) {
   world.add(p); npcs.push(p);
   tag(p, { t: "npc", club: club.name });
 }
-ISL.forEach((d, i) => { const home = d.pos.clone().add(FACE_DIR.clone().multiplyScalar(1.5)); addNpc(i * 2, home, 1.6); addNpc(i * 2 + 1, home, 1.6); });
-[0, 1, 2].forEach((k) => addNpc(40 + k, new V3(0, 0, 0), 3));
+// 人數固定上限，不會因為社團或島變多而變擠；站在廣場側邊，避開角色站位與名牌
+const NPC_MAX = 10, SIDE = new V3(-FACE_DIR.z, 0, FACE_DIR.x);
+ISL.filter((d, i) => i < NPC_MAX - 2).forEach((d, i) => addNpc(i, d.pos.clone().add(SIDE.clone().multiplyScalar(i % 2 ? 1.5 : -1.5)), 0.8));
+[0, 1].forEach((k) => addNpc(40 + k, new V3(0, 0, 0), 3));
+const NPC_MIN_ZOOM = 1.3; // 全景時隱藏路人，畫面只留島與名牌
 function stepNpcs(dt, t) {
+  const show = camera.zoom >= NPC_MIN_ZOOM;
   npcs.forEach((n, i) => {
+    n.visible = show;
     const u = n.userData;
     if (u.wait > 0) { u.wait -= dt; n.position.y = 0; return; }
     if (!u.goal) {
@@ -688,28 +693,30 @@ function goHome() {
 
 /* ---------------- 名牌 ---------------- */
 const lblEl = $("lbl"), labels = [];
-function mkLabel(html, pos3, onClick, cls = "") {
+// pri：越大越優先保留；minZoom：放大到這個倍率才顯示；selId：被選中時永遠顯示
+function mkLabel(html, pos3, onClick, cls = "", opt = {}) {
   const el = document.createElement("button");
   el.type = "button"; el.className = "il " + cls; el.innerHTML = html;
   el.addEventListener("click", onClick);
   lblEl.appendChild(el);
-  const L = { el, pos3 }; labels.push(L); return L;
+  const L = { el, pos3, pri: opt.pri || 0, minZoom: opt.minZoom || 0, selId: opt.selId, me: !!opt.me, w: 0, h: 0 }; labels.push(L); return L;
 }
 function isleBadge(d) { const n = isleDl(d)[0]; if (!n) return ""; const k = daysLeft(n.at); return k <= 14 ? `<span class="d ${k <= 3 ? "hot" : ""}">D-${k}</span>` : ""; }
 function buildLabels() {
   lblEl.innerHTML = ""; labels.length = 0;
   ISL.forEach((d) => {
     d.label = mkLabel(`<span class="no">${d.no}</span>${E(d.name)}${isleBadge(d)}${stamps["isle:" + d.key] ? '<span class="ok">✓</span>' : ""}`,
-      d.pos.clone().add(d.build.position).setY(d.build.userData.h + 0.5), () => openIsle(d.i));
+      d.pos.clone().add(d.build.position).setY(d.build.userData.h + 0.5), () => openIsle(d.i), "", { pri: 100 + (isleBadge(d).includes("hot") ? 5 : 0), selId: "isle:" + d.key });
   });
   CENTER_SPOTS.forEach((s) => {
     const o = centerObj[s.id], st = officeStatus();
     let extra = "";
     if (s.id === "office") extra = `<span class="d" style="background:${st.open ? "#5F8F5A" : "#7A6B60"}">${E(st.short)}</span>`;
     if (s.id === "news" && unread().length) extra = `<span class="d hot">${unread().length}</span>`;
-    s.label = mkLabel(`<span class="no">${s.no}</span>${E(s.name)}${extra}`, o.position.clone().setY((o.userData.h || 3) * o.scale.y + 0.4), () => openSpot(s.id));
+    s.label = mkLabel(`<span class="no">${s.no}</span>${E(s.name)}${extra}`, o.position.clone().setY((o.userData.h || 3) * o.scale.y + 0.4), () => openSpot(s.id), "",
+      s.id === "office" ? { pri: 95, selId: s.id } : { pri: 50, minZoom: 1.5, selId: s.id });
   });
-  mkLabel(`<b>${E(me.name || "我")}</b><span>${E(me.club || "未選身份")}</span>`, () => av.position.clone().setY(av.position.y + 2.25), () => openChar("look"), "me");
+  mkLabel(`<b>${E(me.name || "我")}</b>${me.club ? `<span>${E(me.club)}</span>` : ""}`, () => av.position.clone().setY(av.position.y + 2.25), () => openChar("look"), "me", { pri: 70, minZoom: 1.8, me: true });
   refreshLabelState();
 }
 function refreshLabelState() {
@@ -717,15 +724,31 @@ function refreshLabelState() {
   CENTER_SPOTS.forEach((s) => s.label.el.classList.toggle("sel", sel === s.id));
 }
 const pv = new V3();
+// 名牌避讓：依優先順序擺放，會和已擺好的名牌重疊就淡出（島仍可直接點 3D 模型）
+let wasCmp = null;
 function placeLabels() {
-  const W = innerWidth, H = innerHeight;
-  lblEl.classList.toggle("cmp", W < 600 && camera.zoom < 1.6);
+  const W = innerWidth, H = innerHeight, z = camera.zoom, cmp = W < 600 && z < 1.6;
+  if (cmp !== wasCmp) { lblEl.classList.toggle("cmp", cmp); labels.forEach((L) => (L.w = 0)); wasCmp = cmp; }
+  const charOpen = !!(panelView && panelView.startsWith("char")), cand = [];
   labels.forEach((L) => {
     pv.copy(typeof L.pos3 === "function" ? L.pos3() : L.pos3).project(camera);
     const x = ((pv.x + 1) / 2) * W, y = ((1 - pv.y) / 2) * H;
     const off = pv.z > 1 || x < -80 || x > W + 80 || y < -40 || y > H + 40;
     L.el.classList.toggle("off", off);
-    if (!off) L.el.style.transform = `translate(${x}px, ${y - 10}px) translate(-50%, -100%)`;
+    if (off) return;
+    L.el.style.transform = `translate(${x}px, ${y - 10}px) translate(-50%, -100%)`;
+    const isSel = L.selId && L.selId === sel;
+    if (!isSel && z < L.minZoom && !(L.me && charOpen)) { L.el.classList.add("hide"); return; }
+    if (!L.w) { L.w = L.el.offsetWidth; L.h = L.el.offsetHeight; }
+    cand.push({ L, x, y, p: isSel || (L.me && charOpen) ? 1e4 : L.pri });
+  });
+  cand.sort((a, b) => b.p - a.p);
+  const placed = [];
+  cand.forEach(({ L, x, y }) => {
+    const r = { l: x - L.w / 2 - 3, r: x + L.w / 2 + 3, t: y - 10 - L.h - 3, b: y - 7 };
+    const hit = placed.some((q) => r.l < q.r && r.r > q.l && r.t < q.b && r.b > q.t);
+    L.el.classList.toggle("hide", hit);
+    if (!hit) placed.push(r);
   });
 }
 
@@ -1060,7 +1083,6 @@ function updHud() {
 let tkI = 0, tkCur = null;
 function tickerMsgs() {
   const m = [], st = officeStatus();
-  if (!me.club) m.push({ t: "先建立角色：選你的身份與職位", go: () => openChar("look") });
   ISL.filter(myDuty).forEach((d) => { const n = isleDl(d)[0]; if (n) m.push({ t: `${me.role}注意：${d.name}「${n.title}」還有 ${daysLeft(n.at)} 天`, go: () => openIsle(d.i) }); });
   upcoming().slice(0, 3).forEach((x) => { const d = isleOf(x.category); m.push({ t: `${d ? d.name + "：" : ""}「${x.title}」還有 ${daysLeft(x.at)} 天`, go: () => (d ? openIsle(d.i) : openSpot("deadlines")) }); });
   if (unread().length) m.push({ t: `公告欄有 ${unread().length} 則新公告`, go: () => openSpot("news") });
@@ -1083,13 +1105,14 @@ function showTalk() {
   $("mKick").textContent = `${talkK} / ${pad2(talkI + 1)}`;
   $("mTitle").textContent = s[0]; $("mText").textContent = s[1];
   $("mNext").textContent = talkI < talkQ.length - 1 ? "下一步 →" : s[2] || "開始探索";
-  $("mSkip").hidden = talkQ.length < 2;
+  $("mSkip").textContent = s[3] ? s[3].label : "略過"; // 最後一步的次要按鈕可以是另一個選擇
+  $("mSkip").hidden = talkQ.length < 2 && !s[3];
   $("modal").hidden = false;
   $("mNext").focus();
 }
-function endTalk(skip) { $("modal").hidden = true; const f = talkEnd; talkEnd = null; if (!skip) f && f(); else if (!me.club) toast("之後可以點右上「角色」建立你的角色"); }
+function endTalk(skip) { $("modal").hidden = true; const f = talkEnd; talkEnd = null; if (!skip) f && f(); }
 $("mNext").addEventListener("click", () => { if (talkI < talkQ.length - 1) { talkI++; showTalk(); } else endTalk(); });
-$("mSkip").addEventListener("click", () => endTalk(true));
+$("mSkip").addEventListener("click", () => { const alt = talkQ[talkI] && talkQ[talkI][3]; endTalk(true); if (alt) alt.go(); });
 function teacherTalk() {
   const n = upcoming()[0], st = officeStatus(), L = [];
   if (n) { const d = isleOf(n.category); L.push(["最近的截止日", `「${n.title}」還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`]); }
@@ -1176,8 +1199,8 @@ async function start() {
       ["每座島是一類行政", `${ISL.length} 座小島各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一座島，或用右側清單探索每一類的截止日、流程與公告。`],
       ["中心是課外組", `群島中間是課外組，旁邊有截止日鐘塔、公告欄和碼頭。${ISL.length} 座島都有橋通到這裡，有問題就回來。`],
       ["提醒會浮在島上", "島的名牌上有 D-倒數；7 天內截止，島上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
-      ["建立你的角色", "選你的身份（課外組或所屬的體能性社團）與職位，換上球衣。角色會帶著招牌道具走過橋，幫你在每座島蓋章。", "建立角色"],
-    ], () => openChar("look"));
-  } else if (!me.club) setTimeout(() => toast("點右上「角色」建立你的角色"), 1200);
+      ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的島，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
+    ]);
+  }
 }
 start();
