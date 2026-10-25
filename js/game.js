@@ -905,6 +905,12 @@ function newsItems(list) {
 }
 function markRead(list) { let ch = false; list.forEach((a) => { if (!read.includes(a.id)) { read.push(a.id); ch = true; } }); if (ch) { LS.set("read", read); updHud(); updMarkers(); buildLabels(); } }
 
+// 島內分區：相對期限的提醒（例如活動結束後 2 週內），附要準備的文件與下載按鈕
+function sectionsHtml(d) {
+  return (d.sections || []).map((s) => `<div class="sec"><h4>${E(s.title)}</h4><ul class="items">${(s.rules || []).map((r) => `<li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(r.title)}${r.note ? `<small>${E(r.note)}</small>` : ""}</span><span class="meta warn">${E(r.when || "")}</span><span class="chev">›</span></button>
+    <div class="more">${r.files?.length ? `<p>${E(r.prep || "需準備：")}</p><ul class="files">${r.files.map((f) => `<li>${E(f)}</li>`).join("")}</ul>` : ""}${r.links?.length ? `<div class="acts">${r.links.map((l) => (l[1] ? `<a class="btn t" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>` : `<span class="btn g pend" aria-disabled="true">${E(l[0])}・連結待補</span>`)).join("")}</div>` : ""}</div></li>`).join("")}</ul></div>`).join("");
+}
+const sectionText = (d) => (d.sections || []).flatMap((s) => [s.title, ...(s.rules || []).flatMap((r) => [r.when, r.title, r.note, r.prep, ...(r.files || [])])]).filter(Boolean);
 function renderIsle(d, keepScroll) {
   const dl = isleDl(d), news = isleNews(d), steps = d.guides.reduce((n, g) => n + g.steps.length, 0), duty = DUTY[d.key] || [];
   const st = $("sbody").scrollTop;
@@ -913,9 +919,10 @@ function renderIsle(d, keepScroll) {
     <p class="lead">${E(d.guides[0]?.title || d.tagline)}</p>
     <p class="quote">「${E(d.tagline)}」</p>
     ${d.links?.length ? `<div class="acts">${d.links.map((l) => `<a class="btn big t ring" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}
-    <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span><span class="tag">${dl.length} 項截止</span><span class="tag">${steps} 個步驟</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
-    <div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>
+    <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span>${d.sections?.length ? `<span class="tag">${d.sections.length} 個分區</span>` : `<span class="tag">${dl.length} 項截止</span>`}<span class="tag">${steps} 個步驟</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
     ${d.guides.map((g) => `<div class="sec"><h4>${E(g.topic)}・辦事步驟</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 步</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
+    ${sectionsHtml(d)}
+    ${dl.length || !d.sections?.length ? `<div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>` : ""}
     ${isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政待辦</h4>${todoItems(isleTodos(d))}</div>` : ""}
     <div class="sec"><h4>相關公告</h4>${newsItems(news)}</div>
     <div class="sec"><h4>這一島在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
@@ -987,12 +994,13 @@ function renderLinks() {
     <div class="sec"><h4>常用連結</h4><ul class="items">${row("課外組網站", "activity.thu.edu.tw", D.links.office)}${row("體能性社團各項作業期程", "整學期的正式時程表", D.links.schedule)}${row("體能性社團 Linktree", "表單、雲端資料夾與常用連結", D.links.linktree)}${row("本站文字版", "不顯示 3D，內容相同", "list.html", false)}</ul></div>`;
   showSheet("links", html);
 }
-const isleHits = (d, q) => d.name.includes(q) || ["s1", "s2"].some((sem) => todoList(sem).some((x) => x.island === d.key && (x.title + (x.note || "")).includes(q))) || d.guides.some((g) => [g.topic, g.title, g.summary, ...g.steps].some((s) => s.includes(q))) || isleDl(d).some((x) => (x.title + (x.detail || "")).includes(q)) || isleNews(d).some((a) => (a.title + (a.body || "")).includes(q));
+const isleHits = (d, q) => d.name.includes(q) || sectionText(d).some((s) => s.includes(q)) || ["s1", "s2"].some((sem) => todoList(sem).some((x) => x.island === d.key && (x.title + (x.note || "")).includes(q))) || d.guides.some((g) => [g.topic, g.title, g.summary, ...g.steps].some((s) => s.includes(q))) || isleDl(d).some((x) => (x.title + (x.detail || "")).includes(q)) || isleNews(d).some((a) => (a.title + (a.body || "")).includes(q));
 function listResults(q) {
   const res = [];
   ISL.forEach((d) => {
     d.guides.forEach((g) => { const hit = [g.topic, g.title, g.summary, ...g.steps].find((s) => s.includes(q)); if (hit) res.push({ d, t: g.title, s: hit }); });
     isleDl(d).forEach((x) => { if ((x.title + (x.detail || "")).includes(q)) res.push({ d, t: x.title, s: `截止日・${fmt(x.at)}` }); });
+    (d.sections || []).forEach((s) => (s.rules || []).forEach((r) => { if ([s.title, r.when, r.title, r.note, ...(r.files || [])].filter(Boolean).join(" ").includes(q)) res.push({ d, t: r.title, s: `${s.title}・${r.when || ""}` }); }));
     isleNews(d).forEach((a) => { if ((a.title + (a.body || "")).includes(q)) res.push({ d, t: a.title, s: "公告" + (a.body ? "・" + a.body : "") }); });
     ["s1", "s2"].forEach((sem) => todoList(sem).filter((x) => x.island === d.key && (sem === "s1" || x.sem !== "common")).forEach((x) => { if ((x.title + (x.note || "")).includes(q)) res.push({ d, t: x.title, s: `${x.sem === "common" ? "每學期" : SEM_NAME[sem]}待辦${x.note ? "・" + x.note : ""}` }); }));
   });

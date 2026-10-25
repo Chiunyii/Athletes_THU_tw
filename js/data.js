@@ -54,7 +54,38 @@ var SITE_DATA = {
     },
     { key: "行政", name: "行政島", icon: "📋", color: "#6E8FB5", building: "track", tagline: "幹部交接、名冊繳交，新任幹部的第一站。" },
     { key: "活動", name: "活動島", icon: "⛺", color: "#D98B4E", building: "tent", tagline: "辦活動前要送什麼、活動後要交什麼。" },
-    { key: "經費", name: "經費島", icon: "💰", color: "#D9B24E", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。" },
+    {
+      key: "經費", name: "經費島", icon: "💰", color: "#D9B24E", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。",
+      // sections：島內分區；rules 是「相對期限」的提醒（例如活動結束後 2 週內），沒有固定日期所以不倒數
+      // prep + files：要先準備給承辦老師的電子檔
+      sections: [
+        {
+          title: "活動經費",
+          rules: [{
+            when: "活動結束後 2 週內", title: "完成活動經費核銷",
+            note: "12 月及 1 月的活動，需在活動結束後 5 日內完成核銷。",
+            prep: "須先約時間並提供以下電子檔給峮老師：", files: ["學輔成效報告", "收支結算表"],
+            links: [["文件下載", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=3"]],
+          }],
+        },
+        {
+          title: "器材經費",
+          rules: [{
+            when: "收到發票 2 週內", title: "完成器材經費核銷", note: "",
+            prep: "須先約時間並提供以下電子檔給峮老師：", files: ["器材效益表", "器材收支結算表"],
+            links: [["文件下載", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=3"]],
+          }],
+        },
+        {
+          title: "校外指導老師鐘點費補助",
+          rules: [{
+            when: "社課結束後 1 週內", title: "校外指導老師提交社課記錄表",
+            note: "需確認照片是否有拍攝到指導老師及社員，並詳述授課說明。",
+            links: [["社團社課授課紀錄表 文件下載", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=2"]],
+          }],
+        },
+      ],
+    },
     { key: "場地", name: "場地島", icon: "🏟", color: "#6FA38C", building: "gym", tagline: "練習場地借用與使用規範。" },
     { key: "安全", name: "安全島", icon: "⛑", color: "#C8623F", building: "aid", tagline: "保險、急救、校外活動安全，體能性社團最重要的事。" },
     { key: "器材", name: "器材島", icon: "🏐", color: "#9C83B5", building: "store", tagline: "器材清冊、借用與保管。" },
@@ -125,14 +156,6 @@ var SITE_DATA = {
       due: "2026-11-13 17:00",
       category: "場地",
       detail: "體育館、球場、韻律教室等場地請提早登記，避免與系隊或課程衝突。",
-      link: "",
-    },
-    {
-      id: "d-reimburse",
-      title: "期中活動經費核銷",
-      due: "2026-11-27 17:00",
-      category: "經費",
-      detail: "收據抬頭、統編、日期需正確；活動結束後兩週內完成核銷。",
       link: "",
     },
     {
@@ -290,11 +313,11 @@ var SITE_DATA = {
       island: "經費",
       topic: "經費核銷",
       title: "經費申請與核銷注意事項",
-      summary: "收據抬頭、統編、日期正確，活動後儘速核銷。",
+      summary: "收據抬頭「東海大學」、統編「52004800」要正確；核銷前先和峮老師約時間。",
       steps: [
         "確認活動是否有申請補助，以及補助可支用的項目。",
-        "取得收據或發票，檢查抬頭、統編、日期、金額與品項。",
-        "黏貼憑證、填寫核銷單，由社長與指導老師簽名後送件。",
+        "取得收據或發票，檢查抬頭「東海大學」、統編「52004800」、日期、金額與品項。",
+        "請先與峮老師約時間，並提供核銷文件電子檔，再依約好的時間將發票或收據送到課外組。",
       ],
       links: [],
     },

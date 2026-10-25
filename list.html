@@ -199,6 +199,8 @@ mark { background: var(--whistle-soft); color: inherit; padding: 0 1px; }
 .progress { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; margin-bottom: 14px; }
 .progress i { display: block; height: 100%; width: 0; background: var(--field); transition: width .3s; }
 .tasks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.sec-rule { border-top: 1px dashed var(--line); margin-top: 12px; padding-top: 10px; font-size: 14px; }
+.sec-rule p { margin: 6px 0; }
 .todo-h { font-size: 14px; color: var(--muted); margin: 14px 0 8px; letter-spacing: .08em; }
 .todo-i { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 8px; margin-bottom: 8px; }
 .todo-i label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-weight: 700; }
@@ -582,6 +584,18 @@ footer a { color: var(--band-fg); }
     var eq = esc(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     return s.replace(new RegExp(eq, "g"), "<mark>$&</mark>");
   }
+  // 島內分區（例如經費島的活動經費、器材經費…）的相對期限提醒
+  function sectionsHtml(key) {
+    var isl = (D.islands || []).filter(function (x) { return x.key === key; })[0];
+    if (!isl || !isl.sections) return "";
+    return isl.sections.map(function (sec) {
+      return '<div class="sec-rule"><b>' + esc(sec.title) + "</b>" + (sec.rules || []).map(function (r) {
+        return '<p><span class="tag">' + esc(r.when || "") + "</span> " + esc(r.title) + (r.note ? "。" + esc(r.note) : "") + "</p>" +
+          (r.files && r.files.length ? "<p>" + esc(r.prep || "需準備：") + esc(r.files.join("、")) + "</p>" : "") +
+          (r.links && r.links.length ? '<div class="row">' + r.links.map(function (l) { return '<a class="btn small plain" target="_blank" rel="noopener" href="' + esc(l[1]) + '">' + esc(l[0]) + " ↗</a>"; }).join("") + "</div>" : "");
+      }).join("") + "</div>";
+    }).join("");
+  }
   function renderGuides() {
     var q = $("q").value.trim();
     var topics = ["全部"].concat(D.guides.map(function (g) { return g.topic; }));
@@ -594,6 +608,7 @@ footer a { color: var(--band-fg); }
       return '<article class="guide"><div class="topic">' + hl(g.topic, q) + "</div><h3>" + hl(g.title, q) + "</h3><p>" + hl(g.summary, q) + "</p>" +
         "<details" + (hit || gTopic !== "全部" ? " open" : "") + "><summary>看步驟</summary><ol>" + g.steps.map(function (s) { return "<li>" + hl(s, q) + "</li>"; }).join("") + "</ol></details>" +
         (g.links && g.links.length ? '<div class="row">' + g.links.map(function (l) { return '<a class="btn small plain" target="_blank" rel="noopener" href="' + esc(l[1]) + '">' + esc(l[0]) + "</a>"; }).join("") + "</div>" : "") +
+        sectionsHtml(g.island) +
         "</article>";
     }).join("") : '<p class="empty">找不到「' + esc(q) + '」相關的主題，可以到課外組辦公時間當面詢問。</p>';
   }
