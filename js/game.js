@@ -1,6 +1,6 @@
 /* 體能社團行政群島：Three.js
  * 中心島 = 課外組（辦公室、截止日鐘塔、公告欄、碼頭），外圍一圈島 = 行政分類（數量由 data.js 的 islands 決定）。
- * 玩家可以（選填）建立角色：身份、職位、外觀；角色會走過橋到各島蓋章。
+ * 玩家可以（選填）建立角色：身份、職位、外觀；角色會沿著島上的道路走到各建築區蓋章。
  * 內容全部來自 js/data.js；這個檔案只負責群島、角色與資訊卡。 */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -105,20 +105,22 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 
-/* 群島佈局：中心島 + 分類島圍成一圈，正前方（鏡頭方向）留給碼頭 */
+/* 島嶼佈局：一座大島。中央是課外組與圓環，外圈環狀道路連到各行政分類的建築區（正前方留給碼頭） */
 const FACE = Math.PI / 4;
 const FACE_DIR = new V3(Math.sin(FACE), 0, Math.cos(FACE));
-const RC = 9;
 const NI = ISL.length;
 const front = Math.atan2(FACE_DIR.z, FACE_DIR.x);
+const R_ISLE = 21;           // 大島半徑
+const RW = 3.9, RO = 12.3;   // 角色走的路線：中央圓環、外圈環狀道路（車道中心）
+const R_LOT = 16.4;          // 各分類建築區的中心
 ISL.forEach((d, i) => {
-  d.r = 5;
   d.a = front + Math.PI / NI + (i * 2 * Math.PI) / NI;
-  d.dist = RC + d.r + 4.5;
   d.dir = new V3(Math.cos(d.a), 0, Math.sin(d.a));
-  d.pos = d.dir.clone().multiplyScalar(d.dist);
+  d.pos = d.dir.clone().multiplyScalar(R_LOT);
 });
-const WORLD_R = RC + 2 * 5 + 4.5 + 1;
+// 圓環到外圈的連絡道路：每隔一個建築區一條
+const SPOKES = ISL.filter((d, i) => i % 2 === 0).map((d) => d.a);
+const WORLD_R = R_ISLE + 1;
 
 const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, -300, 500);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -173,7 +175,7 @@ const cone = (p, r, h, c, x, y, z, seg = 6) => mesh(new THREE.ConeGeometry(r, h,
 const ball = (p, r, c, x, y, z, det = 0) => mesh(new THREE.IcosahedronGeometry(r, det), c, x, y, z, p);
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
 const FONT = '"Noto Sans TC", "PingFang TC", sans-serif';
-const MONO = '"Baloo 2", "Arial Rounded MT Bold", sans-serif';
+const MONO = '"Space Mono", ui-monospace, monospace';
 function textPlane(w, h, draw) {
   const cv = document.createElement("canvas");
   cv.width = Math.round(w * 128); cv.height = Math.round(h * 128);
@@ -218,7 +220,7 @@ function landmass(parent, r, seed) {
   const top = layer(r, r * 0.97, 0.8, -0.4, soft(C.grass));
   layer(r * 1.1, r * 1.13, 0.5, -0.95, soft(C.sand));
   layer(r * 0.97, r * 0.62, 2.6, -2.1, C.cliff);
-  const sh = layer(r * 1.45, r * 1.45, 0.05, -1.08, mat(C.shallow, { flatShading: false, transparent: true, opacity: 0.75, roughness: 0.3 })); // 淺灘
+  const sh = layer(r * 1.22, r * 1.22, 0.05, -1.08, mat(C.shallow, { flatShading: false, transparent: true, opacity: 0.75, roughness: 0.3 })); // 淺灘
   sh.castShadow = false; sh.receiveShadow = false;
   return { top, wob };
 }
@@ -402,107 +404,99 @@ function lampPost(p, x, z) {
 }
 const angOff = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 
-/* ---- 中心島：課外組 ---- */
-const center = new THREE.Group();
+/* ---- 大島 ---- */
+const center = new THREE.Group();   // 中央區（課外組）的建築都放在這個群組
 world.add(center);
-const CL = landmass(center, RC, 1.3);
-tag(CL.top, { t: "center" });
+const LAND = landmass(world, R_ISLE, 1.3);
+tag(LAND.top, { t: "ground" });
+const flatRoad = (p, geo, x, z, ry = 0) => { const m = mesh(geo, soft(C.road), x, 0.045, z, p); m.rotation.x = -Math.PI / 2; m.rotation.z = ry; m.castShadow = false; return m; };
+const dashAt = (p, x, z, ry, len = 0.38) => { const d = box(p, 0.06, 0.02, len, 0xffffff, x, 0.05, z); d.rotation.y = ry; d.castShadow = false; };
+// 直線道路：從半徑 r0 到 r1，方位 a
+function radialRoad(a, r0, r1, w = 1.4) {
+  const len = r1 - r0, m = (r0 + r1) / 2;
+  const road = box(world, len, 0.05, w, C.road, Math.cos(a) * m, 0, Math.sin(a) * m);
+  road.rotation.y = -a; road.castShadow = false;
+  for (let s = r0 + 0.6; s < r1 - 0.3; s += 1.1) dashAt(world, Math.cos(a) * s, Math.sin(a) * s, -a + Math.PI / 2);
+}
+// 中央廣場、噴水池、校旗
 cyl(center, 3.2, 3.2, 0.06, C.plaza, 0, 0, 0, 24).castShadow = false;
-// 環狀道路（角色走的路線）與白色虛線
-{ const road = mesh(new THREE.RingGeometry(3.2, 4.6, 48), soft(C.road), 0, 0.045, 0, center); road.rotation.x = -Math.PI / 2; road.castShadow = false;
-  for (let k = 0; k < 28; k++) { const a = (k / 28) * Math.PI * 2, dsh = box(center, 0.06, 0.02, 0.38, 0xffffff, Math.cos(a) * 3.9, 0.05, Math.sin(a) * 3.9); dsh.rotation.y = -a; dsh.castShadow = false; } }
+flatRoad(center, new THREE.RingGeometry(3.2, 4.6, 48), 0, 0);
+for (let k = 0; k < 28; k++) { const a = (k / 28) * Math.PI * 2; dashAt(center, Math.cos(a) * RW, Math.sin(a) * RW, -a); }
 cyl(center, 1.3, 1.5, 0.5, 0xd9cbb4, 0, 0, 0, 10);
 cyl(center, 1.05, 1.05, 0.12, 0x9fcfd0, 0, 0.45, 0, 10);
 cyl(center, 0.18, 0.25, 1.2, 0xd9cbb4, 0, 0.5, 0);
 ball(center, 0.35, 0xbfe2e2, 0, 1.85, 0);
 const flag = box(center, 1.4, 0.8, 0.04, C.roof, 2.1, 3.3, -1.6);
 cyl(center, 0.06, 0.06, 4.2, 0xdddddd, 1.4, 0, -1.6, 6);
-// 橋的方位是 front + (2i+1)π/N，所以 mid(k) 一定落在兩座橋中間；行走環道半徑 3.9，建築都放在環道外
+// 外圈環狀道路與連絡道路
+flatRoad(world, new THREE.RingGeometry(RO - 0.7, RO + 0.7, 120), 0, 0);
+for (let k = 0; k < 64; k++) { const a = (k / 64) * Math.PI * 2; dashAt(world, Math.cos(a) * RO, Math.sin(a) * RO, -a); }
+SPOKES.forEach((a) => radialRoad(a, 4.6, RO - 0.7));
+// 中央區的地點放在兩條建築區方位之間（mid(k)），避開連絡道路
 const mid = (k) => front + (k * 2 * Math.PI) / NI;
 const SPOT = {
-  office: { a: mid(3), r: 6.4, build: bOffice },
-  deadlines: { a: mid(4), r: 6.2, build: bClock },
-  news: { a: mid(2), r: 6, build: bBoard },
-  todo: { a: mid(6), r: 6, build: bTodo },
-  links: { a: mid(0), r: RC * 0.96, build: bDock },
+  office: { a: mid(3), r: 7.4, build: bOffice },
+  deadlines: { a: mid(4), r: 7.2, build: bClock },
+  news: { a: mid(2), r: 7, build: bBoard },
+  todo: { a: mid(6), r: 7, build: bTodo },
+  links: { a: mid(0), r: R_ISLE * 0.95, build: bDock },
 };
+radialRoad(mid(0), RO + 0.7, R_ISLE * 0.93); // 通往碼頭的路
 const centerObj = {};
 Object.entries(SPOT).forEach(([id, s]) => {
   const g = new THREE.Group();
   s.build(g);
   g.position.set(Math.cos(s.a) * s.r, 0, Math.sin(s.a) * s.r);
   g.rotation.y = id === "links" ? Math.atan2(Math.cos(s.a), Math.sin(s.a)) : FACE; // 碼頭沿 +z 伸向海面
-  if (id === "office") g.scale.setScalar(NI > 7 ? 0.8 : 0.92); // 島越多，橋越密，課外組要縮小才不會擋到走道
+  if (id === "office") g.scale.setScalar(0.85);
   center.add(g);
   tag(g, { t: "spot", id });
   centerObj[id] = g;
   s.pos = g.position.clone();
 });
-for (let k = 0; k < NI; k++) { const a = ISL[k].a; lampPost(center, Math.cos(a + 0.3) * 4.7, Math.sin(a + 0.3) * 4.7); }
-{
-  let n = 0;
-  for (let i = 0; i < 300 && n < 18; i++) {
-    const a = hash("ca" + i) * Math.PI * 2, r = 4.4 + hash("cr" + i) * (RC * 0.82 - 4.4);
-    if (ISL.some((d) => angOff(a, d.a) < 0.3)) continue;
-    const x = Math.cos(a) * r, z = Math.sin(a) * r;
-    if (Object.values(SPOT).some((s) => Math.hypot(s.pos.x - x, s.pos.z - z) < 2.9)) continue;
-    tree(center, x, z, 0.7 + hash("cs" + i) * 0.5, hash("ck" + i)); n++;
-  }
-}
+for (let k = 0; k < 8; k++) { const a = front + (k + 0.5) * Math.PI / 4; lampPost(center, Math.cos(a) * 5, Math.sin(a) * 5); }
 
-/* ---- 分類島 ---- */
+/* ---- 各行政分類的建築區（沿外圈道路排列） ---- */
 ISL.forEach((d) => {
   const g = new THREE.Group();
   g.position.copy(d.pos);
   world.add(g);
   d.group = g;
-  const L = landmass(g, d.r, hash(d.key) * 10);
-  tag(L.top, { t: "isle", i: d.i });
   const col = new THREE.Color(d.color).getHex();
-  cyl(g, 2.4, 2.4, 0.06, new THREE.Color(d.color).lerp(new THREE.Color(0xfbf3e6), 0.65).getHex(), 0, 0, 0, 20).castShadow = false;
-  const toC = Math.atan2(-d.dir.z, -d.dir.x), len = d.r - 2.2;
-  const path = box(g, len, 0.05, 1.3, C.path, Math.cos(toC) * (2.2 + len / 2), 0, Math.sin(toC) * (2.2 + len / 2));
-  path.rotation.y = -toC; path.castShadow = false;
-  for (let k = 0; k < 3; k++) { const rr2 = 2.6 + (k + 0.5) * (len - 0.8) / 3, dsh = box(g, 0.34, 0.02, 0.06, 0xffffff, Math.cos(toC) * rr2, 0.05, Math.sin(toC) * rr2); dsh.rotation.y = -toC; dsh.castShadow = false; }
+  const lot = cyl(g, 2.7, 2.7, 0.07, new THREE.Color(d.color).lerp(new THREE.Color(0xfbf3e6), 0.6).getHex(), 0, 0, 0, 24);
+  lot.castShadow = false;
+  tag(lot, { t: "isle", i: d.i });
+  // 從外圈道路接到建築區的短車道
+  radialRoad(d.a, RO + 0.7, R_LOT - 1.6, 1.3);
   const b = new THREE.Group();
   (BUILD[d.building] || bHouse)(b, col);
-  b.position.copy(FACE_DIR).multiplyScalar(-0.9);
+  b.position.copy(d.dir).multiplyScalar(0.9); // 建築在車道的另一側，正面朝鏡頭
   b.rotation.y = FACE;
   g.add(b);
   tag(b, { t: "isle", i: d.i });
   d.build = b;
-  d.spot = FACE_DIR.clone().multiplyScalar(2.1);
-  let n = 0;
-  for (let i = 0; i < 200 && n < 9; i++) {
-    const a = hash(d.key + "a" + i) * Math.PI * 2, r = 2.9 + hash(d.key + "r" + i) * (d.r * 0.85 - 2.9);
-    if (angOff(a, toC) < 0.45 || angOff(a, FACE) < 0.2) continue;
-    const x = Math.cos(a) * r, z = Math.sin(a) * r;
-    if (Math.hypot(x - b.position.x, z - b.position.z) < 2.8) continue;
-    tree(g, x, z, 0.65 + hash(d.key + "s" + i) * 0.45, hash(d.key + "k" + i)); n++;
-  }
-  lampPost(g, Math.cos(toC + 0.5) * 2.7, Math.sin(toC + 0.5) * 2.7);
+  d.spot = d.dir.clone().multiplyScalar(-1.7); // 角色站在車道口
+  const perp = new V3(-d.dir.z, 0, d.dir.x);
+  lampPost(g, perp.x * 2.4 - d.dir.x * 1.6, perp.z * 2.4 - d.dir.z * 1.6);
 });
 
-/* ---- 橋 ---- */
-ISL.forEach((d) => {
-  const p0 = d.dir.clone().multiplyScalar(RC * 0.9), p1 = d.dir.clone().multiplyScalar(d.dist - d.r * 0.88);
-  const len = p0.distanceTo(p1), m = p0.clone().add(p1).multiplyScalar(0.5);
-  const g = new THREE.Group();
-  g.position.copy(m); g.rotation.y = -d.a;
-  world.add(g);
-  const plank = mat(0xe0a866), rail = mat(0xa86a3a);
-  const n = Math.round(len / 0.5);
-  for (let k = 0; k < n; k++) {
-    const x = -len / 2 + (k + 0.5) * (len / n), y = Math.sin(((k + 0.5) / n) * Math.PI) * 0.35;
-    mesh(new THREE.BoxGeometry(len / n - 0.06, 0.14, 1.5), plank, x, y - 0.05, 0, g).rotation.y = (hash(d.key + k) - 0.5) * 0.06;
+/* ---- 樹：避開道路、建築區與中央地點 ---- */
+{
+  const roadAngles = [...SPOKES, mid(0)];
+  const nearRadial = (x, z, r) => roadAngles.some((a) => { const along = x * Math.cos(a) + z * Math.sin(a), side = Math.abs(-x * Math.sin(a) + z * Math.cos(a)); return along > 4 && side < 1.6; }) ||
+    ISL.some((d) => { const along = x * Math.cos(d.a) + z * Math.sin(d.a), side = Math.abs(-x * Math.sin(d.a) + z * Math.cos(d.a)); return along > RO && along < R_LOT && side < 1.5; });
+  let n = 0;
+  for (let i = 0; i < 900 && n < 70; i++) {
+    const a = hash("ta" + i) * Math.PI * 2, r = 5.2 + hash("tr" + i) * (R_ISLE - 5.2);
+    if (r > R_ISLE * LAND.wob(a) * 0.9) continue;
+    if (Math.abs(r - RO) < 1.4) continue;
+    const x = Math.cos(a) * r, z = Math.sin(a) * r;
+    if (nearRadial(x, z, r)) continue;
+    if (ISL.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.6)) continue;
+    if (Object.values(SPOT).some((s) => Math.hypot(s.pos.x - x, s.pos.z - z) < 3)) continue;
+    tree(world, x, z, 0.7 + hash("ts" + i) * 0.55, hash("tk" + i)); n++;
   }
-  [-0.78, 0.78].forEach((z) => {
-    for (let k = 0; k <= 4; k++) { const x = -len / 2 + (k * len) / 4, y = Math.sin((k / 4) * Math.PI) * 0.35; cyl(g, 0.07, 0.07, 0.7, rail, x, y - 0.05, z, 5); }
-    mesh(new THREE.BoxGeometry(len, 0.08, 0.08), rail, 0, 0.6, z, g);
-  });
-  [-len / 2 + 0.6, len / 2 - 0.6].forEach((x) => cyl(g, 0.12, 0.12, 1.4, rail, x, -1.5, 0, 6));
-  d.bridge = { p0, p1, len };
-});
+}
 
 /* ---- 海上小島、帆船、雲 ---- */
 const UMB = [0xc8623f, 0xe8b04b, 0x6e8fb5, 0xfbf3e6];
@@ -621,7 +615,7 @@ function addNpc(i, home, rad) {
 }
 // 人數固定上限，不會因為社團或島變多而變擠；站在廣場側邊，避開角色站位與名牌
 const NPC_MAX = 10, SIDE = new V3(-FACE_DIR.z, 0, FACE_DIR.x);
-ISL.filter((d, i) => i < NPC_MAX - 2).forEach((d, i) => addNpc(i, d.pos.clone().add(SIDE.clone().multiplyScalar(i % 2 ? 1.5 : -1.5)), 0.8));
+ISL.filter((d, i) => i < NPC_MAX - 2).forEach((d, i) => { const perp = new V3(-d.dir.z, 0, d.dir.x); addNpc(i, d.pos.clone().add(perp.multiplyScalar(i % 2 ? 1.6 : -1.6)).sub(d.dir.clone().multiplyScalar(0.6)), 0.6); });
 [0, 1].forEach((k) => addNpc(40 + k, new V3(0, 0, 0), 3));
 const NPC_MIN_ZOOM = 1.3; // 全景時隱藏路人，畫面只留島與名牌
 function stepNpcs(dt, t) {
@@ -643,28 +637,30 @@ function stepNpcs(dt, t) {
   });
 }
 
-/* ---------------- 行走：沿著橋走 ---------------- */
+/* ---------------- 行走：沿著道路走 ---------------- */
 let avAt = "C", avPath = [], avGoal = null;
-const ringPt = (a, r = 3.9) => new V3(Math.cos(a) * r, 0, Math.sin(a) * r);
-function bridgePts(d, outbound) {
-  const pts = [], m = Math.ceil(d.bridge.len / 0.4);
-  for (let k = 0; k <= m; k++) { const t = outbound ? k / m : 1 - k / m; const p = d.bridge.p0.clone().lerp(d.bridge.p1, t); p.y = Math.sin(t * Math.PI) * 0.35; pts.push(p); }
-  return pts;
-}
-function arc(a0, a1, r = 3.9) {
+const ringPt = (a, r = RW) => new V3(Math.cos(a) * r, 0, Math.sin(a) * r);
+function arc(a0, a1, r = RW) {
   const pts = [], da = Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)), m = Math.max(1, Math.ceil((Math.abs(da) * r) / 0.4));
   for (let k = 0; k <= m; k++) pts.push(ringPt(a0 + (da * k) / m, r));
   return pts;
 }
+const nearestSpoke = (a) => SPOKES.reduce((b, s) => (angOff(a, s) < angOff(a, b) ? s : b), SPOKES[0]);
 const isleSpot = (d) => d.pos.clone().add(d.spot);
-function isleSide(d) { const perp = new V3(-FACE_DIR.z, 0, FACE_DIR.x), s = Math.sign(perp.dot(d.dir.clone().negate())) || 1; return d.pos.clone().add(perp.multiplyScalar(2.5 * s)); }
+// 路線：建築區 ⇄ 外圈道路 ⇄（連絡道路）⇄ 中央圓環
 function route(to) {
   const pts = [], curA = Math.atan2(av.position.z, av.position.x);
-  if (avAt !== "C") { const d = ISL[avAt]; pts.push(isleSide(d)); pts.push(...bridgePts(d, false)); pts.push(ringPt(d.a)); }
-  else pts.push(ringPt(curA));
-  const fromA = avAt !== "C" ? ISL[avAt].a : curA;
-  if (to === "C") { pts.push(...arc(fromA, front)); pts.push(AV_HOME.clone()); }
-  else { const d = ISL[to]; pts.push(...arc(fromA, d.a)); pts.push(...bridgePts(d, true)); pts.push(isleSide(d)); pts.push(isleSpot(d)); }
+  let posA, onOuter;
+  if (avAt !== "C") { posA = ISL[avAt].a; pts.push(ringPt(posA, RO)); onOuter = true; }
+  else { posA = curA; pts.push(ringPt(curA, RW)); onOuter = false; }
+  if (to === "C") {
+    if (onOuter) { const s = nearestSpoke(posA); pts.push(...arc(posA, s, RO), ringPt(s, RW)); posA = s; }
+    pts.push(...arc(posA, front, RW), AV_HOME.clone());
+  } else {
+    const d = ISL[to];
+    if (!onOuter) { const s = nearestSpoke(d.a); pts.push(...arc(posA, s, RW), ringPt(s, RO)); posA = s; }
+    pts.push(...arc(posA, d.a, RO), isleSpot(d));
+  }
   return pts;
 }
 function walkTo(to, onArrive) {
@@ -674,7 +670,7 @@ function walkTo(to, onArrive) {
 }
 function stepWalk(dt, t) {
   if (!avPath.length) { av.position.y = Math.max(0, av.position.y - dt); return; }
-  let move = 6.5 * dt;
+  let move = 7.5 * dt;
   while (move > 0 && avPath.length) {
     const nx = avPath[0], dir = nx.clone().sub(av.position), dist = dir.length();
     if (dist <= move) { av.position.copy(nx); avPath.shift(); move -= dist; }
@@ -707,8 +703,8 @@ function stepTween(now) {
 // 讓目標落在 HUD 與資訊抽屜都沒蓋住的區域中央
 function freeCenter() {
   const W = innerWidth, H = innerHeight, sh = $("sheet"), desk = W >= 900;
-  let top = $("res").getBoundingClientRect().bottom + 8, bottom = $("dock").getBoundingClientRect().top - 8, left = 0, right = W;
-  if (!sh.hidden) { const r = sh.getBoundingClientRect(); if (desk) { right = r.left - 8; bottom = H - 8; } else { bottom = r.top - 8; top = $("brand").getBoundingClientRect().bottom + 6; } }
+  let top = desk ? 0 : $("brand").getBoundingClientRect().bottom + 8, bottom = H, left = 0, right = desk ? $("rail").getBoundingClientRect().left - 8 : W;
+  if (!sh.hidden) { const r = sh.getBoundingClientRect(); if (desk) right = r.left - 8; else { bottom = r.top - 8; top = 60; } }
   if (bottom - top < 120) bottom = top + 120;
   return { cx: (left + right) / 2, cy: (top + bottom) / 2, W, H };
 }
@@ -850,9 +846,8 @@ function startTour() {
   tourNext();
 }
 function tourNext() {
-  updGo();
   if (!touring) return;
-  if (!tourQ.length) { touring = false; updGo(); openSpot("office"); toast("導覽結束，回到課外組"); return; }
+  if (!tourQ.length) { touring = false; openSpot("office"); toast("導覽結束，回到課外組"); return; }
   openIsle(tourQ.shift(), true);
 }
 
@@ -897,20 +892,20 @@ function saveFile(name, blob, okMsg) {
 }
 const download = (name, text) => saveFile(name, new Blob([text], { type: "text/calendar;charset=utf-8" }), "已下載行事曆檔，開啟即可加入");
 const subUrl = () => (location.protocol === "https:" ? "webcal://" + location.host + location.pathname.replace(/[^/]*$/, "") + "calendar.ics" : "calendar.ics");
-const noTag = (no) => `<span style="font:700 13px var(--f-num);color:var(--orange);margin-right:8px">${no}</span>`;
+const noTag = (no) => `<span style="font:700 13px var(--f-mono);color:var(--terra);margin-right:8px">${no}</span>`;
 
 function dlItems(list, showIsle, openFirst) {
   if (!list.length) return '<p class="empty">目前沒有待辦的截止日。</p>';
   return '<ul class="items">' + list.map((x, k) => {
     const n = daysLeft(x.at), d = isleOf(x.category), l = lvl(n), open = openFirst && k === 0;
-    return `<li class="item ${l === "hot" ? "hl" : ""}" style="--c:${d ? d.color : "var(--orange)"}"><button type="button" aria-expanded="${open}"><span class="dot"></span><span class="nm">${E(x.title)}<small>${fmt(x.at)} 截止${showIsle && d ? "・" + E(d.name) : ""}</small></span><span class="meta ${l}">${n === 0 ? "今天" : "D-" + n}</span><span class="chev">›</span></button>
+    return `<li class="item ${l === "hot" ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="${open}"><span class="dot"></span><span class="nm">${E(x.title)}<small>${fmt(x.at)} 截止${showIsle && d ? "・" + E(d.name) : ""}</small></span><span class="meta ${l}">${n === 0 ? "今天" : "D-" + n}</span><span class="chev">›</span></button>
       <div class="more" ${open ? "" : "hidden"}>${x.detail ? `<p>${E(x.detail)}</p>` : ""}<div class="acts"><a class="btn g" target="_blank" rel="noopener" href="${E(gcal(x))}">Google 日曆</a><button class="btn g" type="button" data-ics="${E(x.id)}">iPhone／其他</button>${x.link ? `<a class="btn g" target="_blank" rel="noopener" href="${E(x.link)}">相關文件 ↗</a>` : ""}${showIsle && d ? `<button class="btn" type="button" data-isle="${d.i}">去${E(d.name)}</button>` : ""}</div></div></li>`;
   }).join("") + "</ul>";
 }
 function newsItems(list) {
   if (!list.length) return '<p class="empty">目前沒有公告。</p>';
   return '<ul class="items">' + list.map((a) => { const d = isleOf(a.tag), nw = !read.includes(a.id);
-    return `<li class="item ${nw ? "hl" : ""}" style="--c:${d ? d.color : "var(--orange)"}"><button type="button" aria-expanded="${nw}"><span class="dot"></span><span class="nm">${E(a.title)}<small>${[a.date, d && d.name].filter(Boolean).map(E).join("・")}</small></span><span class="meta ${nw ? "hot" : ""}">${a.pinned ? "置頂" : nw ? "NEW" : ""}</span><span class="chev">›</span></button><div class="more" ${nw ? "" : "hidden"}>${a.body ? `<p>${E(a.body)}</p>` : ""}${a.link ? `<div class="acts"><a class="btn t" target="_blank" rel="noopener" href="${E(a.link)}">查看公告 ↗</a></div>` : ""}</div></li>`; }).join("") + "</ul>";
+    return `<li class="item ${nw ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="${nw}"><span class="dot"></span><span class="nm">${E(a.title)}<small>${[a.date, d && d.name].filter(Boolean).map(E).join("・")}</small></span><span class="meta ${nw ? "hot" : ""}">${a.pinned ? "置頂" : nw ? "NEW" : ""}</span><span class="chev">›</span></button><div class="more" ${nw ? "" : "hidden"}>${a.body ? `<p>${E(a.body)}</p>` : ""}${a.link ? `<div class="acts"><a class="btn t" target="_blank" rel="noopener" href="${E(a.link)}">查看公告 ↗</a></div>` : ""}</div></li>`; }).join("") + "</ul>";
 }
 function markRead(list) { let ch = false; list.forEach((a) => { if (!read.includes(a.id)) { read.push(a.id); ch = true; } }); if (ch) { LS.set("read", read); updHud(); updMarkers(); buildLabels(); } }
 
@@ -948,7 +943,7 @@ function renderOffice() {
   const st = officeStatus(), p = tw(), slots = D.office.hours.slots.map((s) => s.join("–")).join("、");
   const rows = [1, 2, 3, 4, 5, 6, 0].map((wd) => { const on = D.office.hours.days.includes(wd); return `<tr class="${wd === p.wd ? "today" : ""}"><td>週${WEEK[wd]}${wd === p.wd ? "（今天）" : ""}</td><td class="${on ? "" : "closed"}">${on ? slots : "不辦公"}</td></tr>`; }).join("");
   const html = `${head("🏛", "CENTER 00 · 群島中心", D.office.name)}
-    <p class="lead">${ISL.length} 座行政島都有橋通到這裡，有問題就回來找我們。</p>
+    <p class="lead">島上 ${ISL.length} 個行政建築區都有道路通到這裡，有問題就回來找我們。</p>
     <div class="bigst"><span class="lamp ${st.open ? "on" : "off"}"></span>${E(st.text)}</div>
     <div class="tags"><span class="tag">週一至週五</span><span class="tag">9:00–12:00</span><span class="tag">13:30–17:00</span>${stampTag("office")}</div>
     <div class="sec"><h4>辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
@@ -975,7 +970,7 @@ function todoItems(list) {
   return '<ul class="items">' + list.map((x) => {
     const done = !!todoDone[x.key], d = isleOf(x.island);
     const btns = (x.links || []).map((l) => (l[1] ? `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>` : `<span class="btn g pend" aria-disabled="true">${E(l[0])}・連結待補</span>`)).join("");
-    return `<li class="item todo ${done ? "done" : ""}" style="--c:${d ? d.color : "var(--orange)"}"><label class="row"><input type="checkbox" data-todo="${E(x.key)}" ${done ? "checked" : ""} aria-label="完成：${E(x.title)}"><span class="nm">${E(x.title)}${x.note ? `<small>${E(x.note)}</small>` : ""}</span><span class="meta">${x.when ? E(x.when) : ""}</span><span></span></label>${btns ? `<div class="more"><div class="acts">${btns}</div></div>` : ""}</li>`;
+    return `<li class="item todo ${done ? "done" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><label class="row"><input type="checkbox" data-todo="${E(x.key)}" ${done ? "checked" : ""} aria-label="完成：${E(x.title)}"><span class="nm">${E(x.title)}${x.note ? `<small>${E(x.note)}</small>` : ""}</span><span class="meta">${x.when ? E(x.when) : ""}</span><span></span></label>${btns ? `<div class="more"><div class="acts">${btns}</div></div>` : ""}</li>`;
   }).join("") + "</ul>";
 }
 let todoSem = null;
@@ -1069,8 +1064,8 @@ function shoot() {
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H + 150;
   const c = cv.getContext("2d");
   c.drawImage(src, 0, 0, W, H);
-  c.fillStyle = "#FFF8E7"; c.fillRect(0, H, W, 150);
-  c.fillStyle = "#FF9A1F"; c.font = `800 56px ${MONO}`; c.fillText("CLUB ON.", 40, H + 74);
+  c.fillStyle = "#FBF6EE"; c.fillRect(0, H, W, 150);
+  c.fillStyle = "#C8623F"; c.font = "900 54px Archivo, sans-serif"; c.fillText("CLUB ON.", 40, H + 72);
   c.fillStyle = "#2A211C"; c.font = `900 34px ${FONT}`; c.fillText(`${me.name || "我"}・${me.club || "體能性社團"}・${me.role}`, 40, H + 124);
   c.textAlign = "right"; c.fillStyle = "#7A6B60"; c.font = `700 24px ${FONT}`;
   const p = tw(); c.fillText(`東海體能社團行政群島・集章 ${Object.keys(stamps).length}/${STAMPS.length}・${p.y}/${p.m}/${p.d}`, W - 40, H + 124);
@@ -1142,9 +1137,6 @@ function checkNotify() {
 
 /* ---------------- HUD、跑馬燈、對話 ---------------- */
 $("bHome").addEventListener("click", goHome);
-$("brand").addEventListener("click", () => openChar(panelView && panelView.startsWith("char") ? undefined : "look"));
-$("bGo").addEventListener("click", () => { if (touring) { touring = false; toast("已停止導覽"); updGo(); return; } closeSheet(true); startTour(); updGo(); });
-function updGo() { $("goTxt").textContent = touring ? "停止導覽" : "逛群島"; }
 $("bChar").addEventListener("click", () => (panelView && panelView.startsWith("char") ? closeSheet() : openChar()));
 $("bList").addEventListener("click", () => (panelView === "list" ? closeSheet() : renderList()));
 $("bDl").addEventListener("click", () => (panelView === "deadlines" ? closeSheet() : openSpot("deadlines")));
@@ -1153,7 +1145,6 @@ $("bTodo").addEventListener("click", () => (panelView === "todo" ? closeSheet() 
 $("pOffice").addEventListener("click", () => openSpot("office"));
 $("pNext").addEventListener("click", () => { const n = upcoming()[0], d = n && isleOf(n.category); d ? openIsle(d.i) : openSpot("deadlines"); });
 
-const PROP_EMOJI = { clipboard: "📋", basketball: "🏀", volleyball: "🏐", soccer: "⚽", bat: "⚾", rugby: "🏉", racket: "🏸", frisbee: "🥏", bowling: "🎳", bow: "🏹", helmet: "🏇", sword: "🤺", belt: "🥋", gloves: "🥊", dumbbell: "🏋️", mat: "🧘", bib: "🏃", backpack: "🥾", ring: "🏊", skateboard: "🛹", skates: "⛸️", pompom: "📣", kit: "⛑️" };
 function updHud() {
   const st = officeStatus();
   $("lamp").className = "lamp " + (st.open ? "on" : "off");
@@ -1164,13 +1155,7 @@ function updHud() {
   $("dlN").hidden = !soon; $("dlN").textContent = soon;
   const u = unread().length; $("newsN").hidden = !u; $("newsN").textContent = u;
   const tl = todoLeft(); $("todoN").hidden = !tl; $("todoN").textContent = tl;
-  const s = Object.keys(stamps).length;
-  $("stampN").textContent = `${s}/${STAMPS.length}`; $("pBar").style.width = `${(s / STAMPS.length) * 100}%`;
-  $("pName").textContent = me.name ? `${me.name}的幹部日誌` : "我的幹部日誌";
-  $("pSub").textContent = me.club ? `${me.club}・${me.role}` : "點這裡建立角色（選填）";
-  $("pAv").textContent = PROP_EMOJI[myProp()] || "🙂";
-  $("dlR").textContent = n ? (daysLeft(n.at) === 0 ? "今天截止" : "D-" + daysLeft(n.at)) : "截止日"; $("dlR").classList.toggle("hot", !!n && daysLeft(n.at) <= 3);
-  $("todoR").textContent = tl ? `待辦 ${tl}` : "待辦完成"; $("newsR").textContent = u ? `公告 ${u}` : "公告";
+  const s = Object.keys(stamps).length; $("stampN").hidden = !s; $("stampN").textContent = `${s}/${STAMPS.length}`;
 }
 let tkI = 0, tkCur = null;
 function tickerMsgs() {
@@ -1291,10 +1276,10 @@ async function start() {
   else if (!LS.get("intro", false)) {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
-      ["每座島是一類行政", `${ISL.length} 座小島各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一座島，或用左下的「清單」探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `群島中間是課外組，旁邊有截止日鐘塔、公告欄、待辦看板和碼頭。${ISL.length} 座島都有橋通到這裡，有問題就回來。`],
+      ["每一區是一類行政", `島上有 ${ISL.length} 個建築區，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
+      ["中心是課外組", `島的中央是課外組，旁邊有截止日鐘塔、公告欄、待辦看板和碼頭。外圈道路連到 ${ISL.length} 個行政建築區，有問題就回來。`],
       ["提醒會浮在島上", "島的名牌上有 D-倒數；7 天內截止，島上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
-      ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的島，隨時可以點左上的幹部日誌，或左下的「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
+      ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的島，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
   }
 }
