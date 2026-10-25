@@ -69,7 +69,7 @@ const CENTER_SPOTS = [
   { id: "office", no: "00", name: "課外組", icon: "🏛" },
   { id: "deadlines", no: "◷", name: "截止日鐘塔", icon: "⏰" },
   { id: "news", no: "✎", name: "公告欄", icon: "📌" },
-  { id: "todo", no: "✓", name: "待辦看板", icon: "✅" },
+  { id: "todo", no: "✓", name: "社團小秘書", icon: "🧑‍💼" },
   { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
 ];
 const STAMPS = [...CENTER_SPOTS.map((s) => ({ id: s.id, name: s.name, no: s.no })), ...ISL.map((d) => ({ id: "isle:" + d.key, name: d.name, no: d.no }))];
@@ -382,23 +382,25 @@ function bHall(g, col) {
   for (let k = 0; k < 6; k++) box(g, 0.3, 0.35, 0.3, C.wood, -1.1 + (k % 3) * 1.1, 0, 2.1 + Math.floor(k / 3) * 0.55);
   g.userData.h = 3.6;
 }
+// 社團小秘書：拿著資料夾板的 NPC，頭上的對話泡泡顯示本學期還剩幾項待辦
 function bTodo(g) {
-  [-0.9, 0.9].forEach((x) => { box(g, 0.12, 2.7, 0.12, C.dark, x, 0, 0).rotation.x = -0.1; });
-  box(g, 0.12, 2.5, 0.12, C.dark, 0, 0, -0.55).rotation.x = 0.28;
-  box(g, 2.3, 1.75, 0.1, 0xfffdf9, 0, 0.85, 0.05);
-  const face = textPlane(2.1, 1.55, (c, w, h) => {
-    const sem = curSem(), list = todoList(sem), left = list.filter((x) => !todoDone[x.key]);
-    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.15}px ${FONT}`; c.fillText(`${SEM_NAME[sem]}待辦`, 18, h * 0.19);
-    list.slice(0, 4).forEach((x, i) => {
-      const y = h * (0.33 + i * 0.15), done = !!todoDone[x.key];
-      c.strokeStyle = "#2A211C"; c.lineWidth = 5; c.strokeRect(20, y - h * 0.05, h * 0.09, h * 0.09);
-      if (done) { c.strokeStyle = "#5F8F5A"; c.lineWidth = 8; c.beginPath(); c.moveTo(24, y); c.lineTo(36, y + 12); c.lineTo(56, y - 14); c.stroke(); }
-      c.fillStyle = done ? "#9A8C80" : "#2A211C"; c.font = `700 ${h * 0.08}px ${FONT}`; c.fillText(x.title.length > 13 ? x.title.slice(0, 12) + "…" : x.title, 20 + h * 0.14, y + h * 0.035);
-    });
-    c.fillStyle = "#7A6B60"; c.font = `700 ${h * 0.08}px ${FONT}`; c.fillText(left.length ? `還有 ${left.length} 項` : "全部完成！", 20, h * 0.95);
+  cyl(g, 0.9, 1, 0.18, 0xe2d6c3, 0, 0, 0, 16);
+  const p = person({ shirt: "#E8B04B", hair: "#3A2A20", skin: "#F6D7BE", prop: "clipboard" });
+  p.scale.setScalar(1.3); p.position.y = 0.18;
+  g.add(p);
+  g.userData.npc = p;
+  const bubble = textPlane(3.8, 1.5, (c, w, h) => {
+    const left = todoLeft(), sem = SEM_NAME[curSem()];
+    const bh = h * 0.78;
+    rr(c, 6, 6, w - 12, bh - 6, 34); c.fillStyle = "#FFFDF9"; c.fill(); c.lineWidth = 8; c.strokeStyle = "#2A211C"; c.stroke();
+    c.beginPath(); c.moveTo(w / 2 - 22, bh - 4); c.lineTo(w / 2, h - 6); c.lineTo(w / 2 + 22, bh - 4); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = "#FFFDF9"; c.fillRect(w / 2 - 18, bh - 14, 36, 14);
+    c.textAlign = "center"; c.textBaseline = "middle";
+    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.2}px ${FONT}`; c.fillText("社團小秘書", w / 2, bh * 0.33);
+    c.fillStyle = "#2A211C"; c.font = `900 ${h * 0.19}px ${FONT}`; c.fillText(left ? `${sem}還有 ${left} 項待辦` : `${sem}待辦全部完成！`, w / 2, bh * 0.7);
   });
-  face.position.set(0, 1.72, 0.11); g.add(face);
-  g.userData.sign = face; g.userData.h = 3.3;
+  bubble.position.set(0, 3.55, 0); g.add(bubble);
+  g.userData.sign = bubble; g.userData.h = 4.5;
 }
 function bHouse(g, col) {
   box(g, 2.4, 1.6, 2, C.wall, 0, 0, 0);
@@ -1041,8 +1043,8 @@ let todoSem = null;
 function renderTodo(sem) {
   todoSem = sem || todoSem || curSem();
   const list = todoList(todoSem), n = list.filter((x) => todoDone[x.key]).length;
-  const html = `${head("✅", "TO-DO · 社團行政待辦", "社團行政待辦清單")}
-    <p class="lead">每學期都要完成的社團行政事項，完成後打勾。</p>
+  const html = `${head("🧑‍💼", "SECRETARY · 社團小秘書", "社團行政待辦清單")}
+    <p class="lead">我是社團小秘書！每學期要完成的行政事項都幫你記著，完成後打勾。</p>
     <div class="tabs two" role="tablist">${["s1", "s2"].map((s) => `<button type="button" role="tab" data-sem="${s}" aria-selected="${todoSem === s}">${SEM_NAME[s]}${s === curSem() ? "・本學期" : ""}</button>`).join("")}</div>
     <div class="sec"><h4>完成進度・<span id="todoProg">${n}/${list.length}</span></h4><div class="prog"><i id="todoBar" style="width:${list.length ? (n / list.length) * 100 : 0}%"></i></div></div>
     <div class="tags">${stampTag("todo")}</div>
@@ -1259,7 +1261,7 @@ function teacherTalk() {
   const n = upcoming()[0], st = officeStatus(), L = [];
   if (n) { const d = isleOf(n.category); L.push(["最近的截止日", `「${n.title}」還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`]); }
   if (unread().length) L.push(["有新公告", `公告欄有 ${unread().length} 則你還沒看過的公告。`]);
-  if (todoLeft()) L.push(["行政待辦", `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政待辦，到待辦看板可以一項一項打勾。`]);
+  if (todoLeft()) L.push(["行政待辦", `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政待辦，找社團小秘書可以一項一項打勾。`]);
   L.push(["隨時來找我們", `課外組${st.text}。週一至週五 9:00–12:00、13:30–17:00 都可以來。`, "好"]);
   talk("課外組老師", L);
 }
@@ -1305,6 +1307,7 @@ function loop(now) {
     newsMarker.rotation.y += dt * 1.5;
     const boat = centerObj.links.userData.boat; boat.position.y = -1.15 + Math.sin(t * 1.4) * 0.08; boat.rotation.z = Math.sin(t * 1.1) * 0.05;
     teacher.position.y = Math.abs(Math.sin(t * 2)) * 0.03;
+    const sec = centerObj.todo.userData.npc; sec.position.y = 0.18 + Math.abs(Math.sin(t * 2.2)) * 0.05; sec.rotation.y = Math.sin(t * 0.8) * 0.25;
     selRing.rotation.z += dt * 1.2;
     stepNpcs(dt, t);
   }
@@ -1341,7 +1344,7 @@ async function start() {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每一區是一類行政", `島上有 ${ISL.length} 個建築區，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `島的中央是課外組，旁邊有截止日鐘塔、公告欄、待辦看板和碼頭。外圈道路連到 ${ISL.length} 個行政建築區，有問題就回來。`],
+      ["中心是課外組", `島的中央是課外組，旁邊有截止日鐘塔、公告欄、社團小秘書和碼頭。外圈道路連到 ${ISL.length} 個行政建築區，有問題就回來。`],
       ["提醒會浮在島上", "島的名牌上有 D-倒數；7 天內截止，島上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的島，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
