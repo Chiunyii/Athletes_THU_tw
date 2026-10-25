@@ -211,7 +211,7 @@ var SITE_DATA = {
       },
       {
         id: "t1-bankbook-doc", island: "經費", title: "繳交變更存摺文件至課外組核章", note: "",
-        links: [["相關文件", ""]],
+        links: [["文件下載", "https://activity.thu.edu.tw/upload/activity/downloads_upload/%E7%A4%BE%E5%9C%98%E7%B6%93%E8%B2%BB%E9%83%B5%E5%B1%80%E5%B0%88%E6%88%B6(%E6%94%B9%E9%81%B8%E8%AE%8A%E6%9B%B4%E6%88%B6%E5%90%8D%E7%94%A8).doc"]],
       },
       {
         id: "t1-bankbook-upload", island: "經費", title: "存摺上傳", note: "",
