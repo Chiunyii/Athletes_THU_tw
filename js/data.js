@@ -46,14 +46,50 @@ var SITE_DATA = {
    * building 可用：track、tent、bank、gym、aid、store、podium、house
    * --------------------------------------------------------- */
   islands: [
-    { key: "行政", name: "行政島", icon: "📋", color: "#5D9FE3", building: "track", tagline: "幹部交接、名冊繳交，新任幹部的第一站。" },
-    { key: "活動", name: "活動島", icon: "⛺", color: "#F2A65A", building: "tent", tagline: "辦活動前要送什麼、活動後要交什麼。" },
-    { key: "經費", name: "經費島", icon: "💰", color: "#F4C95D", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。" },
-    { key: "場地", name: "場地島", icon: "🏟", color: "#5FBFA8", building: "gym", tagline: "練習場地借用與使用規範。" },
-    { key: "安全", name: "安全島", icon: "⛑", color: "#F28C72", building: "aid", tagline: "保險、急救、校外活動安全，體能性社團最重要的事。" },
-    { key: "器材", name: "器材島", icon: "🏐", color: "#B98BD9", building: "store", tagline: "器材清冊、借用與保管。" },
-    { key: "評鑑", name: "評鑑島", icon: "🏆", color: "#E88AAE", building: "podium", tagline: "成果與評鑑資料，平常就要存。" },
+    { key: "行政", name: "行政島", icon: "📋", color: "#6E8FB5", building: "track", tagline: "幹部交接、名冊繳交，新任幹部的第一站。" },
+    { key: "活動", name: "活動島", icon: "⛺", color: "#D98B4E", building: "tent", tagline: "辦活動前要送什麼、活動後要交什麼。" },
+    { key: "經費", name: "經費島", icon: "💰", color: "#D9B24E", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。" },
+    { key: "場地", name: "場地島", icon: "🏟", color: "#6FA38C", building: "gym", tagline: "練習場地借用與使用規範。" },
+    { key: "安全", name: "安全島", icon: "⛑", color: "#C8623F", building: "aid", tagline: "保險、急救、校外活動安全，體能性社團最重要的事。" },
+    { key: "器材", name: "器材島", icon: "🏐", color: "#9C83B5", building: "store", tagline: "器材清冊、借用與保管。" },
+    { key: "評鑑", name: "評鑑島", icon: "🏆", color: "#C97A8F", building: "podium", tagline: "成果與評鑑資料，平常就要存。" },
   ],
+
+  /* ---------------------------------------------------------
+   * 角色身分：體能性社團（資料來源：東海大學社團島）
+   * prop 是角色手上的道具：basketball、soccer、volleyball、rugby、bat、racket、bow、
+   * sword、gloves、belt、frisbee、skateboard、skates、mat、backpack、dumbbell、ring、
+   * bowling、bib、pompom、kit、helmet；新增社團時挑一個最接近的即可
+   * --------------------------------------------------------- */
+  clubs: [
+    { name: "籃球社", prop: "basketball" },
+    { name: "排球社", prop: "volleyball" },
+    { name: "足球社", prop: "soccer" },
+    { name: "棒球社", prop: "bat" },
+    { name: "橄欖球社", prop: "rugby" },
+    { name: "東海羽球聯盟", prop: "racket" },
+    { name: "飛盤社", prop: "frisbee" },
+    { name: "保齡球社", prop: "bowling" },
+    { name: "射箭社", prop: "bow" },
+    { name: "古代騎射社", prop: "bow" },
+    { name: "馬術社", prop: "helmet" },
+    { name: "劍道社", prop: "sword" },
+    { name: "八方傳統武術社", prop: "sword" },
+    { name: "跆拳社", prop: "belt" },
+    { name: "空手道社", prop: "belt" },
+    { name: "拳擊社", prop: "gloves" },
+    { name: "肌力與體能社", prop: "dumbbell" },
+    { name: "瑜珈社", prop: "mat" },
+    { name: "馬拉松社", prop: "bib" },
+    { name: "登山社", prop: "backpack" },
+    { name: "水上活動社", prop: "ring" },
+    { name: "自由潛水社", prop: "ring" },
+    { name: "滑板社", prop: "skateboard" },
+    { name: "風之舞溜冰社", prop: "skates" },
+    { name: "競技啦啦社", prop: "pompom" },
+    { name: "運動防護社", prop: "kit" },
+  ],
+  roles: ["社長", "副社長", "財務", "活動長", "器材長", "公關", "幹部", "社員"],
 
   /* ---------------------------------------------------------
    * 截止日：會依日期自動排序、倒數，並可加入行事曆

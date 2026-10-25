@@ -1,5 +1,6 @@
 /* 體能社團行政群島：Three.js
  * 中心島 = 課外組（辦公室、截止日鐘塔、公告欄、碼頭），外圍七座島 = 行政分類。
+ * 玩家先建立角色（所屬體能性社團、職位、外觀），角色會走過橋到各島蓋章。
  * 內容全部來自 js/data.js；這個檔案只負責群島、角色與資訊卡。 */
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -15,6 +16,7 @@ const LS = {
   get(k, d) { try { const v = localStorage.getItem("thuarch:" + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("thuarch:" + k, JSON.stringify(v)); } catch {} },
 };
+const pad2 = (n) => String(n).padStart(2, "0");
 
 /* ---------------- 時間（一律台灣時間） ---------------- */
 function parse(s) {
@@ -29,7 +31,7 @@ function tw(d = new Date()) {
 }
 const dayKey = (d) => { const p = tw(d); return Date.UTC(p.y, p.m - 1, p.d); };
 const daysLeft = (due) => Math.round((dayKey(due) - dayKey(new Date())) / 864e5);
-const fmt = (d) => { const p = tw(d); return `${p.m}/${p.d}（${WEEK[p.wd]}）${String(p.h).padStart(2, "0")}:${String(p.min).padStart(2, "0")}`; };
+const fmt = (d) => { const p = tw(d); return `${p.m}/${p.d}（${WEEK[p.wd]}）${pad2(p.h)}:${pad2(p.min)}`; };
 const toMin = (s) => { const [h, m] = s.split(":"); return +h * 60 + +m; };
 function officeStatus() {
   const h = D.office.hours, p = tw(), cur = p.h * 60 + p.min, openToday = h.days.includes(p.wd);
@@ -53,19 +55,31 @@ let read = LS.get("read", []);
 let stamps = LS.get("stamps", {});
 let tasks = LS.get("tasks", {});
 const unread = () => anns.filter((a) => !read.includes(a.id));
+const CLUBS = D.clubs || [];
+const ROLES = D.roles || ["社長", "幹部", "社員"];
+// 每種行政分類主要由哪些職位負責（用來提醒「這是你的事」）
+const DUTY = { 行政: ["社長", "副社長"], 活動: ["社長", "活動長"], 經費: ["社長", "財務"], 場地: ["活動長", "器材長"], 安全: ["社長", "副社長", "活動長", "幹部"], 器材: ["器材長", "幹部"], 評鑑: ["社長", "公關"] };
 
-const ISL = D.islands.map((d, i) => ({ ...d, i, guides: D.guides.filter((g) => g.island === d.key) }));
+const ISL = D.islands.map((d, i) => ({ ...d, i, no: pad2(i + 1), guides: D.guides.filter((g) => g.island === d.key) }));
 const isleOf = (key) => ISL.find((d) => d.key === key);
 const isleDl = (d) => upcoming().filter((x) => x.category === d.key);
 const isleNews = (d) => anns.filter((a) => a.tag === d.key);
 const lvl = (n) => (n <= 3 ? "hot" : n <= 7 ? "warn" : "ok");
 const CENTER_SPOTS = [
-  { id: "office", name: "課外組", icon: "🏛", c: "#8FCB8B" },
-  { id: "deadlines", name: "截止日鐘塔", icon: "⏰", c: "#F4C95D" },
-  { id: "news", name: "公告欄", icon: "📌", c: "#F28C72" },
-  { id: "links", name: "出航碼頭", icon: "⛵", c: "#5FC4D6" },
+  { id: "office", no: "00", name: "課外組", icon: "🏛" },
+  { id: "deadlines", no: "◷", name: "截止日鐘塔", icon: "⏰" },
+  { id: "news", no: "✎", name: "公告欄", icon: "📌" },
+  { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
 ];
-const STAMPS = [...CENTER_SPOTS.map((s) => ({ id: s.id, name: s.name, icon: s.icon, c: s.c })), ...ISL.map((d) => ({ id: "isle:" + d.key, name: d.name, icon: d.icon, c: d.color }))];
+const STAMPS = [...CENTER_SPOTS.map((s) => ({ id: s.id, name: s.name, no: s.no })), ...ISL.map((d) => ({ id: "isle:" + d.key, name: d.name, no: d.no }))];
+
+/* 角色 */
+const SHIRTS = ["#C8623F", "#3E6E9E", "#5F8F5A", "#E8B04B", "#7E5A9B", "#2A211C", "#E9E2D6", "#C97A8F"];
+const HAIRS = ["#2B2118", "#5A3B28", "#8A5A3B", "#C9A36A", "#1F2A44"];
+const SKINS = ["#F6D7BE", "#E9BC98", "#C98E66", "#8E5B3C"];
+let me = Object.assign({ name: "", club: "", role: "社員", shirt: SHIRTS[1], hair: HAIRS[0], skin: SKINS[0] }, LS.get("me", {}));
+const myProp = () => (CLUBS.find((c) => c.name === me.club) || {}).prop;
+const myDuty = (d) => !!me.club && (DUTY[d.key] || []).includes(me.role);
 
 /* ---------------- Three.js 基本 ---------------- */
 let renderer;
@@ -82,11 +96,11 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 
 /* 群島佈局：中心島 + 七座島圍成一圈，正前方（鏡頭方向）留給碼頭 */
-const FACE = Math.PI / 4;                         // 預設鏡頭所在方位；建築都轉向這裡
+const FACE = Math.PI / 4;
 const FACE_DIR = new V3(Math.sin(FACE), 0, Math.cos(FACE));
-const RC = 9;                                    // 中心島半徑
+const RC = 9;
 const NI = ISL.length;
-const front = Math.atan2(FACE_DIR.z, FACE_DIR.x); // xz 平面上的鏡頭方位角
+const front = Math.atan2(FACE_DIR.z, FACE_DIR.x);
 ISL.forEach((d, i) => {
   d.r = 5;
   d.a = front + Math.PI / NI + (i * 2 * Math.PI) / NI;
@@ -96,15 +110,15 @@ ISL.forEach((d, i) => {
 });
 const WORLD_R = RC + 2 * 5 + 4.5 + 1;
 
-const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, -200, 400);
+const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, -300, 500);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.screenSpacePanning = false;
 controls.minPolarAngle = 0.5;
-controls.maxPolarAngle = 1.15;
+controls.maxPolarAngle = 1.2;
 controls.minZoom = 0.7;
-controls.maxZoom = 4;
+controls.maxZoom = 6;
 controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
 controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
 controls.addEventListener("change", () => {
@@ -114,8 +128,8 @@ controls.addEventListener("change", () => {
 const HOME = { phi: 0.98, theta: FACE };
 const homeZoom = () => (innerWidth >= 900 ? 0.84 : 1);
 
-const hemi = new THREE.HemisphereLight(0xeaf8ff, 0x6b8f5a, 1.15);
-const sun = new THREE.DirectionalLight(0xfff2dc, 2.1);
+const hemi = new THREE.HemisphereLight(0xfff6ea, 0x8a9a72, 1.2);
+const sun = new THREE.DirectionalLight(0xfff0dc, 2);
 sun.position.set(25, 40, 12);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -127,7 +141,7 @@ scene.add(hemi, sun);
 let night = 0;
 function applySky() {
   const h = tw().h;
-  const s = h >= 6 && h < 17 ? { bg: 0xbde5f4, sun: 2.1, hemi: 1.15, n: 0 } : h >= 17 && h < 19 ? { bg: 0xf6caa6, sun: 1.4, hemi: 0.9, n: 0.5 } : h === 5 ? { bg: 0xd3dcf0, sun: 1.2, hemi: 0.85, n: 0.4 } : { bg: 0x2c4472, sun: 0.65, hemi: 0.7, n: 1 };
+  const s = h >= 6 && h < 17 ? { bg: 0xe6eadf, sun: 2, hemi: 1.2, n: 0 } : h >= 17 && h < 19 ? { bg: 0xf1d6bd, sun: 1.4, hemi: 0.95, n: 0.5 } : h === 5 ? { bg: 0xdcdfe6, sun: 1.2, hemi: 0.9, n: 0.4 } : { bg: 0x3b4763, sun: 0.7, hemi: 0.75, n: 1 };
   scene.background = new THREE.Color(s.bg);
   document.body.style.background = "#" + s.bg.toString(16).padStart(6, "0");
   sun.intensity = s.sun; hemi.intensity = s.hemi; night = s.n;
@@ -135,7 +149,8 @@ function applySky() {
 
 /* ---- 低多邊形工具 ---- */
 const MC = new Map();
-const mat = (c, x = {}) => { const k = c + JSON.stringify(x); if (!MC.has(k)) MC.set(k, new THREE.MeshStandardMaterial({ color: c, flatShading: true, roughness: 0.85, ...x })); return MC.get(k); };
+const mat = (c, x = {}) => { const k = c + JSON.stringify(x); if (!MC.has(k)) MC.set(k, new THREE.MeshStandardMaterial({ color: c, flatShading: true, roughness: 0.88, ...x })); return MC.get(k); };
+const soft = (c) => mat(c, { flatShading: false, roughness: 0.7 });
 function mesh(geo, c, x = 0, y = 0, z = 0, parent) {
   const m = new THREE.Mesh(geo, c && c.isMaterial ? c : mat(c));
   m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
@@ -147,8 +162,8 @@ const cyl = (p, rt, rb, h, c, x, y, z, seg = 8) => mesh(new THREE.CylinderGeomet
 const cone = (p, r, h, c, x, y, z, seg = 6) => mesh(new THREE.ConeGeometry(r, h, seg), c, x, y + h / 2, z, p);
 const ball = (p, r, c, x, y, z, det = 0) => mesh(new THREE.IcosahedronGeometry(r, det), c, x, y, z, p);
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
-const FONT = '"Zen Maru Gothic", "Noto Sans TC", sans-serif';
-const NUMF = '"Barlow Condensed", "Arial Narrow", sans-serif';
+const FONT = '"Noto Sans TC", "PingFang TC", sans-serif';
+const MONO = '"Space Mono", ui-monospace, monospace';
 function textPlane(w, h, draw) {
   const cv = document.createElement("canvas");
   cv.width = Math.round(w * 128); cv.height = Math.round(h * 128);
@@ -160,19 +175,30 @@ function textPlane(w, h, draw) {
   return m;
 }
 const rr = (c, x, y, w, h, r) => { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); };
+const C = { grass: 0xb7c893, sand: 0xebddbe, cliff: 0xb49a7a, plaza: 0xf3e9d6, path: 0xe8d9bc, wall: 0xfbf3e6, roof: 0xc8623f, wood: 0xb98a5e, dark: 0x6e4a33, tree1: 0x7e9c5a, tree2: 0x93ae6a, tree3: 0xa3bb78, pine: 0x6d8c55 };
 
-/* ---- 海 ---- */
-const seaGeo = new THREE.PlaneGeometry(320, 320, 80, 80);
+/* ---- 海、遠山 ---- */
+const seaGeo = new THREE.PlaneGeometry(360, 360, 80, 80);
 seaGeo.rotateX(-Math.PI / 2);
 const seaBase = seaGeo.attributes.position.array.slice();
-const sea = mesh(seaGeo, mat(0x5fc4d6, { roughness: 0.45 }), 0, -1.15, 0);
+const sea = mesh(seaGeo, mat(0x86b7b8, { roughness: 0.5 }), 0, -1.15, 0);
 sea.castShadow = false;
 scene.add(sea);
+// 群島後方的山：平行投影下會出現在畫面上方，像政策島背後的山林
+for (let i = 0; i < 16; i++) {
+  const a = front + Math.PI + (i / 15 - 0.5) * 2.6, r = 70 + hash("mr" + i) * 22, h = 10 + hash("mh" + i) * 14, rad = 12 + hash("md" + i) * 10;
+  const m = cone(scene, rad, h, [0xa9b98c, 0x9fb083, 0xb4c299][i % 3], Math.cos(a) * r, -1.3, Math.sin(a) * r, 7);
+  m.castShadow = false; m.rotation.y = hash("mo" + i) * 3;
+  for (let k = 0; k < 5; k++) {
+    const ta = a + (hash("ta" + i + k) - 0.5) * 0.18, tr = r - rad * (0.3 + hash("tr" + i + k) * 0.5);
+    cone(scene, 1.2, 3.4, C.pine, Math.cos(ta) * tr, -1.2 + h * 0.2 + hash("ty" + i + k) * h * 0.3, Math.sin(ta) * tr, 5).castShadow = false;
+  }
+}
 
 /* ---- 島 ---- */
 const pickables = [];
 const tag = (obj, info) => { obj.traverse((o) => { if (o.isMesh) o.userData.pick = info; }); pickables.push(obj); };
-function landmass(parent, r, seed, grass) {
+function landmass(parent, r, seed) {
   const wob = (a) => 1 + 0.07 * Math.sin(3 * a + seed) + 0.045 * Math.sin(5 * a + seed * 1.7);
   const layer = (rt, rb, h, y, c) => {
     const g = new THREE.CylinderGeometry(rt, rb, h, 32, 1), p = g.attributes.position;
@@ -180,171 +206,172 @@ function landmass(parent, r, seed, grass) {
     g.computeVertexNormals();
     return mesh(g, c, 0, y, 0, parent);
   };
-  const top = layer(r, r * 0.96, 0.8, -0.4, grass);
-  layer(r * 1.1, r * 1.12, 0.5, -0.95, 0xf3d7a0);
-  layer(r * 0.96, r * 0.6, 2.6, -2.1, 0x9b7653);
+  const top = layer(r, r * 0.96, 0.8, -0.4, C.grass);
+  layer(r * 1.1, r * 1.12, 0.5, -0.95, C.sand);
+  layer(r * 0.96, r * 0.6, 2.6, -2.1, C.cliff);
   return { top, wob };
 }
-
 const world = new THREE.Group();
 scene.add(world);
 
 /* ---- 建築 ---- */
 function bOffice(g) {
-  box(g, 5, 0.3, 3.8, 0xd8d1c2, 0, 0, 0);
-  box(g, 4.6, 2.5, 3.4, 0xfaf6ec, 0, 0.3, 0);
-  box(g, 4.6, 1.3, 3.4, 0xf3eee2, 0, 2.8, 0);
-  const roof = cone(g, 3.6, 1.7, 0x2f6db5, 0, 4.1, 0, 4); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, 0.82);
-  box(g, 1.1, 1.7, 0.1, 0x7a5136, 0, 0.3, 1.71);
-  const win = mat(0xa8dcf0, { emissive: 0xffd27a, emissiveIntensity: 0 });
+  box(g, 5, 0.3, 3.8, 0xe2d6c3, 0, 0, 0);
+  box(g, 4.6, 2.5, 3.4, C.wall, 0, 0.3, 0);
+  box(g, 4.6, 1.3, 3.4, 0xf4eadb, 0, 2.8, 0);
+  const roof = cone(g, 3.6, 1.7, C.roof, 0, 4.1, 0, 4); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, 0.82);
+  box(g, 1.1, 1.7, 0.1, C.dark, 0, 0.3, 1.71);
+  const win = mat(0xf6efe2, { emissive: 0xffc77a, emissiveIntensity: 0 });
   g.userData.win = win;
   [-1.5, 1.5].forEach((x) => { mesh(new THREE.BoxGeometry(0.9, 0.75, 0.08), win, x, 1.45, 1.72, g); mesh(new THREE.BoxGeometry(0.9, 0.6, 0.08), win, x, 3.4, 1.72, g); });
   mesh(new THREE.BoxGeometry(0.9, 0.6, 0.08), win, 0, 3.4, 1.72, g);
   const sign = textPlane(2.9, 0.75, (c, w, h) => {
     const st = officeStatus();
-    rr(c, 4, 4, w - 8, h - 8, 22); c.fillStyle = "#183D3B"; c.fill();
-    c.fillStyle = "#FFFDF6"; c.font = `900 ${h * 0.5}px ${FONT}`; c.textBaseline = "middle"; c.fillText("課外組", 24, h / 2 + 2);
-    c.fillStyle = st.open ? "#6BE39A" : "#FF8B7E"; c.font = `700 ${h * 0.36}px ${FONT}`; c.textAlign = "right"; c.fillText(st.short, w - 24, h / 2 + 2);
+    rr(c, 4, 4, w - 8, h - 8, 22); c.fillStyle = "#2A211C"; c.fill();
+    c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.5}px ${FONT}`; c.textBaseline = "middle"; c.fillText("課外組", 24, h / 2 + 2);
+    c.fillStyle = st.open ? "#8FD6A0" : "#F19A84"; c.font = `700 ${h * 0.36}px ${FONT}`; c.textAlign = "right"; c.fillText(st.short, w - 24, h / 2 + 2);
   });
   sign.position.set(0, 2.35, 1.76); g.add(sign);
   g.userData.sign = sign; g.userData.h = 6.3;
 }
 function bClock(g) {
-  box(g, 2.4, 0.4, 2.4, 0xcfc6b4, 0, 0, 0);
-  box(g, 1.8, 5.2, 1.8, 0xefe6d2, 0, 0.4, 0);
-  box(g, 2.1, 0.3, 2.1, 0xb8ab93, 0, 5.6, 0);
-  const r = cone(g, 1.7, 1.8, 0xd9483b, 0, 5.9, 0, 4); r.rotation.y = Math.PI / 4;
+  box(g, 2.4, 0.4, 2.4, 0xe2d6c3, 0, 0, 0);
+  box(g, 1.8, 5.2, 1.8, 0xf1e6d4, 0, 0.4, 0);
+  box(g, 2.1, 0.3, 2.1, 0xcdb99c, 0, 5.6, 0);
+  const r = cone(g, 1.7, 1.8, C.roof, 0, 5.9, 0, 4); r.rotation.y = Math.PI / 4;
   const face = textPlane(1.5, 1.5, (c, w, h) => {
     const n = upcoming()[0], d = n ? daysLeft(n.at) : null;
-    c.fillStyle = "#FFFDF6"; c.beginPath(); c.arc(w / 2, h / 2, w / 2 - 6, 0, Math.PI * 2); c.fill();
-    c.lineWidth = 10; c.strokeStyle = "#183D3B"; c.stroke();
-    c.fillStyle = d !== null && d <= 3 ? "#D9483B" : "#183D3B"; c.textAlign = "center"; c.textBaseline = "middle";
-    c.font = `700 ${h * 0.42}px ${NUMF}`; c.fillText(d === null ? "--" : d === 0 ? "今天" : "D-" + d, w / 2, h * 0.47);
-    c.fillStyle = "#4F6B69"; c.font = `700 ${h * 0.12}px ${FONT}`; c.fillText("下個截止", w / 2, h * 0.77);
+    c.fillStyle = "#FFFDF9"; c.beginPath(); c.arc(w / 2, h / 2, w / 2 - 6, 0, Math.PI * 2); c.fill();
+    c.lineWidth = 9; c.strokeStyle = "#2A211C"; c.stroke();
+    c.fillStyle = d !== null && d <= 3 ? "#C8443A" : "#2A211C"; c.textAlign = "center"; c.textBaseline = "middle";
+    c.font = `700 ${h * 0.3}px ${MONO}`; c.fillText(d === null ? "--" : d === 0 ? "今天" : "D-" + d, w / 2, h * 0.47);
+    c.fillStyle = "#C8623F"; c.font = `700 ${h * 0.12}px ${FONT}`; c.fillText("下個截止", w / 2, h * 0.75);
   });
   face.position.set(0, 4.4, 0.92); g.add(face);
   g.userData.sign = face; g.userData.h = 8.3;
 }
 function bBoard(g) {
-  [-1.3, 1.3].forEach((x) => box(g, 0.2, 2.6, 0.2, 0x8a5a3b, x, 0, 0));
-  box(g, 3, 1.8, 0.2, 0x9c6b47, 0, 0.9, 0);
-  box(g, 3.3, 0.25, 0.5, 0x6e4329, 0, 2.7, 0);
+  [-1.3, 1.3].forEach((x) => box(g, 0.2, 2.6, 0.2, C.dark, x, 0, 0));
+  box(g, 3, 1.8, 0.2, C.wood, 0, 0.9, 0);
+  box(g, 3.3, 0.25, 0.5, C.roof, 0, 2.7, 0);
   const notes = textPlane(2.7, 1.5, (c, w, h) => {
-    c.fillStyle = "#F3E6C8"; c.fillRect(0, 0, w, h);
-    ["#FFF3A8", "#FFD2CC", "#CFEEFC", "#D9F4C9"].forEach((col, i) => { c.save(); c.translate(30 + (i * (w - 60)) / 4, 40 + (i % 2) * 24); c.rotate((i % 2 ? 1 : -1) * 0.06); c.fillStyle = col; c.fillRect(0, 0, (w - 80) / 4, h - 104); c.restore(); });
-    c.fillStyle = "#183D3B"; c.font = `900 ${h * 0.2}px ${FONT}`; c.textAlign = "center"; c.fillText("公告", w / 2, h - 14);
+    c.fillStyle = "#F3E6CE"; c.fillRect(0, 0, w, h);
+    ["#FFF1B8", "#F9D3C2", "#DCEBE6", "#E4EDCF"].forEach((col, i) => { c.save(); c.translate(30 + (i * (w - 60)) / 4, 40 + (i % 2) * 24); c.rotate((i % 2 ? 1 : -1) * 0.06); c.fillStyle = col; c.fillRect(0, 0, (w - 80) / 4, h - 104); c.restore(); });
+    c.fillStyle = "#2A211C"; c.font = `900 ${h * 0.2}px ${FONT}`; c.textAlign = "center"; c.fillText("公告", w / 2, h - 14);
   });
   notes.position.set(0, 1.8, 0.11); g.add(notes);
   g.userData.h = 4.2;
 }
-function bDock(g) {
-  for (let i = 0; i < 5; i++) box(g, 1.6, 0.18, 0.9, 0xb98a5e, 0, -0.35, i * 0.95);
-  [-0.75, 0.75].forEach((x) => [0.6, 2.4, 4].forEach((z) => cyl(g, 0.1, 0.1, 1.5, 0x8a5a3b, x, -1.5, z, 5)));
+function sailboat(col) {
   const boat = new THREE.Group();
-  box(boat, 1.2, 0.6, 2.8, 0xd9483b, 0, 0, 0);
+  box(boat, 1.2, 0.6, 2.8, col, 0, 0, 0);
   box(boat, 1, 0.1, 2.5, 0xf5ead2, 0, 0.6, 0);
   cyl(boat, 0.05, 0.05, 2.4, 0xdddddd, 0, 0.6, -0.1, 5);
   const sg = new THREE.BufferGeometry();
   sg.setAttribute("position", new THREE.Float32BufferAttribute([0, 0.8, -0.2, 0, 2.9, -0.2, 0, 0.8, -1.4], 3));
   sg.computeVertexNormals();
-  mesh(sg, mat(0xffffff, { side: THREE.DoubleSide }), 0, 0, 0, boat);
+  mesh(sg, mat(0xfffdf9, { side: THREE.DoubleSide }), 0, 0, 0, boat);
+  return boat;
+}
+function bDock(g) {
+  for (let i = 0; i < 5; i++) box(g, 1.6, 0.18, 0.9, C.wood, 0, -0.35, i * 0.95);
+  [-0.75, 0.75].forEach((x) => [0.6, 2.4, 4].forEach((z) => cyl(g, 0.1, 0.1, 1.5, C.dark, x, -1.5, z, 5)));
+  const boat = sailboat(C.roof);
   boat.position.set(1.8, -1.15, 3);
   g.add(boat);
   g.userData.boat = boat; g.userData.h = 3;
 }
 function bTrack(g, col) {
-  const t = mesh(new THREE.TorusGeometry(1.9, 0.45, 3, 24), 0xc4553f, 0, 0.12, 0, g);
+  const t = mesh(new THREE.TorusGeometry(1.9, 0.45, 3, 24), 0xc9714f, 0, 0.12, 0, g);
   t.rotation.x = Math.PI / 2; t.scale.set(1.25, 1, 1);
-  const inner = cyl(g, 1.45, 1.45, 0.1, 0x5fae4f, 0, 0, 0, 20); inner.scale.set(1.3, 1, 1);
-  const baton = cyl(g, 0.12, 0.12, 0.9, 0xf4c95d, 1.2, 0.3, 1.4); baton.rotation.z = Math.PI / 2;
-  box(g, 2, 1.6, 1.4, 0xfaf6ec, 0, 0, -2.6);
+  const inner = cyl(g, 1.45, 1.45, 0.1, 0x9fbc7a, 0, 0, 0, 20); inner.scale.set(1.3, 1, 1);
+  const baton = cyl(g, 0.12, 0.12, 0.9, 0xe8b04b, 1.2, 0.3, 1.4); baton.rotation.z = Math.PI / 2;
+  box(g, 2, 1.6, 1.4, C.wall, 0, 0, -2.6);
   const r = cone(g, 1.6, 1, col, 0, 1.6, -2.6, 4); r.rotation.y = Math.PI / 4; r.scale.set(1, 1, 0.75);
   g.userData.h = 3.4;
 }
 function bTent(g, col) {
   const t = cone(g, 2, 2.6, col, 0, 0, 0, 4); t.rotation.y = Math.PI / 4;
-  box(g, 0.8, 1.1, 0.1, 0x7b3b14, 0, 0, 1.35);
+  box(g, 0.8, 1.1, 0.1, C.dark, 0, 0, 1.35);
   cyl(g, 0.05, 0.05, 3.6, 0xdddddd, 1.6, 0, 1, 5);
-  box(g, 0.9, 0.55, 0.04, 0x2fa35a, 2.08, 2.9, 1);
-  cyl(g, 0.6, 0.6, 0.3, 0x8a5a3b, -1.9, 0, 1.2, 6);
+  box(g, 0.9, 0.55, 0.04, C.roof, 2.08, 2.9, 1);
+  cyl(g, 0.6, 0.6, 0.3, C.wood, -1.9, 0, 1.2, 6);
   g.userData.h = 3.8;
 }
 function bBank(g) {
-  box(g, 3.4, 0.3, 2.6, 0xd8d1c2, 0, 0, 0);
-  box(g, 3, 1.8, 2.2, 0xf5efe0, 0, 0.3, 0);
+  box(g, 3.4, 0.3, 2.6, 0xe2d6c3, 0, 0, 0);
+  box(g, 3, 1.8, 2.2, C.wall, 0, 0.3, 0);
   [-1.1, -0.37, 0.37, 1.1].forEach((x) => cyl(g, 0.14, 0.14, 1.8, 0xffffff, x, 0.3, 1.2, 6));
-  const pd = cone(g, 2.2, 0.9, 0xe8c25a, 0, 2.1, 0, 4); pd.rotation.y = Math.PI / 4; pd.scale.set(1.1, 1, 0.8);
-  const coin = cyl(g, 0.8, 0.8, 0.22, mat(0xffcf3a, { metalness: 0.4, roughness: 0.4 }), 0, 3.5, 0, 16);
+  const pd = cone(g, 2.2, 0.9, 0xd9b24e, 0, 2.1, 0, 4); pd.rotation.y = Math.PI / 4; pd.scale.set(1.1, 1, 0.8);
+  const coin = cyl(g, 0.8, 0.8, 0.22, mat(0xe8b04b, { metalness: 0.35, roughness: 0.45 }), 0, 3.5, 0, 16);
   coin.rotation.x = Math.PI / 2;
   g.userData.spin = coin; g.userData.h = 5;
 }
 function bGym(g, col) {
-  cyl(g, 2.4, 2.5, 1.2, 0xeeeae0, 0, 0, 0, 12);
+  cyl(g, 2.4, 2.5, 1.2, C.wall, 0, 0, 0, 12);
   mesh(new THREE.SphereGeometry(2.4, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), col, 0, 1.2, 0, g);
-  box(g, 1.2, 1, 0.3, 0x2a5d84, 0, 0, 2.35);
-  ball(g, 0.35, 0xff8a3d, 1.9, 0.35, 2.1);
+  box(g, 1.2, 1, 0.3, C.dark, 0, 0, 2.35);
+  ball(g, 0.35, 0xd98b4e, 1.9, 0.35, 2.1);
   g.userData.h = 4.3;
 }
 function bAid(g) {
-  box(g, 3, 1.9, 2.4, 0xffffff, 0, 0, 0);
-  box(g, 3.2, 0.3, 2.6, 0xd9483b, 0, 1.9, 0);
-  box(g, 1, 0.3, 0.06, 0xd9483b, 0, 0.95, 1.22); box(g, 0.3, 1, 0.06, 0xd9483b, 0, 0.6, 1.22);
-  box(g, 0.5, 0.6, 0.25, 0x2fa35a, 1.9, 0.4, 0.6);
+  box(g, 3, 1.9, 2.4, C.wall, 0, 0, 0);
+  box(g, 3.2, 0.3, 2.6, C.roof, 0, 1.9, 0);
+  box(g, 1, 0.3, 0.06, 0xc8443a, 0, 0.95, 1.22); box(g, 0.3, 1, 0.06, 0xc8443a, 0, 0.6, 1.22);
+  box(g, 0.5, 0.6, 0.25, 0x5f8f5a, 1.9, 0.4, 0.6);
   g.userData.h = 3.3;
 }
 function bStore(g, col) {
-  box(g, 3.4, 1.6, 2.4, 0xe9e4f2, 0, 0, 0);
+  box(g, 3.4, 1.6, 2.4, C.wall, 0, 0, 0);
   const roof = mesh(new THREE.CylinderGeometry(1.25, 1.25, 3.5, 10, 1, false, 0, Math.PI), col, 0, 1.6, 0, g);
   roof.rotation.z = Math.PI / 2;
-  box(g, 1.4, 1.2, 0.08, 0x5a4a6e, 0, 0, 1.21);
-  ball(g, 0.32, 0xff8a3d, -1.6, 0.32, 1.7); ball(g, 0.3, 0xffffff, -1.0, 0.3, 1.9); ball(g, 0.28, 0xf5d547, -1.3, 0.28, 2.4);
+  box(g, 1.4, 1.2, 0.08, C.dark, 0, 0, 1.21);
+  ball(g, 0.32, 0xd98b4e, -1.6, 0.32, 1.7); ball(g, 0.3, 0xffffff, -1.0, 0.3, 1.9); ball(g, 0.28, 0xe8b04b, -1.3, 0.28, 2.4);
   g.userData.h = 3.5;
 }
 function bPodium(g) {
-  box(g, 1, 1.4, 1, 0xffd34d, 0, 0, 0); box(g, 1, 0.9, 1, 0xd9dfe6, -1.05, 0, 0); box(g, 1, 0.6, 1, 0xd99a62, 1.05, 0, 0);
-  const gold = mat(0xffc83d, { metalness: 0.5, roughness: 0.35 });
+  box(g, 1, 1.4, 1, 0xe8b04b, 0, 0, 0); box(g, 1, 0.9, 1, 0xd9d2c5, -1.05, 0, 0); box(g, 1, 0.6, 1, 0xc9875a, 1.05, 0, 0);
+  const gold = mat(0xe8b04b, { metalness: 0.45, roughness: 0.4 });
   cyl(g, 0.18, 0.28, 0.2, gold, 0, 1.4, 0); cyl(g, 0.06, 0.06, 0.3, gold, 0, 1.6, 0);
   g.userData.spin = cyl(g, 0.42, 0.18, 0.55, gold, 0, 1.9, 0);
   g.userData.h = 3.4;
 }
 function bHouse(g, col) {
-  box(g, 2.4, 1.6, 2, 0xf6efe0, 0, 0, 0);
+  box(g, 2.4, 1.6, 2, C.wall, 0, 0, 0);
   const r = cone(g, 2, 1.2, col, 0, 1.6, 0, 4); r.rotation.y = Math.PI / 4;
-  box(g, 0.7, 1, 0.08, 0x7a5136, 0, 0, 1.02);
+  box(g, 0.7, 1, 0.08, C.dark, 0, 0, 1.02);
   g.userData.h = 3.4;
 }
 const BUILD = { track: bTrack, tent: bTent, bank: bBank, gym: bGym, aid: bAid, store: bStore, podium: bPodium, house: bHouse };
 
 function tree(p, x, z, s, k) {
   cyl(p, 0.12 * s, 0.16 * s, 0.7 * s, 0x8b5e3c, x, 0, z, 5);
-  if (k > 0.45) { cone(p, 0.75 * s, 1.5 * s, 0x4c9f65, x, 0.6 * s, z); cone(p, 0.55 * s, 1.1 * s, 0x5daa4f, x, 1.4 * s, z); }
-  else ball(p, 0.75 * s, [0x68b457, 0x7fc86a, 0x8fcb8b][Math.floor(k * 6.6) % 3], x, 1.3 * s, z);
+  if (k > 0.5) { cone(p, 0.75 * s, 1.5 * s, C.pine, x, 0.6 * s, z); cone(p, 0.55 * s, 1.1 * s, C.tree1, x, 1.4 * s, z); }
+  else ball(p, 0.78 * s, [C.tree1, C.tree2, C.tree3][Math.floor(k * 6) % 3], x, 1.3 * s, z);
 }
+const lamps = [];
 function lampPost(p, x, z) {
-  cyl(p, 0.07, 0.07, 1.2, 0x3d4a48, x, 0, z, 6);
-  const m = mat(0xfff6d8, { emissive: 0xffd27a, emissiveIntensity: 0 });
+  cyl(p, 0.07, 0.07, 1.2, 0x3d3530, x, 0, z, 6);
+  const m = mat(0xfff6d8, { emissive: 0xffc77a, emissiveIntensity: 0 });
   lamps.push(m);
   mesh(new THREE.IcosahedronGeometry(0.22, 0), m, x, 1.35, z, p);
 }
-const lamps = [];
 const angOff = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 
 /* ---- 中心島：課外組 ---- */
 const center = new THREE.Group();
 world.add(center);
-const CL = landmass(center, RC, 1.3, 0x8fcb8b);
+const CL = landmass(center, RC, 1.3);
 tag(CL.top, { t: "center" });
-cyl(center, 3.4, 3.4, 0.06, 0xece1c4, 0, 0, 0, 24).castShadow = false;
-cyl(center, 1.3, 1.5, 0.5, 0xc9bfae, 0, 0, 0, 10);
-cyl(center, 1.05, 1.05, 0.12, 0x6fd3ec, 0, 0.45, 0, 10);
-cyl(center, 0.18, 0.25, 1.2, 0xc9bfae, 0, 0.5, 0);
-ball(center, 0.35, 0x8fe1f2, 0, 1.85, 0);
-const flag = box(center, 1.4, 0.8, 0.04, 0x1f5fa8, 2.1, 3.3, -1.6);
+cyl(center, 3.4, 3.4, 0.06, C.plaza, 0, 0, 0, 24).castShadow = false;
+cyl(center, 1.3, 1.5, 0.5, 0xd9cbb4, 0, 0, 0, 10);
+cyl(center, 1.05, 1.05, 0.12, 0x9fcfd0, 0, 0.45, 0, 10);
+cyl(center, 0.18, 0.25, 1.2, 0xd9cbb4, 0, 0.5, 0);
+ball(center, 0.35, 0xbfe2e2, 0, 1.85, 0);
+const flag = box(center, 1.4, 0.8, 0.04, C.roof, 2.1, 3.3, -1.6);
 cyl(center, 0.06, 0.06, 4.2, 0xdddddd, 1.4, 0, -1.6, 6);
-
-// 中心島上的地點放在兩座橋之間，避開走道
-const mid = (k) => front + (k * 2 * Math.PI) / NI;  // k=0 為正前方（碼頭）
 // 七座橋的方位是 front + (2i+1)π/7，所以 mid(k) 一定落在兩座橋中間；行走環道半徑 3.9，建築都放在環道外
+const mid = (k) => front + (k * 2 * Math.PI) / NI;
 const SPOT = {
   office: { a: mid(3), r: 6.4, build: bOffice },
   deadlines: { a: mid(4), r: 6.2, build: bClock },
@@ -356,15 +383,13 @@ Object.entries(SPOT).forEach(([id, s]) => {
   const g = new THREE.Group();
   s.build(g);
   g.position.set(Math.cos(s.a) * s.r, 0, Math.sin(s.a) * s.r);
-  if (id === "links") g.rotation.y = Math.atan2(Math.cos(s.a), Math.sin(s.a)); // 碼頭沿 +z 伸向海面
-  else g.rotation.y = FACE;
+  g.rotation.y = id === "links" ? Math.atan2(Math.cos(s.a), Math.sin(s.a)) : FACE; // 碼頭沿 +z 伸向海面
   if (id === "office") g.scale.setScalar(0.92);
   center.add(g);
   tag(g, { t: "spot", id });
   centerObj[id] = g;
   s.pos = g.position.clone();
 });
-// 中心島的路燈與樹
 for (let k = 0; k < NI; k++) { const a = ISL[k].a; lampPost(center, Math.cos(a + 0.3) * 4.7, Math.sin(a + 0.3) * 4.7); }
 {
   let n = 0;
@@ -383,17 +408,13 @@ ISL.forEach((d) => {
   g.position.copy(d.pos);
   world.add(g);
   d.group = g;
-  const L = landmass(g, d.r, hash(d.key) * 10, 0x8fcb8b);
+  const L = landmass(g, d.r, hash(d.key) * 10);
   tag(L.top, { t: "isle", i: d.i });
   const col = new THREE.Color(d.color).getHex();
-  // 島色廣場
-  const pl = cyl(g, 2.4, 2.4, 0.06, new THREE.Color(d.color).lerp(new THREE.Color(0xfffdf6), 0.55).getHex(), 0, 0, 0, 20);
-  pl.castShadow = false;
-  // 從廣場到橋頭的步道
+  cyl(g, 2.4, 2.4, 0.06, new THREE.Color(d.color).lerp(new THREE.Color(0xfbf3e6), 0.65).getHex(), 0, 0, 0, 20).castShadow = false;
   const toC = Math.atan2(-d.dir.z, -d.dir.x), len = d.r - 2.2;
-  const path = box(g, len, 0.05, 1.2, 0xe9dcc0, Math.cos(toC) * (2.2 + len / 2), 0, Math.sin(toC) * (2.2 + len / 2));
+  const path = box(g, len, 0.05, 1.2, C.path, Math.cos(toC) * (2.2 + len / 2), 0, Math.sin(toC) * (2.2 + len / 2));
   path.rotation.y = -toC; path.castShadow = false;
-  // 建築放在廣場後方，面向鏡頭
   const b = new THREE.Group();
   (BUILD[d.building] || bHouse)(b, col);
   b.position.copy(FACE_DIR).multiplyScalar(-0.9);
@@ -401,12 +422,11 @@ ISL.forEach((d) => {
   g.add(b);
   tag(b, { t: "isle", i: d.i });
   d.build = b;
-  d.spot = FACE_DIR.clone().multiplyScalar(2.1); // 角色站的位置（廣場前緣，島的區域座標）
-  // 樹
+  d.spot = FACE_DIR.clone().multiplyScalar(2.1);
   let n = 0;
   for (let i = 0; i < 200 && n < 9; i++) {
     const a = hash(d.key + "a" + i) * Math.PI * 2, r = 2.9 + hash(d.key + "r" + i) * (d.r * 0.85 - 2.9);
-    if (angOff(a, toC) < 0.45 || angOff(a, FACE + 0) < 0.2) continue;
+    if (angOff(a, toC) < 0.45 || angOff(a, FACE) < 0.2) continue;
     const x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (Math.hypot(x - b.position.x, z - b.position.z) < 2.8) continue;
     tree(g, x, z, 0.65 + hash(d.key + "s" + i) * 0.45, hash(d.key + "k" + i)); n++;
@@ -415,82 +435,158 @@ ISL.forEach((d) => {
 });
 
 /* ---- 橋 ---- */
-function bridge(d) {
+ISL.forEach((d) => {
   const p0 = d.dir.clone().multiplyScalar(RC * 0.9), p1 = d.dir.clone().multiplyScalar(d.dist - d.r * 0.88);
   const len = p0.distanceTo(p1), m = p0.clone().add(p1).multiplyScalar(0.5);
   const g = new THREE.Group();
-  g.position.copy(m);
-  g.rotation.y = -d.a;
+  g.position.copy(m); g.rotation.y = -d.a;
   world.add(g);
-  const plank = mat(0xc89a6a), rail = mat(0x8a5a3b);
+  const plank = mat(0xd2ab7f), rail = mat(C.dark);
   const n = Math.round(len / 0.5);
   for (let k = 0; k < n; k++) {
     const x = -len / 2 + (k + 0.5) * (len / n), y = Math.sin(((k + 0.5) / n) * Math.PI) * 0.35;
-    const pl = mesh(new THREE.BoxGeometry(len / n - 0.06, 0.14, 1.5), plank, x, y - 0.05, 0, g);
-    pl.rotation.y = (hash(d.key + k) - 0.5) * 0.06;
+    mesh(new THREE.BoxGeometry(len / n - 0.06, 0.14, 1.5), plank, x, y - 0.05, 0, g).rotation.y = (hash(d.key + k) - 0.5) * 0.06;
   }
   [-0.78, 0.78].forEach((z) => {
     for (let k = 0; k <= 4; k++) { const x = -len / 2 + (k * len) / 4, y = Math.sin((k / 4) * Math.PI) * 0.35; cyl(g, 0.07, 0.07, 0.7, rail, x, y - 0.05, z, 5); }
-    const r = mesh(new THREE.BoxGeometry(len, 0.08, 0.08), rail, 0, 0.75, z, g);
-    r.position.y = 0.6;
+    mesh(new THREE.BoxGeometry(len, 0.08, 0.08), rail, 0, 0.6, z, g);
   });
   [-len / 2 + 0.6, len / 2 - 0.6].forEach((x) => cyl(g, 0.12, 0.12, 1.4, rail, x, -1.5, 0, 6));
   d.bridge = { p0, p1, len };
-}
-ISL.forEach(bridge);
+});
 
-/* ---- 雲 ---- */
+/* ---- 海上小島、帆船、雲 ---- */
+const UMB = [0xc8623f, 0xe8b04b, 0x6e8fb5, 0xfbf3e6];
+[[front + 0.95, 31], [front - 0.9, 33], [front + Math.PI * 0.62, 36], [front - Math.PI * 0.6, 35]].forEach(([a, r], i) => {
+  const g = new THREE.Group(); g.position.set(Math.cos(a) * r, 0, Math.sin(a) * r); scene.add(g);
+  cyl(g, 2.6, 2.9, 0.5, C.sand, 0, -1.05, 0, 14);
+  if (i % 2 === 0) for (let k = 0; k < 3; k++) { const x = (k - 1) * 1.3, z = (k % 2) * 0.6; cyl(g, 0.04, 0.04, 1.2, 0xffffff, x, -0.6, z, 4); cone(g, 0.6, 0.35, UMB[(i + k) % 4], x, 0.5, z, 8); }
+  else { const t = new THREE.Group(); t.position.y = -0.6; g.add(t); tree(t, -0.6, 0, 0.7, 0.2); tree(t, 0.7, 0.4, 0.6, 0.7); }
+});
+const boats = [0, 1].map((i) => { const b = sailboat(i ? 0x6e8fb5 : 0xfbf3e6); b.scale.setScalar(0.8); scene.add(b); b.userData = { r: 30 + i * 6, a: front + 0.5 + i * 2.4, s: 0.02 + i * 0.008 }; return b; });
 const clouds = [];
-for (let i = 0; i < 8; i++) {
+for (let i = 0; i < 9; i++) {
   const c = new THREE.Group();
-  const cm = mat(0xffffff, { roughness: 1, emissive: 0x9aaabb, emissiveIntensity: 0.4 });
-  for (let k = 0; k < 4; k++) { const b = ball(c, 1 + hash("cl" + i + k) * 1.1, cm, k * 1.3, hash("cy" + i + k) * 0.6, hash("cz" + i + k) * 0.8); b.castShadow = false; }
-  // 只放在群島後方（遠離鏡頭的半圈），平行投影下才不會擋住島
-  c.userData = { r: WORLD_R + 8 + hash("cr" + i) * 14, a0: front + Math.PI + (hash("ca" + i) - 0.5) * 2.4, a: 0, s: 0.2 + hash("cs" + i) * 0.3 };
-  c.userData.a = c.userData.a0;
-  c.position.set(Math.cos(c.userData.a) * c.userData.r, 3 + hash("ch" + i) * 4, Math.sin(c.userData.a) * c.userData.r);
+  const cm = mat(0xffffff, { roughness: 1, emissive: 0xc9c0b4, emissiveIntensity: 0.35, flatShading: false });
+  for (let k = 0; k < 4; k++) { const b = ball(c, 1.4 + hash("cl" + i + k) * 1.4, cm, k * 1.7, hash("cy" + i + k) * 0.8, hash("cz" + i + k) * 1, 1); b.castShadow = false; }
+  c.userData = { r: WORLD_R + 14 + hash("cr" + i) * 22, a0: front + Math.PI + (hash("ca" + i) - 0.5) * 2.6, s: 0.2 + hash("cs" + i) * 0.3 };
+  c.position.set(Math.cos(c.userData.a0) * c.userData.r, 8 + hash("ch" + i) * 8, Math.sin(c.userData.a0) * c.userData.r);
   scene.add(c); clouds.push(c);
 }
 
-/* ---- 提醒標記：分類島上方的菱形 ---- */
+/* ---- 提醒標記 ---- */
+const markMat = (c) => mat(c, { emissive: c, emissiveIntensity: 0.35 });
 ISL.forEach((d) => {
-  const m = mesh(new THREE.OctahedronGeometry(0.5, 0), mat(0xf4c95d, { emissive: 0xf4c95d, emissiveIntensity: 0.35 }), 0, 0, 0, d.group);
+  const m = mesh(new THREE.OctahedronGeometry(0.5, 0), markMat(0xe8b04b), 0, 0, 0, d.group);
   m.castShadow = false;
   m.position.copy(d.build.position).setY(d.build.userData.h + 1.6);
   d.marker = m;
 });
-const newsMarker = mesh(new THREE.OctahedronGeometry(0.5, 0), mat(0xd9483b, { emissive: 0xd9483b, emissiveIntensity: 0.35 }), 0, 0, 0, center);
+const newsMarker = mesh(new THREE.OctahedronGeometry(0.5, 0), markMat(0xc8443a), 0, 0, 0, center);
 newsMarker.position.copy(SPOT.news.pos).setY(5.6);
 function updMarkers() {
-  ISL.forEach((d) => {
-    const n = isleDl(d)[0], days = n ? daysLeft(n.at) : 99;
-    d.marker.visible = days <= 7;
-    d.marker.material = days <= 3 ? mat(0xd9483b, { emissive: 0xd9483b, emissiveIntensity: 0.35 }) : mat(0xf4c95d, { emissive: 0xf4c95d, emissiveIntensity: 0.35 });
-  });
+  ISL.forEach((d) => { const n = isleDl(d)[0], days = n ? daysLeft(n.at) : 99; d.marker.visible = days <= 7; d.marker.material = markMat(days <= 3 ? 0xc8443a : 0xe8b04b); });
   newsMarker.visible = unread().length > 0;
 }
 
-/* ---- 角色 ---- */
-function person(shirt, hair) {
+/* ---------------- 人物 ---------------- */
+// 每個社團一件招牌道具，讓角色一眼看得出是哪個社團
+function addProp(g, type, o) {
+  const H = new V3(0.44, 0.52, 0.12); // 右手位置
+  switch (type) {
+    case "basketball": ball(g, 0.2, soft(0xd9733a), H.x + 0.05, H.y, H.z + 0.12, 1); break;
+    case "volleyball": ball(g, 0.2, soft(0xf6f0e2), H.x + 0.05, H.y, H.z + 0.12, 1); ball(g, 0.205, mat(0xe8b04b, { wireframe: true }), H.x + 0.05, H.y, H.z + 0.12, 0); break;
+    case "soccer": ball(g, 0.2, soft(0xffffff), 0.25, 0.2, 0.42, 1); ball(g, 0.205, mat(0x2a211c, { wireframe: true }), 0.25, 0.2, 0.42, 0); break;
+    case "bowling": ball(g, 0.19, soft(0x2f3e6e), H.x + 0.04, H.y, H.z + 0.12, 1); break;
+    case "rugby": ball(g, 0.22, soft(0x8a5a3b), H.x + 0.05, H.y + 0.05, H.z + 0.12, 1).scale.set(0.7, 0.7, 1.15); break;
+    case "bat": { const b = cyl(g, 0.06, 0.035, 0.95, soft(0xd8b98a), 0, 0, 0, 8); b.position.set(H.x + 0.05, H.y + 0.35, H.z); b.rotation.z = -0.35; break; }
+    case "racket": { const r = new THREE.Group(); cyl(r, 0.025, 0.025, 0.4, soft(0x2a211c), 0, 0, 0, 6); mesh(new THREE.TorusGeometry(0.14, 0.02, 6, 16), soft(o.shirt), 0, 0.55, 0, r).scale.set(0.8, 1.1, 1); r.position.set(H.x + 0.05, H.y - 0.05, H.z + 0.05); r.rotation.z = -0.4; g.add(r); break; }
+    case "bow": mesh(new THREE.TorusGeometry(0.42, 0.025, 6, 16, Math.PI), soft(0x8a5a3b), -0.48, 0.75, 0.1, g).rotation.z = -Math.PI / 2; box(g, 0.01, 0.84, 0.01, 0xffffff, -0.48, 0.33, 0.1); break;
+    case "sword": { const s = cyl(g, 0.03, 0.03, 1.15, soft(0xe9dcc0), 0, 0, 0, 6); s.position.set(H.x + 0.02, H.y + 0.45, H.z + 0.18); s.rotation.x = 0.5; break; }
+    case "gloves": ball(g, 0.14, soft(0xc8443a), 0.44, 0.55, 0.14, 1); ball(g, 0.14, soft(0xc8443a), -0.44, 0.55, 0.14, 1); break;
+    case "belt": mesh(new THREE.TorusGeometry(0.315, 0.04, 6, 20), soft(0x1f1a16), 0, 0.62, 0, g).rotation.x = Math.PI / 2; box(g, 0.08, 0.2, 0.04, 0x1f1a16, 0.08, 0.42, 0.31); break;
+    case "frisbee": cyl(g, 0.26, 0.24, 0.04, soft(0xe8b04b), H.x + 0.08, H.y, H.z + 0.12, 16).rotation.x = 0.3; break;
+    case "skateboard": { const s = new THREE.Group(); box(s, 0.25, 0.04, 0.9, soft(0xc8623f), 0, 0.08, 0); [-0.32, 0.32].forEach((z) => [-0.1, 0.1].forEach((x) => ball(s, 0.045, 0xfbf3e6, x, 0.05, z))); s.position.set(0.6, 0, 0.1); g.add(s); break; }
+    case "skates": [-0.13, 0.13].forEach((x) => { box(g, 0.16, 0.12, 0.3, soft(0xfbf3e6), x, 0, 0.04); [-0.08, 0.08].forEach((z) => ball(g, 0.04, 0xc8623f, x, 0, 0.04 + z)); }); break;
+    case "mat": { const m = cyl(g, 0.1, 0.1, 0.75, soft(0x9c83b5), 0, 0, 0, 10); m.position.set(0, 1.0, -0.36); m.rotation.z = Math.PI / 2; break; }
+    case "backpack": { box(g, 0.48, 0.55, 0.26, soft(0x6e8fb5), 0, 0.55, -0.4); const r = cyl(g, 0.1, 0.1, 0.5, soft(0x5f8f5a), 0, 0, 0, 8); r.position.set(0, 1.18, -0.4); r.rotation.z = Math.PI / 2; break; }
+    case "dumbbell": { const d = new THREE.Group(); cyl(d, 0.03, 0.03, 0.4, soft(0x555555), 0, -0.2, 0, 6); [-0.2, 0.2].forEach((y) => cyl(d, 0.1, 0.1, 0.08, soft(0x2a211c), 0, y - 0.04, 0, 10)); d.rotation.z = Math.PI / 2; d.position.set(H.x + 0.05, H.y, H.z + 0.1); g.add(d); break; }
+    case "ring": { mesh(new THREE.TorusGeometry(0.36, 0.1, 8, 18), soft(0xe9e2d6), 0, 0.66, 0, g).rotation.x = Math.PI / 2; for (let k = 0; k < 4; k++) mesh(new THREE.TorusGeometry(0.36, 0.104, 8, 3, Math.PI / 4), soft(0xc8443a), 0, 0.66, 0, g).rotation.set(Math.PI / 2, 0, (k * Math.PI) / 2); break; }
+    case "bib": box(g, 0.34, 0.26, 0.02, soft(0xffffff), 0, 0.68, 0.31); mesh(new THREE.TorusGeometry(0.4, 0.05, 6, 20), soft(0xc8443a), 0, 1.55, 0, g).rotation.x = Math.PI / 2; break;
+    case "pompom": ball(g, 0.18, soft(0xe8b04b), 0.46, 0.52, 0.12, 0); ball(g, 0.18, soft(0xe8b04b), -0.46, 0.52, 0.12, 0); break;
+    case "kit": box(g, 0.34, 0.26, 0.16, soft(0xc8443a), H.x + 0.06, H.y - 0.2, H.z); box(g, 0.14, 0.04, 0.17, 0xffffff, H.x + 0.06, H.y - 0.09, H.z); box(g, 0.04, 0.14, 0.17, 0xffffff, H.x + 0.06, H.y - 0.14, H.z); break;
+    case "helmet": mesh(new THREE.SphereGeometry(0.46, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), soft(0x2a211c), 0, 1.55, -0.02, g).scale.set(1, 0.85, 1); box(g, 0.4, 0.03, 0.16, 0x2a211c, 0, 1.52, 0.45); break;
+  }
+}
+function person(o) {
   const g = new THREE.Group();
-  cyl(g, 0.1, 0.1, 0.45, 0x2b3a4a, -0.13, 0, 0, 6); cyl(g, 0.1, 0.1, 0.45, 0x2b3a4a, 0.13, 0, 0, 6);
-  cyl(g, 0.3, 0.34, 0.65, shirt, 0, 0.42, 0, 8);
-  ball(g, 0.3, 0xf7d7be, 0, 1.38, 0, 1);
-  const h = ball(g, 0.32, hair, 0, 1.5, -0.04, 1); h.scale.set(1, 0.7, 1);
-  box(g, 0.08, 0.08, 0.02, 0x183d3b, -0.11, 1.32, 0.28); box(g, 0.08, 0.08, 0.02, 0x183d3b, 0.11, 1.32, 0.28);
+  const shirt = soft(o.shirt), skin = soft(o.skin), hairM = soft(o.hair), pants = soft(0x2f2a3a), shoe = soft(0x2a211c);
+  [-0.13, 0.13].forEach((x) => { mesh(new THREE.CapsuleGeometry(0.1, 0.25, 4, 8), pants, x, 0.25, 0, g); mesh(new THREE.BoxGeometry(0.17, 0.08, 0.24), shoe, x, 0.04, 0.03, g); });
+  mesh(new THREE.CapsuleGeometry(0.3, 0.35, 6, 12), shirt, 0, 0.78, 0, g);
+  [-0.38, 0.38].forEach((x) => { mesh(new THREE.CapsuleGeometry(0.085, 0.32, 4, 8), shirt, x, 0.78, 0, g).rotation.z = x > 0 ? 0.12 : -0.12; mesh(new THREE.SphereGeometry(0.085, 10, 8), skin, x * 1.12, 0.54, 0, g); });
+  mesh(new THREE.SphereGeometry(0.42, 20, 16), skin, 0, 1.45, 0, g);
+  mesh(new THREE.SphereGeometry(0.45, 20, 12, 0, Math.PI * 2, 0, Math.PI * 0.55), hairM, 0, 1.47, -0.03, g).rotation.x = -0.25;
+  [-0.14, 0.14].forEach((x) => {
+    mesh(new THREE.SphereGeometry(0.045, 8, 6), soft(0x1f1a16), x, 1.46, 0.39, g);
+    const bl = mesh(new THREE.CircleGeometry(0.07, 12), mat(0xf0a8a0, { transparent: true, opacity: 0.8, flatShading: false }), x * 1.45, 1.36, 0.37, g);
+    bl.rotation.y = x * 2; bl.castShadow = false;
+  });
+  if (o.prop) addProp(g, o.prop, o);
   return g;
 }
-const av = person(0xf28c72, 0x2b2118);
-box(av, 0.36, 0.2, 0.02, 0xffffff, 0, 0.72, 0.31);
+
+/* 玩家角色 */
+const av = new THREE.Group();
 const AV_HOME = FACE_DIR.clone().multiplyScalar(3.8);
-av.position.copy(AV_HOME);
-av.rotation.y = FACE;
+av.position.copy(AV_HOME); av.rotation.y = FACE;
 world.add(av);
-const teacher = person(0x2e8b57, 0x55463a);
+const selRing = mesh(new THREE.TorusGeometry(0.62, 0.04, 6, 32, Math.PI * 1.6), mat(0xc8623f, { emissive: 0xc8623f, emissiveIntensity: 0.4 }), 0, 0.04, 0, av);
+selRing.rotation.x = Math.PI / 2; selRing.castShadow = false;
+function rebuildAvatar() {
+  av.children.filter((c) => c !== selRing).forEach((c) => av.remove(c));
+  const p = person({ shirt: me.shirt, hair: me.hair, skin: me.skin, prop: myProp() });
+  av.add(p);
+  const i = pickables.findIndex((o) => o.userData.isMe);
+  if (i >= 0) pickables.splice(i, 1);
+  p.userData.isMe = true;
+  tag(p, { t: "me" });
+}
+rebuildAvatar();
+
+/* 老師與其他社團成員 */
+const teacher = person({ shirt: "#5F8F5A", hair: "#55463A", skin: "#F1CDB0" });
 teacher.position.copy(FACE_DIR.clone().multiplyScalar(2.2).add(new V3(-1.6, 0, 1.6).applyAxisAngle(new V3(0, 1, 0), FACE - Math.PI / 4)));
 teacher.rotation.y = FACE;
 world.add(teacher);
 tag(teacher, { t: "teacher" });
+const npcs = [];
+function addNpc(i, home, rad) {
+  const club = CLUBS[Math.floor(hash("nc" + i) * CLUBS.length)] || {};
+  const p = person({ shirt: SHIRTS[Math.floor(hash("ns" + i) * SHIRTS.length)], hair: HAIRS[Math.floor(hash("nh" + i) * HAIRS.length)], skin: SKINS[Math.floor(hash("nk" + i) * SKINS.length)], prop: club.prop });
+  p.scale.setScalar(0.85);
+  p.position.copy(home).add(new V3(hash("nx" + i) - 0.5, 0, hash("nz" + i) - 0.5).multiplyScalar(rad));
+  p.userData = { home, rad, goal: null, wait: hash("nw" + i) * 4 };
+  world.add(p); npcs.push(p);
+  tag(p, { t: "npc", club: club.name });
+}
+ISL.forEach((d, i) => { const home = d.pos.clone().add(FACE_DIR.clone().multiplyScalar(1.5)); addNpc(i * 2, home, 1.6); addNpc(i * 2 + 1, home, 1.6); });
+[0, 1, 2].forEach((k) => addNpc(40 + k, new V3(0, 0, 0), 3));
+function stepNpcs(dt, t) {
+  npcs.forEach((n, i) => {
+    const u = n.userData;
+    if (u.wait > 0) { u.wait -= dt; n.position.y = 0; return; }
+    if (!u.goal) {
+      const a = Math.random() * Math.PI * 2, r = Math.random() * u.rad;
+      u.goal = u.home.clone().add(new V3(Math.cos(a) * r, 0, Math.sin(a) * r));
+      if (u.home.lengthSq() < 1) u.goal.setLength(2.2 + Math.random() * 1.2); // 中心島的人在噴水池外圍走動
+    }
+    const dir = u.goal.clone().sub(n.position).setY(0), dist = dir.length();
+    if (dist < 0.05) { u.goal = null; u.wait = 2 + Math.random() * 5; return; }
+    n.position.add(dir.multiplyScalar(Math.min(dist, 1.1 * dt) / dist));
+    n.rotation.y = Math.atan2(dir.x, dir.z);
+    n.position.y = Math.abs(Math.sin(t * 9 + i)) * 0.06;
+  });
+}
 
 /* ---------------- 行走：沿著橋走 ---------------- */
 let avAt = "C", avPath = [], avGoal = null;
@@ -505,14 +601,10 @@ function arc(a0, a1, r = 3.9) {
   for (let k = 0; k <= m; k++) pts.push(ringPt(a0 + (da * k) / m, r));
   return pts;
 }
-function isleSpot(d) { return d.pos.clone().add(d.spot); }
-function isleSide(d) { // 繞過建築的側邊點
-  const perp = new V3(-FACE_DIR.z, 0, FACE_DIR.x), s = Math.sign(perp.dot(d.dir.clone().negate())) || 1;
-  return d.pos.clone().add(perp.multiplyScalar(2.5 * s));
-}
+const isleSpot = (d) => d.pos.clone().add(d.spot);
+function isleSide(d) { const perp = new V3(-FACE_DIR.z, 0, FACE_DIR.x), s = Math.sign(perp.dot(d.dir.clone().negate())) || 1; return d.pos.clone().add(perp.multiplyScalar(2.5 * s)); }
 function route(to) {
-  const pts = [];
-  const curA = Math.atan2(av.position.z, av.position.x);
+  const pts = [], curA = Math.atan2(av.position.z, av.position.x);
   if (avAt !== "C") { const d = ISL[avAt]; pts.push(isleSide(d)); pts.push(...bridgePts(d, false)); pts.push(ringPt(d.a)); }
   else pts.push(ringPt(curA));
   const fromA = avAt !== "C" ? ISL[avAt].a : curA;
@@ -521,8 +613,9 @@ function route(to) {
   return pts;
 }
 function walkTo(to, onArrive) {
+  if (avPath.length && avGoal) avAt = avGoal.from; // 走到一半改目的地：從出發點重新規劃
   if (to === avAt && !avPath.length) { onArrive && onArrive(); return; }
-  avPath = route(to); avGoal = { to, onArrive };
+  avPath = route(to); avGoal = { to, onArrive, from: avAt };
 }
 function stepWalk(dt, t) {
   if (!avPath.length) { av.position.y = Math.max(0, av.position.y - dt); return; }
@@ -543,13 +636,11 @@ function resize() {
   const w = innerWidth, h = innerHeight, a = w / h;
   renderer.setSize(w, h, false);
   const base = WORLD_R * (a < 0.8 ? 1.12 : 0.95);
-  const hh = a >= 1 ? base : base / a * 0.9, hw = hh * a;
+  const hh = a >= 1 ? base : (base / a) * 0.9, hw = hh * a;
   camera.left = -hw; camera.right = hw; camera.top = hh; camera.bottom = -hh;
   camera.updateProjectionMatrix();
 }
-function flyTo(target, zoom, dur = 900) {
-  tween = { s: performance.now(), d: RM ? 1 : dur, t0: controls.target.clone(), t1: target.clone(), z0: camera.zoom, z1: zoom };
-}
+function flyTo(target, zoom, dur = 900) { tween = { s: performance.now(), d: RM ? 1 : dur, t0: controls.target.clone(), t1: target.clone(), z0: camera.zoom, z1: zoom }; }
 function stepTween(now) {
   if (!tween) return;
   const k = Math.min(1, (now - tween.s) / tween.d), e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
@@ -558,14 +649,11 @@ function stepTween(now) {
   camera.zoom = tween.z0 + (tween.z1 - tween.z0) * e; camera.updateProjectionMatrix();
   if (k >= 1) tween = null;
 }
-// 讓目標落在 HUD 與資訊卡都沒蓋住的區域中央
+// 讓目標落在 HUD 與資訊抽屜都沒蓋住的區域中央
 function freeCenter() {
-  const W = innerWidth, H = innerHeight, panel = $("panel"), desk = W >= 900;
-  let top = $("top").getBoundingClientRect().bottom + 8, bottom = $("bottom").getBoundingClientRect().top - 8, left = 0, right = W;
-  if (!panel.hidden) {
-    const r = panel.getBoundingClientRect();
-    if (desk) right = r.left - 8; else bottom = r.top - 8;
-  }
+  const W = innerWidth, H = innerHeight, sh = $("sheet"), desk = W >= 900;
+  let top = desk ? 0 : $("brand").getBoundingClientRect().bottom + 8, bottom = H, left = 0, right = desk ? $("rail").getBoundingClientRect().left - 8 : W;
+  if (!sh.hidden) { const r = sh.getBoundingClientRect(); if (desk) right = r.left - 8; else { bottom = r.top - 8; top = 60; } }
   if (bottom - top < 120) bottom = top + 120;
   return { cx: (left + right) / 2, cy: (top + bottom) / 2, W, H };
 }
@@ -576,12 +664,11 @@ function framed(p, zoom) {
   const right = new V3().setFromMatrixColumn(camera.matrixWorld, 0), up = new V3().setFromMatrixColumn(camera.matrixWorld, 1);
   return p.clone().setY(0).add(right.multiplyScalar((W / 2 - cx) * wpp)).add(up.multiplyScalar((cy - H / 2) * wpp));
 }
-function focusOn(p, zoom) { flyTo(framed(p, zoom), zoom); }
+const focusOn = (p, zoom) => flyTo(framed(p, zoom), zoom);
 function goHome() {
-  closePanel(true);
+  closeSheet(true);
   sph.set(camera.position.distanceTo(controls.target), HOME.phi, HOME.theta);
-  const off = new V3().setFromSpherical(sph);
-  camera.position.copy(controls.target).add(off);
+  camera.position.copy(controls.target).add(new V3().setFromSpherical(sph));
   flyTo(framed(new V3(0, 0, 0), homeZoom()), homeZoom());
   setSel(null);
 }
@@ -595,129 +682,127 @@ function mkLabel(html, pos3, onClick, cls = "") {
   lblEl.appendChild(el);
   const L = { el, pos3 }; labels.push(L); return L;
 }
-function isleSub(d) {
-  const dl = isleDl(d), n = dl[0], nn = isleNews(d).filter((a) => !read.includes(a.id)).length;
-  const parts = [];
-  if (dl.length) parts.push(`${dl.length} 項截止`);
-  if (d.guides.length) parts.push(`${d.guides.length} 份流程`);
-  if (nn) parts.push(`${nn} 則新公告`);
-  const hit = n ? `<span class="hit ${lvl(daysLeft(n.at)) === "hot" ? "hot" : ""}">D-${daysLeft(n.at)}</span>` : "";
-  return { sub: parts.join("・") || "目前沒有待辦", hit };
-}
+function isleBadge(d) { const n = isleDl(d)[0]; if (!n) return ""; const k = daysLeft(n.at); return k <= 14 ? `<span class="d ${k <= 3 ? "hot" : ""}">D-${k}</span>` : ""; }
 function buildLabels() {
   lblEl.innerHTML = ""; labels.length = 0;
   ISL.forEach((d) => {
-    const s = isleSub(d);
-    d.label = mkLabel(`<span class="ic" style="--c:${d.color}">${d.icon}</span><span>${E(d.name)}${s.hit}<small>${E(s.sub)}</small></span>`,
-      d.pos.clone().add(d.build.position).setY(d.build.userData.h + 0.4), () => openIsle(d.i));
+    d.label = mkLabel(`<span class="no">${d.no}</span>${E(d.name)}${isleBadge(d)}${stamps["isle:" + d.key] ? '<span class="ok">✓</span>' : ""}`,
+      d.pos.clone().add(d.build.position).setY(d.build.userData.h + 0.5), () => openIsle(d.i));
   });
   CENTER_SPOTS.forEach((s) => {
-    const o = centerObj[s.id];
+    const o = centerObj[s.id], st = officeStatus();
     let extra = "";
-    if (s.id === "office") { const st = officeStatus(); extra = `<small>${E(st.short)}</small>`; }
-    if (s.id === "deadlines") { const n = upcoming()[0]; extra = n ? `<small>最近 D-${daysLeft(n.at)}</small>` : ""; }
-    if (s.id === "news") { const u = unread().length; extra = u ? `<small>${u} 則未讀</small>` : ""; }
-    s.label = mkLabel(`<span class="ic" style="--c:${s.c}">${s.icon}</span><span>${E(s.name)}${extra}</span>`,
-      o.position.clone().setY((o.userData.h || 3) * (s.id === "office" ? 0.92 : 1) + 0.3), () => openSpot(s.id), "sm");
+    if (s.id === "office") extra = `<span class="d" style="background:${st.open ? "#5F8F5A" : "#7A6B60"}">${E(st.short)}</span>`;
+    if (s.id === "news" && unread().length) extra = `<span class="d hot">${unread().length}</span>`;
+    s.label = mkLabel(`<span class="no">${s.no}</span>${E(s.name)}${extra}`, o.position.clone().setY((o.userData.h || 3) * (s.id === "office" ? 0.92 : 1) + 0.4), () => openSpot(s.id));
   });
+  mkLabel(`<b>${E(me.name || "我")}</b><span>${E(me.club || "未選社團")}</span>`, () => av.position.clone().setY(av.position.y + 2.25), () => openChar("look"), "me");
   refreshLabelState();
 }
 function refreshLabelState() {
-  const q = query();
-  ISL.forEach((d) => {
-    d.label.el.classList.toggle("done", !!stamps["isle:" + d.key]);
-    d.label.el.classList.toggle("sel", sel === "isle:" + d.key);
-    d.label.el.classList.toggle("dim", !!q && !isleHits(d, q));
-  });
+  ISL.forEach((d) => d.label.el.classList.toggle("sel", sel === "isle:" + d.key));
   CENTER_SPOTS.forEach((s) => s.label.el.classList.toggle("sel", sel === s.id));
 }
 const pv = new V3();
 function placeLabels() {
   const W = innerWidth, H = innerHeight;
-  lblEl.classList.toggle("cmp", W < 600 && camera.zoom < 1.4);
+  lblEl.classList.toggle("cmp", W < 600 && camera.zoom < 1.6);
   labels.forEach((L) => {
-    pv.copy(L.pos3).project(camera);
-    const x = (pv.x + 1) / 2 * W, y = (1 - pv.y) / 2 * H;
+    pv.copy(typeof L.pos3 === "function" ? L.pos3() : L.pos3).project(camera);
+    const x = ((pv.x + 1) / 2) * W, y = ((1 - pv.y) / 2) * H;
     const off = pv.z > 1 || x < -80 || x > W + 80 || y < -40 || y > H + 40;
     L.el.classList.toggle("off", off);
-    if (!off) L.el.style.transform = `translate(${x}px, ${y - 14}px) translate(-50%, -100%)`;
+    if (!off) L.el.style.transform = `translate(${x}px, ${y - 10}px) translate(-50%, -100%)`;
   });
 }
 
 /* ---------------- 互動 ---------------- */
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
-let downAt = null;
-renderer.domElement.addEventListener("pointerdown", (e) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; tween = null; });
+let downAt = null, sel = null, touring = false;
+function pickAt(e) {
+  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(pickables, true).find((h) => h.object.userData.pick);
+  return hit && hit.object.userData.pick;
+}
+renderer.domElement.addEventListener("pointerdown", (e) => { downAt = { x: e.clientX, y: e.clientY, t: performance.now() }; tween = null; touring = false; });
 renderer.domElement.addEventListener("pointerup", (e) => {
   if (!downAt || Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 7 || performance.now() - downAt.t > 600) return;
   downAt = null;
-  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-  ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects(pickables, true).find((h) => h.object.userData.pick);
-  if (!hit) return;
-  const p = hit.object.userData.pick;
+  const p = pickAt(e);
+  if (!p) return;
   if (p.t === "isle") openIsle(p.i);
   else if (p.t === "spot") openSpot(p.id);
   else if (p.t === "teacher") teacherTalk();
+  else if (p.t === "me") openChar("look");
+  else if (p.t === "npc") toast(`這位是${p.club || "體能性社團"}的夥伴`);
   else if (p.t === "center") openSpot("office");
 });
-renderer.domElement.addEventListener("pointermove", (e) => {
-  if (e.pointerType !== "mouse" || e.buttons) return;
-  ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
-  ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects(pickables, true).find((h) => h.object.userData.pick);
-  renderer.domElement.style.cursor = hit ? "pointer" : "grab";
-});
+renderer.domElement.addEventListener("pointermove", (e) => { if (e.pointerType !== "mouse" || e.buttons) return; renderer.domElement.style.cursor = pickAt(e) ? "pointer" : "grab"; });
 
-let sel = null;
-function setSel(id) { sel = id; refreshLabelState(); renderChips(); }
+function setSel(id) { sel = id; refreshLabelState(); }
 function stamp(id, name) {
   if (stamps[id]) return;
   stamps[id] = Date.now(); LS.set("stamps", stamps);
-  updHud(); refreshLabelState();
+  updHud(); buildLabels();
   const n = Object.keys(stamps).length;
-  toast(`🏅 蓋章！${name}（${n}/${STAMPS.length}）`);
-  if (n === STAMPS.length) { confetti(); setTimeout(() => startTalk(["恭喜！整座群島都走過一遍了，你已經是合格的新任幹部。", "之後有新公告或快到的截止日，島上會出現漂浮的菱形提醒，記得常回來看看。"]), 900); }
-  if (!$("panel").hidden && panelView === "passport") renderPassport();
+  toast(`蓋章！${name}（${n}/${STAMPS.length}）`);
+  if (n === STAMPS.length) { confetti(); setTimeout(() => talk("CONGRATS", [["全部蓋滿了！", `${me.name || "你"}已經走遍整座群島，是合格的新任幹部。之後有新公告或快到的截止日，島上會浮出菱形提醒，記得常回來看看。`, "好"]]), 900); }
 }
-function openIsle(i) {
+function openIsle(i, tour) {
+  if (!tour) touring = false;
   const d = ISL[i];
   setSel("isle:" + d.key);
   renderIsle(d);
   focusOn(d.pos, innerWidth < 600 ? 2.4 : 2);
-  walkTo(i, () => { stamp("isle:" + d.key, d.name); if (panelView === "isle:" + d.key) renderIsle(d); toast(`${d.name}到了！`); });
+  walkTo(i, () => {
+    stamp("isle:" + d.key, d.name);
+    if (panelView === "isle:" + d.key) renderIsle(d, true);
+    if (touring) setTimeout(tourNext, 2600);
+  });
 }
 function openSpot(id) {
+  touring = false;
   setSel(id);
-  const r = { office: renderOffice, deadlines: renderDeadlines, news: renderNews, links: renderLinks }[id];
-  r();
+  ({ office: renderOffice, deadlines: renderDeadlines, news: renderNews, links: renderLinks })[id]();
   focusOn(SPOT[id].pos, innerWidth < 600 ? 2.1 : 1.8);
   walkTo("C", () => stamp(id, CENTER_SPOTS.find((s) => s.id === id).name));
 }
-
-/* ---------------- 資訊卡 ---------------- */
-let panelView = null;
-function showPanel(view, head, body, color) {
-  panelView = view;
-  $("ph").innerHTML = head; $("pbody").innerHTML = body;
-  $("panel").style.setProperty("--c", color || "var(--sun)");
-  $("panel").hidden = false; document.body.classList.add("paneled");
-  document.body.classList.toggle("searching", view === "search");
-  $("pbody").scrollTop = 0;
-  setNav(["deadlines", "news", "passport"].includes(view) ? view : "map");
-  try { history.replaceState(null, "", "#" + view.replace("isle:", "isle-")); } catch {}
+let tourQ = [];
+function startTour() {
+  tourQ = ISL.map((d) => d.i).filter((i) => !stamps["isle:" + ISL[i].key]);
+  if (!tourQ.length) tourQ = ISL.map((d) => d.i);
+  touring = true;
+  toast("出發！角色會帶你一座一座逛");
+  tourNext();
 }
-function closePanel(keepSel) {
-  $("panel").hidden = true; document.body.classList.remove("paneled", "searching"); panelView = null;
-  setNav("map");
+function tourNext() {
+  if (!touring) return;
+  if (!tourQ.length) { touring = false; openSpot("office"); toast("導覽結束，回到課外組"); return; }
+  openIsle(tourQ.shift(), true);
+}
+
+/* ---------------- 資訊抽屜 ---------------- */
+let panelView = null;
+const RAIL = { char: "bChar", list: "bList", deadlines: "bDl", news: "bNews" };
+function showSheet(view, html) {
+  panelView = view;
+  $("sbody").innerHTML = html;
+  $("sheet").hidden = false; document.body.classList.add("sheeted");
+  $("sbody").scrollTop = 0;
+  Object.entries(RAIL).forEach(([v, id]) => $(id).setAttribute("aria-pressed", String(view === v || (v === "char" && view.startsWith("char")))));
+  try { history.replaceState(null, "", "#" + view.replace("isle:", "isle-").replace(/^char.*/, "me")); } catch {}
+}
+function closeSheet(keepSel) {
+  $("sheet").hidden = true; document.body.classList.remove("sheeted"); panelView = null; touring = false;
+  Object.values(RAIL).forEach((id) => $(id).setAttribute("aria-pressed", "false"));
   if (!keepSel) setSel(null);
   try { history.replaceState(null, "", location.pathname + location.search); } catch {}
 }
-$("px").addEventListener("click", () => closePanel());
-addEventListener("keydown", (e) => { if (e.key === "Escape") { if (!$("talk").hidden) $("talk").hidden = true; else closePanel(); } });
-const head = (icon, c, title, sub) => `<span class="ic" style="--c:${c}">${icon}</span><span>${E(title)}<small>${E(sub)}</small></span>`;
-const stampLine = (id, hint) => stamps[id] ? `<div class="stampline ok">✓ 已蓋章 · ${fmtStamp(stamps[id])}</div>` : `<div class="stampline">${hint}</div>`;
-const fmtStamp = (ts) => { const p = tw(new Date(ts)); return `${p.m}/${p.d} ${String(p.h).padStart(2, "0")}:${String(p.min).padStart(2, "0")}`; };
+$("sx").addEventListener("click", () => closeSheet());
+addEventListener("keydown", (e) => { if (e.key === "Escape") { if (!$("modal").hidden) endTalk(); else closeSheet(); } });
+const head = (tile, kick, title) => `<div class="sh"><div class="tile">${tile}</div><div><div class="kick">${kick}</div><h2>${E(title)}</h2></div></div>`;
+const stampTag = (id) => (stamps[id] ? '<span class="tag ok">✓ 已蓋章</span>' : '<span class="tag">走到這裡可蓋章</span>');
 
 function gcal(x) {
   const z = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -732,101 +817,174 @@ function icsFor(list) {
   L.push("END:VCALENDAR");
   return L.join("\r\n");
 }
-function download(name, text) {
-  try { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/calendar;charset=utf-8" })); a.download = name; document.body.appendChild(a); a.click(); a.remove(); toast("已下載行事曆檔，開啟即可加入"); }
-  catch { toast("無法下載，請改用「Google 日曆」按鈕"); }
+function saveFile(name, blob, okMsg) {
+  try { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); toast(okMsg); }
+  catch { toast("無法下載，請改用其他方式儲存"); }
 }
-const subUrl = () => location.protocol === "https:" ? "webcal://" + location.host + location.pathname.replace(/[^/]*$/, "") + "calendar.ics" : "calendar.ics";
+const download = (name, text) => saveFile(name, new Blob([text], { type: "text/calendar;charset=utf-8" }), "已下載行事曆檔，開啟即可加入");
+const subUrl = () => (location.protocol === "https:" ? "webcal://" + location.host + location.pathname.replace(/[^/]*$/, "") + "calendar.ics" : "calendar.ics");
+const noTag = (no) => `<span style="font:700 13px var(--f-mono);color:var(--terra);margin-right:8px">${no}</span>`;
 
-function dlRows(list, showIsle) {
+function dlItems(list, showIsle, openFirst) {
   if (!list.length) return '<p class="empty">目前沒有待辦的截止日。</p>';
-  return '<ul class="rows">' + list.map((x) => {
-    const n = daysLeft(x.at), d = isleOf(x.category);
-    return `<li class="dlrow lv-${lvl(n)}" style="--c:${d ? d.color : "var(--ink)"}"><div class="days"><b>${n === 0 ? "今" : n}</b><small>${n === 0 ? "今天截止" : "天後"}</small></div><div>
-      <b>${E(x.title)}</b><small>${fmt(x.at)} 截止${showIsle && d ? `・${E(d.name)}` : ""}</small>${x.detail ? `<p>${E(x.detail)}</p>` : ""}
-      <div class="acts"><a class="btn g" target="_blank" rel="noopener" href="${E(gcal(x))}">Google 日曆</a><button class="btn g" type="button" data-ics="${E(x.id)}">iPhone／其他</button>${x.link ? `<a class="btn g" target="_blank" rel="noopener" href="${E(x.link)}">相關文件</a>` : ""}${showIsle && d ? `<button class="btn g" type="button" data-isle="${d.i}">去${E(d.name)}</button>` : ""}</div></div></li>`;
+  return '<ul class="items">' + list.map((x, k) => {
+    const n = daysLeft(x.at), d = isleOf(x.category), l = lvl(n), open = openFirst && k === 0;
+    return `<li class="item ${l === "hot" ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="${open}"><span class="dot"></span><span class="nm">${E(x.title)}<small>${fmt(x.at)} 截止${showIsle && d ? "・" + E(d.name) : ""}</small></span><span class="meta ${l}">${n === 0 ? "今天" : "D-" + n}</span><span class="chev">›</span></button>
+      <div class="more" ${open ? "" : "hidden"}>${x.detail ? `<p>${E(x.detail)}</p>` : ""}<div class="acts"><a class="btn g" target="_blank" rel="noopener" href="${E(gcal(x))}">Google 日曆</a><button class="btn g" type="button" data-ics="${E(x.id)}">iPhone／其他</button>${x.link ? `<a class="btn g" target="_blank" rel="noopener" href="${E(x.link)}">相關文件 ↗</a>` : ""}${showIsle && d ? `<button class="btn" type="button" data-isle="${d.i}">去${E(d.name)}</button>` : ""}</div></div></li>`;
   }).join("") + "</ul>";
 }
-function newsRows(list) {
+function newsItems(list) {
   if (!list.length) return '<p class="empty">目前沒有公告。</p>';
-  return '<ul class="rows">' + list.map((a) => { const d = isleOf(a.tag); return `<li style="--c:${d ? d.color : "var(--ink)"}"><b>${a.pinned ? '<span class="pin">置頂</span>' : ""}${!read.includes(a.id) ? '<span class="new">NEW</span>' : ""}${E(a.title)}</b><small>${E(a.date)}${d ? "・" + E(d.name) : ""}</small><p>${E(a.body)}</p></li>`; }).join("") + "</ul>";
+  return '<ul class="items">' + list.map((a) => { const d = isleOf(a.tag), nw = !read.includes(a.id);
+    return `<li class="item ${nw ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="${nw}"><span class="dot"></span><span class="nm">${E(a.title)}<small>${E(a.date)}${d ? "・" + E(d.name) : ""}</small></span><span class="meta ${nw ? "hot" : ""}">${a.pinned ? "置頂" : nw ? "NEW" : ""}</span><span class="chev">›</span></button><div class="more" ${nw ? "" : "hidden"}><p>${E(a.body)}</p></div></li>`; }).join("") + "</ul>";
 }
 function markRead(list) { let ch = false; list.forEach((a) => { if (!read.includes(a.id)) { read.push(a.id); ch = true; } }); if (ch) { LS.set("read", read); updHud(); updMarkers(); buildLabels(); } }
 
-function renderIsle(d) {
-  const dl = isleDl(d), news = isleNews(d);
-  const body = `<p class="tagl">${E(d.tagline)}</p>
-    ${stampLine("isle:" + d.key, "🚶 •ᴗ• 正在過橋，走到島上就能蓋章…")}
-    <div class="grp"><h3>⏰ 截止日 <span class="n">${dl.length} 項</span></h3>${dlRows(dl)}</div>
-    ${d.guides.map((g) => `<div class="grp"><h3>🧭 ${E(g.title)}</h3><p class="tagl" style="--c:var(--paper2);margin:0 0 6px">${E(g.summary)}</p><ol class="steps">${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>
-      ${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])}</a>`).join("")}</div>` : ""}</div>`).join("")}
-    <div class="grp"><h3>📌 相關公告 <span class="n">${news.length} 則</span></h3>${newsRows(news)}</div>
+function renderIsle(d, keepScroll) {
+  const dl = isleDl(d), news = isleNews(d), steps = d.guides.reduce((n, g) => n + g.steps.length, 0), duty = DUTY[d.key] || [];
+  const st = $("sbody").scrollTop;
+  const mine = (r) => me.club && me.role === r;
+  const html = `${head(d.icon, `ISLAND ${d.no} · ${E(d.key)}`, d.name)}
+    <p class="lead">${E(d.guides[0]?.title || d.tagline)}</p>
+    <p class="quote">「${E(d.tagline)}」</p>
+    <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span><span class="tag">${dl.length} 項截止</span><span class="tag">${steps} 個步驟</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
+    <div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>
+    ${d.guides.map((g) => `<div class="sec"><h4>${E(g.topic)}・辦事步驟</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 步</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
+    <div class="sec"><h4>相關公告</h4>${newsItems(news)}</div>
+    <div class="sec"><h4>這一島在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
     <p class="foot">還有問題？請在辦公時間到中心島的課外組詢問。</p>`;
-  showPanel("isle:" + d.key, head(d.icon, d.color, d.name, d.guides[0]?.topic ? d.guides.map((g) => g.topic).join("、") : "行政分類"), body, d.color);
+  showSheet("isle:" + d.key, html);
+  if (keepScroll) $("sbody").scrollTop = st;
   markRead(news);
+}
+function placeItems(filter) {
+  return '<ul class="items">' + ISL.filter((d) => !filter || filter(d)).map((d) => { const n = isleDl(d)[0], k = n ? daysLeft(n.at) : null;
+    return `<li class="item ${myDuty(d) ? "hl" : ""}" style="--c:${d.color}"><button type="button" data-isle="${d.i}"><span class="dot"></span><span class="nm">${noTag(d.no)}${E(d.name)}<small>${E(d.tagline)}${myDuty(d) ? "・你的職責" : ""}</small></span><span class="meta ${k !== null ? lvl(k) : ""}">${k !== null ? "D-" + k : ""}${stamps["isle:" + d.key] ? " ✓" : ""}</span><span class="chev">›</span></button></li>`; }).join("") + "</ul>";
 }
 function renderOffice() {
   const st = officeStatus(), p = tw(), slots = D.office.hours.slots.map((s) => s.join("–")).join("、");
   const rows = [1, 2, 3, 4, 5, 6, 0].map((wd) => { const on = D.office.hours.days.includes(wd); return `<tr class="${wd === p.wd ? "today" : ""}"><td>週${WEEK[wd]}${wd === p.wd ? "（今天）" : ""}</td><td class="${on ? "" : "closed"}">${on ? slots : "不辦公"}</td></tr>`; }).join("");
-  const body = `<p class="tagl">群島的中心。七座行政島都有橋通到這裡，有問題就回來找我們。</p>${stampLine("office", "🚶 走到課外組就能蓋章")}
-    <div class="big"><span class="lamp ${st.open ? "on" : "off"}"></span>${E(st.text)}</div>
-    <table class="week"><tbody>${rows}</tbody></table>
-    <div class="grp"><h3>📍 位置與導航</h3><p class="tagl" style="--c:var(--paper2)">${E(D.office.locationNote)}</p>
-      <div class="acts">${D.office.mapUrl ? `<a class="btn" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : '<span class="btn g" aria-disabled="true">導航建置中</span>'}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div></div>
-    <div class="grp"><h3>💡 洽公小提醒</h3><ul class="rows">${D.office.tips.map((t) => `<li style="--c:var(--grass)"><p style="margin:0">${E(t)}</p></li>`).join("")}</ul></div>
-    <div class="grp"><h3>🗺 七座行政島</h3><div class="isles">${ISL.map((d) => `<button type="button" data-isle="${d.i}"><span class="ic" style="--c:${d.color}">${d.icon}</span><span>${E(d.name)}<small>${E(isleSub(d).sub)}</small></span></button>`).join("")}</div></div>`;
-  showPanel("office", head("🏛", "#8FCB8B", D.office.name, "群島中心"), body, "#8FCB8B");
+  const html = `${head("🏛", "CENTER 00 · 群島中心", D.office.name)}
+    <p class="lead">七座行政島都有橋通到這裡，有問題就回來找我們。</p>
+    <div class="bigst"><span class="lamp ${st.open ? "on" : "off"}"></span>${E(st.text)}</div>
+    <div class="tags"><span class="tag">週一至週五</span><span class="tag">9:00–12:00</span><span class="tag">13:30–17:00</span>${stampTag("office")}</div>
+    <div class="sec"><h4>辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
+    <div class="sec"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : '<span class="btn g" aria-disabled="true">導航建置中</span>'}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div></div>
+    <div class="sec"><h4>洽公小提醒</h4><ul class="items">${D.office.tips.map((t) => `<li class="item"><div class="row"><span class="dot"></span><span class="nm">${E(t)}</span><span></span><span></span></div></li>`).join("")}</ul></div>
+    <div class="sec"><h4>七座行政島</h4>${placeItems()}</div>`;
+  showSheet("office", html);
 }
 function renderDeadlines() {
-  const body = `<p class="tagl">所有分類的截止日都在這座鐘塔。7 天內轉黃、3 天內轉紅，分類島上方也會出現提醒菱形。</p>${stampLine("deadlines", "🚶 走到鐘塔就能蓋章")}
-    <div class="acts" style="margin:0 6px 4px"><a class="btn" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" data-ics="all">全部加入行事曆</button><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
-    <p class="foot" style="margin-top:0">訂閱後，新的截止日會自動同步到手機，並在截止前 3 天、1 天提醒。</p>
-    <div class="grp">${dlRows(upcoming(), true)}</div>
+  const html = `${head("⏰", "CLOCK TOWER · 截止日", "截止日鐘塔")}
+    <p class="lead">所有分類的截止日都在這裡。</p>
+    <p class="quote">7 天內轉黃、3 天內轉紅，對應的島上方也會浮出菱形提醒。</p>
+    <div class="tags"><span class="tag">${upcoming().length} 項待辦</span>${stampTag("deadlines")}</div>
+    <div class="acts"><a class="btn t" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" data-ics="all">全部加入行事曆</button><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
+    <p class="foot">訂閱後，新的截止日會自動同步到手機，並在截止前 3 天、1 天提醒。</p>
+    <div class="sec"><h4>依日期排序</h4>${dlItems(upcoming(), true, true)}</div>
     <p class="foot">正式期程以 <a target="_blank" rel="noopener" href="${E(D.links.schedule)}">體能性社團作業期程表 ↗</a> 為準。</p>`;
-  showPanel("deadlines", head("⏰", "#F4C95D", "截止日鐘塔", `${upcoming().length} 項待辦`), body, "#F4C95D");
+  showSheet("deadlines", html);
   renderNotifyBtn();
 }
 function renderNews() {
-  const body = `<p class="tagl">學期間的行政公告都貼在這裡。看過的公告會自動標記為已讀。</p>${stampLine("news", "🚶 走到公告欄就能蓋章")}<div class="grp">${newsRows(anns)}</div>`;
-  showPanel("news", head("📌", "#F28C72", "公告欄", `${anns.length} 則公告`), body, "#F28C72");
+  const html = `${head("📌", "BULLETIN · 公告", "公告欄")}<p class="lead">學期間的行政公告都貼在這裡。</p><div class="tags"><span class="tag">${anns.length} 則公告</span>${unread().length ? `<span class="tag c" style="--c:#C8443A">${unread().length} 則未讀</span>` : ""}${stampTag("news")}</div><div class="sec"><h4>最新公告</h4>${newsItems(anns)}</div>`;
+  showSheet("news", html);
   markRead(anns);
 }
 function renderLinks() {
-  const body = `<p class="tagl">從碼頭出航，前往課外組的其他平台。</p>${stampLine("links", "🚶 走到碼頭就能蓋章")}
-    <ul class="rows">
-      <li style="--c:#5FC4D6"><b>課外組網站</b><small>activity.thu.edu.tw</small><div class="acts"><a class="btn" target="_blank" rel="noopener" href="${E(D.links.office)}">前往 ↗</a></div></li>
-      <li style="--c:#F4C95D"><b>體能性社團各項作業期程</b><small>整學期的正式時程表</small><div class="acts"><a class="btn" target="_blank" rel="noopener" href="${E(D.links.schedule)}">前往 ↗</a></div></li>
-      <li style="--c:#F28C72"><b>體能性社團 Linktree</b><small>表單、雲端資料夾與常用連結</small><div class="acts"><a class="btn" target="_blank" rel="noopener" href="${E(D.links.linktree)}">前往 ↗</a></div></li>
-      <li style="--c:#8FCB8B"><b>本站文字版</b><small>不顯示 3D，內容相同</small><div class="acts"><a class="btn g" href="list.html">開啟</a></div></li>
-    </ul>`;
-  showPanel("links", head("⛵", "#5FC4D6", "出航碼頭", "常用連結"), body, "#5FC4D6");
+  const row = (t, s, href, ext = true) => `<li class="item"><a class="row" style="text-decoration:none;color:inherit" href="${E(href)}" ${ext ? 'target="_blank" rel="noopener"' : ""}><span class="dot"></span><span class="nm">${t}<small>${s}</small></span><span class="meta">${ext ? "↗" : ""}</span><span class="chev">›</span></a></li>`;
+  const html = `${head("⛵", "HARBOR · 出航", "出航碼頭")}<p class="lead">從碼頭出航，前往課外組的其他平台。</p><div class="tags">${stampTag("links")}</div>
+    <div class="sec"><h4>常用連結</h4><ul class="items">${row("課外組網站", "activity.thu.edu.tw", D.links.office)}${row("體能性社團各項作業期程", "整學期的正式時程表", D.links.schedule)}${row("體能性社團 Linktree", "表單、雲端資料夾與常用連結", D.links.linktree)}${row("本站文字版", "不顯示 3D，內容相同", "list.html", false)}</ul></div>`;
+  showSheet("links", html);
 }
-function renderPassport() {
-  const n = Object.keys(stamps).length, t = D.onboarding.filter((x) => tasks[x]).length;
-  const body = `<div class="big"><span class="num" style="font-size:40px">${n}</span><span style="color:var(--mut);font-size:15px">/ ${STAMPS.length} 個印章</span></div>
-    <div class="prog"><i style="width:${(n / STAMPS.length) * 100}%"></i></div>
-    <div class="stamps">${STAMPS.map((s) => `<button type="button" class="stc ${stamps[s.id] ? "on" : ""}" data-stamp="${E(s.id)}" style="--c:${s.c}"><i>${s.icon}</i>${E(s.name)}</button>`).join("")}</div>
-    <div class="grp"><h3>✅ 新任幹部上任清單 <span class="n" id="taskN">${t}/${D.onboarding.length}</span></h3>
-    <ul class="tasks">${D.onboarding.map((x, i) => `<li><label for="task${i}"><input type="checkbox" id="task${i}" data-task="${i}" ${tasks[x] ? "checked" : ""}><span>${E(x)}</span></label></li>`).join("")}</ul></div>
-    <p class="foot">印章與勾選紀錄只存在你自己的手機或電腦。</p>
-    <div class="acts" style="margin:6px"><button class="btn g" type="button" id="resetSt">清除所有印章</button></div>`;
-  showPanel("passport", head("🏅", "#F4C95D", "幹部護照", "走訪群島、完成上任清單"), body, "#F4C95D");
-}
-function renderSearch(q) {
-  const out = [];
+const isleHits = (d, q) => d.name.includes(q) || d.guides.some((g) => [g.topic, g.title, g.summary, ...g.steps].some((s) => s.includes(q))) || isleDl(d).some((x) => (x.title + (x.detail || "")).includes(q)) || isleNews(d).some((a) => (a.title + a.body).includes(q));
+function listResults(q) {
+  const res = [];
   ISL.forEach((d) => {
-    d.guides.forEach((g) => { const hit = [g.topic, g.title, g.summary, ...g.steps].find((s) => s.includes(q)); if (hit) out.push({ d, t: g.title, s: hit }); });
-    isleDl(d).forEach((x) => { if ((x.title + (x.detail || "")).includes(q)) out.push({ d, t: x.title, s: `截止日・${fmt(x.at)}` }); });
-    isleNews(d).forEach((a) => { if ((a.title + a.body).includes(q)) out.push({ d, t: a.title, s: "公告・" + a.body }); });
+    d.guides.forEach((g) => { const hit = [g.topic, g.title, g.summary, ...g.steps].find((s) => s.includes(q)); if (hit) res.push({ d, t: g.title, s: hit }); });
+    isleDl(d).forEach((x) => { if ((x.title + (x.detail || "")).includes(q)) res.push({ d, t: x.title, s: `截止日・${fmt(x.at)}` }); });
+    isleNews(d).forEach((a) => { if ((a.title + a.body).includes(q)) res.push({ d, t: a.title, s: "公告・" + a.body }); });
   });
   const hl = (s) => E(s).split(E(q)).join(`<mark>${E(q)}</mark>`);
-  const body = out.length ? '<ul class="rows">' + out.map((r) => `<li style="--c:${r.d.color}"><b>${hl(r.t)}</b><small>${E(r.d.name)}・${hl(r.s)}</small><div class="acts"><button class="btn g" type="button" data-isle="${r.d.i}">去${E(r.d.name)}</button></div></li>`).join("") + "</ul>"
-    : `<p class="empty">找不到「${E(q)}」。可以在辦公時間到課外組當面詢問。</p>`;
-  showPanel("search", head("⌕", "#F7F2E4", `搜尋「${q}」`, `找到 ${out.length} 筆`), body, "#F7F2E4");
+  return `<div class="sec"><h4>搜尋結果・${res.length} 筆</h4>${res.length ? '<ul class="items">' + res.map((r) => `<li class="item" style="--c:${r.d.color}"><button type="button" data-isle="${r.d.i}"><span class="dot"></span><span class="nm">${hl(r.t)}<small>${E(r.d.name)}・${hl(r.s)}</small></span><span class="meta"></span><span class="chev">›</span></button></li>`).join("") + "</ul>" : `<p class="empty">找不到「${E(q)}」。可以在辦公時間到課外組當面詢問。</p>`}</div>`;
 }
-$("pbody").addEventListener("click", (e) => {
+function renderList() {
+  const centerList = '<ul class="items">' + CENTER_SPOTS.map((s) => `<li class="item"><button type="button" data-spot="${s.id}"><span class="dot"></span><span class="nm">${noTag(s.no)}${E(s.name)}</span><span class="meta">${stamps[s.id] ? "✓" : ""}</span><span class="chev">›</span></button></li>`).join("") + "</ul>";
+  showSheet("list", `${head("≡", "INDEX · 清單", "群島清單")}<label class="foot" for="q">搜尋截止日、流程與公告</label><input id="q" class="search" type="search" autocomplete="off" placeholder="例如：保險、核銷、場地"><div id="results"></div><div id="places"><div class="sec"><h4>行政島</h4>${placeItems()}</div><div class="sec"><h4>中心島</h4>${centerList}</div></div>`);
+  $("q").addEventListener("input", (e) => { const q = e.target.value.trim(); $("results").innerHTML = q ? listResults(q) : ""; $("places").hidden = !!q; });
+}
+
+/* ---- 角色 ---- */
+let charTab = "look", lastPhoto = null;
+function openChar(tab) {
+  touring = false;
+  charTab = tab || charTab;
+  renderChar();
+  setSel(null);
+  focusOn(av.position, innerWidth < 600 ? 5.2 : 4.4);
+}
+function renderChar() {
+  const tabs = `<div class="tabs" role="tablist">${[["look", "外觀"], ["trip", "行程"], ["photo", "拍照"]].map(([k, t]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${charTab === k}">${t}</button>`).join("")}</div>`;
+  let body = "";
+  if (charTab === "look") {
+    body = `<div class="field"><label for="meName">名字</label><input id="meName" class="search" maxlength="12" autocomplete="off" placeholder="替角色取個名字" value="${E(me.name)}"></div>
+      <div class="field"><span>身分・所屬社團</span><div class="choices">${CLUBS.map((c) => `<button type="button" data-club="${E(c.name)}" aria-pressed="${me.club === c.name}">${E(c.name)}</button>`).join("")}</div></div>
+      <div class="field"><span>職位</span><div class="choices sm">${ROLES.map((r) => `<button type="button" data-role="${E(r)}" aria-pressed="${me.role === r}">${E(r)}</button>`).join("")}</div></div>
+      <div class="field"><span>球衣顏色</span><div class="sw">${SHIRTS.map((c) => `<button type="button" data-shirt="${c}" style="--c:${c}" aria-pressed="${me.shirt === c}" aria-label="球衣顏色 ${c}"></button>`).join("")}</div></div>
+      <div class="field"><span>髮色</span><div class="sw">${HAIRS.map((c) => `<button type="button" data-hair="${c}" style="--c:${c}" aria-pressed="${me.hair === c}" aria-label="髮色 ${c}"></button>`).join("")}</div></div>
+      <div class="field"><span>膚色</span><div class="sw">${SKINS.map((c) => `<button type="button" data-skin="${c}" style="--c:${c}" aria-pressed="${me.skin === c}" aria-label="膚色 ${c}"></button>`).join("")}</div></div>
+      <div class="acts"><button class="btn big t" type="button" id="meDone">${me.club ? "完成，開始逛群島" : "先選一個社團"}</button></div>
+      <p class="foot">角色只存在你自己的手機或電腦，不會上傳。</p>`;
+  } else if (charTab === "trip") {
+    const n = Object.keys(stamps).length, t = D.onboarding.filter((x) => tasks[x]).length, mine = ISL.filter(myDuty);
+    body = `<div class="sec"><h4>幹部護照・${n} / ${STAMPS.length}</h4><div class="prog"><i style="width:${(n / STAMPS.length) * 100}%"></i></div>
+      <div class="stamps">${STAMPS.map((s) => `<button type="button" class="stc ${stamps[s.id] ? "on" : ""}" data-stamp="${E(s.id)}"><i>${stamps[s.id] ? "THU" : s.no}</i>${E(s.name)}</button>`).join("")}</div>
+      <div class="acts"><button class="btn big t ring" type="button" id="tourBtn">帶我逛一圈</button></div></div>
+      ${mine.length ? `<div class="sec"><h4>${E(me.role)}要特別注意的島</h4>${placeItems(myDuty)}</div>` : ""}
+      <div class="sec"><h4>新任幹部上任清單・<span id="taskN">${t}/${D.onboarding.length}</span></h4><ul class="tasks">${D.onboarding.map((x, i) => `<li><label for="task${i}"><input type="checkbox" id="task${i}" data-task="${i}" ${tasks[x] ? "checked" : ""}><span>${E(x)}</span></label></li>`).join("")}</ul></div>
+      <div class="acts"><button class="btn g" type="button" id="resetSt">清除所有印章</button></div>`;
+  } else {
+    body = `<p class="lead">和你的角色在群島上合照，存成圖片分享到社團群組。</p>
+      <div class="acts"><button class="btn big t ring" type="button" id="shoot">拍一張</button></div>
+      ${lastPhoto ? `<img class="photo" src="${lastPhoto}" alt="${E(me.name || "我")}在行政群島的合照"><div class="acts"><button class="btn" type="button" id="savePhoto">下載圖片</button></div><p class="foot">手機也可以長按圖片儲存。</p>` : '<p class="foot">會拍下目前的畫面，可以先拖曳、縮放調整角度。</p>'}`;
+  }
+  showSheet("char:" + charTab, `${head("☺", "MY CHARACTER", "角色")}${tabs}${body}`);
+}
+function applyMe(redraw) {
+  const st = $("sbody").scrollTop;
+  LS.set("me", me); rebuildAvatar(); buildLabels(); updHud();
+  if (redraw) { renderChar(); $("sbody").scrollTop = st; }
+}
+function shoot() {
+  renderer.render(scene, camera); // 同一個 tick 內讀取畫面，不需要 preserveDrawingBuffer
+  const src = renderer.domElement, W = Math.min(1200, src.width), H = Math.round((src.height / src.width) * W);
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H + 150;
+  const c = cv.getContext("2d");
+  c.drawImage(src, 0, 0, W, H);
+  c.fillStyle = "#FBF6EE"; c.fillRect(0, H, W, 150);
+  c.fillStyle = "#C8623F"; c.font = "900 54px Archivo, sans-serif"; c.fillText("GAME ON.", 40, H + 72);
+  c.fillStyle = "#2A211C"; c.font = `900 34px ${FONT}`; c.fillText(`${me.name || "我"}・${me.club || "體能性社團"}・${me.role}`, 40, H + 124);
+  c.textAlign = "right"; c.fillStyle = "#7A6B60"; c.font = `700 24px ${FONT}`;
+  const p = tw(); c.fillText(`東海體能社團行政群島・集章 ${Object.keys(stamps).length}/${STAMPS.length}・${p.y}/${p.m}/${p.d}`, W - 40, H + 124);
+  lastPhoto = cv.toDataURL("image/png");
+  renderChar();
+}
+$("sbody").addEventListener("input", (e) => { if (e.target.id === "meName") { me.name = e.target.value.trim(); LS.set("me", me); buildLabels(); } });
+$("sbody").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
+  if (b.hasAttribute("aria-expanded") && b.parentElement.classList.contains("item")) { const open = b.getAttribute("aria-expanded") !== "true"; b.setAttribute("aria-expanded", open); const m = b.nextElementSibling; if (m) m.hidden = !open; return; }
   if (b.dataset.isle !== undefined) return openIsle(+b.dataset.isle);
+  if (b.dataset.spot) return openSpot(b.dataset.spot);
+  if (b.dataset.tab) { charTab = b.dataset.tab; return renderChar(); }
+  if (b.dataset.club) { me.club = b.dataset.club; return applyMe(true); }
+  if (b.dataset.role) { me.role = b.dataset.role; return applyMe(true); }
+  if (b.dataset.shirt) { me.shirt = b.dataset.shirt; return applyMe(true); }
+  if (b.dataset.hair) { me.hair = b.dataset.hair; return applyMe(true); }
+  if (b.dataset.skin) { me.skin = b.dataset.skin; return applyMe(true); }
+  if (b.id === "meDone") { if (!me.club) return toast("請先選擇你的社團"); goHome(); toast(`${me.club}的${me.role}，歡迎登島！`); return; }
+  if (b.id === "tourBtn") { closeSheet(true); return startTour(); }
+  if (b.id === "shoot") return shoot();
+  if (b.id === "savePhoto" && lastPhoto) return fetch(lastPhoto).then((r) => r.blob()).then((bl) => saveFile(`行政群島-${me.name || "合照"}.png`, bl, "已下載合照"));
   if (b.dataset.ics) {
     if (b.dataset.ics === "all") return download("東海體能性社團截止日.ics", icsFor(upcoming()));
     const x = deadlines.find((d) => d.id === b.dataset.ics); return x && download(x.id + ".ics", icsFor([x]));
@@ -834,11 +992,11 @@ $("pbody").addEventListener("click", (e) => {
   if (b.dataset.stamp) { const id = b.dataset.stamp; return id.startsWith("isle:") ? openIsle(isleOf(id.slice(5)).i) : openSpot(id); }
   if (b.id === "notifyBtn") return askNotify();
   if (b.id === "resetSt") {
-    if (b.dataset.arm) { stamps = {}; LS.set("stamps", stamps); updHud(); refreshLabelState(); renderPassport(); toast("印章已清除"); }
+    if (b.dataset.arm) { stamps = {}; LS.set("stamps", stamps); updHud(); buildLabels(); renderChar(); toast("印章已清除"); }
     else { b.dataset.arm = "1"; b.textContent = "確定清除？再按一次"; }
   }
 });
-$("pbody").addEventListener("change", (e) => {
+$("sbody").addEventListener("change", (e) => {
   const i = e.target.dataset.task; if (i === undefined) return;
   tasks[D.onboarding[+i]] = e.target.checked; LS.set("tasks", tasks);
   const t = D.onboarding.filter((x) => tasks[x]).length;
@@ -865,72 +1023,37 @@ function checkNotify() {
   LS.set("notified", today);
 }
 
-/* ---------------- 搜尋與島嶼籤 ---------------- */
-const query = () => $("q").value.trim();
-const isleHits = (d, q) => {
-  let n = 0;
-  d.guides.forEach((g) => { if ([g.topic, g.title, g.summary, ...g.steps].some((s) => s.includes(q))) n++; });
-  isleDl(d).forEach((x) => { if ((x.title + (x.detail || "")).includes(q)) n++; });
-  isleNews(d).forEach((a) => { if ((a.title + a.body).includes(q)) n++; });
-  return n;
-};
-function renderChips() {
-  const q = query();
-  $("chips").innerHTML = ISL.map((d) => {
-    const n = isleDl(d)[0], days = n ? daysLeft(n.at) : null, h = q ? isleHits(d, q) : 0;
-    const small = q ? `${h} 符合` : days !== null ? `D-${days}` : "";
-    return `<button type="button" class="chip ${q && !h ? "off" : ""}" data-isle="${d.i}" aria-pressed="${sel === "isle:" + d.key}" style="--c:${d.color}"><i>${d.icon}</i>${E(d.name)}${small ? ` <small class="${!q && days !== null && days <= 3 ? "hot" : ""}">${small}</small>` : ""}</button>`;
-  }).join("");
-}
-$("chips").addEventListener("click", (e) => { const b = e.target.closest("[data-isle]"); if (b) openIsle(+b.dataset.isle); });
-let qT;
-$("q").addEventListener("input", () => {
-  $("qx").hidden = !query();
-  renderChips(); refreshLabelState();
-  clearTimeout(qT);
-  qT = setTimeout(() => { const q = query(); if (q) renderSearch(q); else if (panelView === "search") closePanel(); }, 250);
-});
-$("qx").addEventListener("click", () => { $("q").value = ""; $("qx").hidden = true; renderChips(); refreshLabelState(); if (panelView === "search") closePanel(); });
-
-/* ---------------- HUD、分頁、對話 ---------------- */
-function setNav(v) { document.querySelectorAll("nav.tab button").forEach((b) => b.dataset.v === v ? b.setAttribute("aria-current", "page") : b.removeAttribute("aria-current")); }
-document.querySelectorAll("nav.tab button").forEach((b) => b.addEventListener("click", () => {
-  const v = b.dataset.v;
-  if (v === "map") return goHome();
-  if (v === "deadlines" || v === "news") return openSpot(v);
-  if (v === "passport") return panelView === "passport" ? closePanel() : renderPassport();
-}));
-$("stampBtn").addEventListener("click", renderPassport);
+/* ---------------- HUD、跑馬燈、對話 ---------------- */
+$("bHome").addEventListener("click", goHome);
+$("bChar").addEventListener("click", () => (panelView && panelView.startsWith("char") ? closeSheet() : openChar()));
+$("bList").addEventListener("click", () => (panelView === "list" ? closeSheet() : renderList()));
+$("bDl").addEventListener("click", () => (panelView === "deadlines" ? closeSheet() : openSpot("deadlines")));
+$("bNews").addEventListener("click", () => (panelView === "news" ? closeSheet() : openSpot("news")));
 $("pOffice").addEventListener("click", () => openSpot("office"));
 $("pNext").addEventListener("click", () => { const n = upcoming()[0], d = n && isleOf(n.category); d ? openIsle(d.i) : openSpot("deadlines"); });
-$("goCenter").addEventListener("click", () => openSpot("office"));
-$("home").addEventListener("click", goHome);
 
 function updHud() {
   const st = officeStatus();
   $("lamp").className = "lamp " + (st.open ? "on" : "off");
   $("officeTxt").textContent = "課外組 " + st.short;
   const n = upcoming()[0];
-  if (n) { const d = daysLeft(n.at); $("nextN").textContent = d === 0 ? "今天" : d; $("nextU").textContent = d === 0 ? "" : "天"; } else { $("nextN").textContent = "無"; $("nextU").textContent = ""; }
+  $("nextN").textContent = n ? (daysLeft(n.at) === 0 ? "今天" : "D-" + daysLeft(n.at)) : "無";
   const soon = upcoming().filter((x) => daysLeft(x.at) <= 7).length;
-  $("dlN").hidden = !soon; $("dlN").textContent = soon; $("dlN").classList.toggle("hot", upcoming().some((x) => daysLeft(x.at) <= 3));
+  $("dlN").hidden = !soon; $("dlN").textContent = soon;
   const u = unread().length; $("newsN").hidden = !u; $("newsN").textContent = u;
-  $("stampTxt").textContent = `${Object.keys(stamps).length} / ${STAMPS.length}`;
-  $("sem").textContent = D.term + (D.isSample ? "・範例資料" : "");
+  const s = Object.keys(stamps).length; $("stampN").hidden = !s; $("stampN").textContent = `${s}/${STAMPS.length}`;
 }
-
-// 跑馬燈：輪流顯示真正需要注意的事
-let tkI = 0;
+let tkI = 0, tkCur = null;
 function tickerMsgs() {
   const m = [], st = officeStatus();
-  upcoming().slice(0, 3).forEach((x) => { const d = isleOf(x.category); m.push({ t: `${d ? d.icon + " " + d.name + "：" : ""}「${x.title}」還有 ${daysLeft(x.at)} 天`, go: () => (d ? openIsle(d.i) : openSpot("deadlines")) }); });
-  if (unread().length) m.push({ t: `📌 公告欄有 ${unread().length} 則新公告`, go: () => openSpot("news") });
-  m.push({ t: `🏛 課外組${st.text}`, go: () => openSpot("office") });
-  m.push({ t: "點一座島，•ᴗ• 會走過橋幫你蓋章", go: null });
+  if (!me.club) m.push({ t: "先建立角色：選你的社團與職位", go: () => openChar("look") });
+  ISL.filter(myDuty).forEach((d) => { const n = isleDl(d)[0]; if (n) m.push({ t: `${me.role}注意：${d.name}「${n.title}」還有 ${daysLeft(n.at)} 天`, go: () => openIsle(d.i) }); });
+  upcoming().slice(0, 3).forEach((x) => { const d = isleOf(x.category); m.push({ t: `${d ? d.name + "：" : ""}「${x.title}」還有 ${daysLeft(x.at)} 天`, go: () => (d ? openIsle(d.i) : openSpot("deadlines")) }); });
+  if (unread().length) m.push({ t: `公告欄有 ${unread().length} 則新公告`, go: () => openSpot("news") });
+  m.push({ t: `課外組${st.text}`, go: () => openSpot("office") });
   m.push({ t: "拖曳移動群島，兩指縮放或旋轉", go: null });
   return m;
 }
-let tkCur = null;
 function tick() {
   const m = tickerMsgs(); tkCur = m[tkI++ % m.length];
   const s = $("tk"); s.style.opacity = 0;
@@ -938,38 +1061,42 @@ function tick() {
 }
 $("ticker").addEventListener("click", () => tkCur && tkCur.go && tkCur.go());
 
-let talkQ = [], talkTotal = 0;
-function startTalk(lines) { talkQ = lines.slice(); talkTotal = lines.length; nextTalk(); }
-function nextTalk() {
-  if (!talkQ.length) { $("talk").hidden = true; return; }
-  $("talkText").textContent = talkQ.shift();
-  const at = talkTotal - talkQ.length;
-  $("talkDots").innerHTML = talkTotal > 1 ? Array.from({ length: talkTotal }, (_, i) => `<i class="${i < at ? "on" : ""}"></i>`).join("") : "";
-  $("talkNext").textContent = talkQ.length ? "下一步 →" : "開始探索";
-  $("talk").hidden = false;
+// 置中對話卡：引導、老師叮嚀、恭喜都用它
+let talkQ = [], talkK = "", talkI = 0, talkEnd = null;
+function talk(kicker, steps, onEnd) { talkQ = steps; talkK = kicker; talkI = 0; talkEnd = onEnd || null; showTalk(); }
+function showTalk() {
+  const s = talkQ[talkI];
+  $("mKick").textContent = `${talkK} / ${pad2(talkI + 1)}`;
+  $("mTitle").textContent = s[0]; $("mText").textContent = s[1];
+  $("mNext").textContent = talkI < talkQ.length - 1 ? "下一步 →" : s[2] || "開始探索";
+  $("mSkip").hidden = talkQ.length < 2;
+  $("modal").hidden = false;
+  $("mNext").focus();
 }
-$("talkNext").addEventListener("click", nextTalk);
+function endTalk() { $("modal").hidden = true; const f = talkEnd; talkEnd = null; f && f(); }
+$("mNext").addEventListener("click", () => { if (talkI < talkQ.length - 1) { talkI++; showTalk(); } else endTalk(); });
+$("mSkip").addEventListener("click", endTalk);
 function teacherTalk() {
   const n = upcoming()[0], st = officeStatus(), L = [];
-  if (n) { const d = isleOf(n.category); L.push(`最近的截止日是「${n.title}」，還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`); }
-  if (unread().length) L.push(`公告欄有 ${unread().length} 則你還沒看過的公告。`);
-  L.push(`課外組${st.text}。週一至週五 9:00–12:00、13:30–17:00 都可以來找我們。`);
-  startTalk(L);
+  if (n) { const d = isleOf(n.category); L.push(["最近的截止日", `「${n.title}」還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`]); }
+  if (unread().length) L.push(["有新公告", `公告欄有 ${unread().length} 則你還沒看過的公告。`]);
+  L.push(["隨時來找我們", `課外組${st.text}。週一至週五 9:00–12:00、13:30–17:00 都可以來。`, "好"]);
+  talk("課外組老師", L);
 }
 
 let toastT;
 function toast(msg, ms = 2400) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), ms); }
 function confetti() {
   if (RM) return;
-  const em = ["🎉", "✨", "🏅", "💛", "🎊"];
-  for (let i = 0; i < 18; i++) {
-    const s = document.createElement("div"); s.className = "cf"; s.textContent = em[i % em.length]; document.body.appendChild(s);
-    const a = Math.random() * Math.PI * 2, r = 120 + Math.random() * 160;
-    s.animate([{ transform: "translate(-50%,-50%) scale(.4)", opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * r}px),calc(-50% + ${Math.sin(a) * r - 60}px)) scale(1.1) rotate(${(Math.random() - 0.5) * 200}deg)`, opacity: 0 }], { duration: 1300 + Math.random() * 500, easing: "cubic-bezier(.2,.7,.3,1)" }).onfinish = () => s.remove();
+  const cols = ["#C8623F", "#E8B04B", "#A9BE8B", "#6E8FB5", "#FFFDF9"];
+  for (let i = 0; i < 36; i++) {
+    const s = document.createElement("div"); s.className = "cf"; s.style.background = cols[i % cols.length]; document.body.appendChild(s);
+    const a = Math.random() * Math.PI * 2, r = 120 + Math.random() * 200;
+    s.animate([{ transform: "translate(-50%,-50%) scale(.6)", opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * r}px),calc(-50% + ${Math.sin(a) * r - 40}px)) rotate(${(Math.random() - 0.5) * 540}deg)`, opacity: 0 }], { duration: 1300 + Math.random() * 600, easing: "cubic-bezier(.2,.7,.3,1)" }).onfinish = () => s.remove();
   }
 }
 
-/* ---------------- 每分鐘更新：天色、辦公狀態、倒數 ---------------- */
+/* ---------------- 每分鐘更新 ---------------- */
 function refreshTimed() {
   applySky();
   const open = officeStatus().open;
@@ -977,7 +1104,7 @@ function refreshTimed() {
   lamps.forEach((m) => (m.emissiveIntensity = night * 1.2));
   centerObj.office.userData.sign.userData.redraw();
   centerObj.deadlines.userData.sign.userData.redraw();
-  updHud(); updMarkers(); buildLabels(); renderChips();
+  updHud(); updMarkers(); buildLabels();
 }
 
 /* ---------------- 動畫迴圈 ---------------- */
@@ -990,13 +1117,17 @@ function loop(now) {
     const a = seaGeo.attributes.position;
     for (let i = 0; i < a.count; i++) { const x = seaBase[i * 3], z = seaBase[i * 3 + 2]; a.setY(i, Math.sin(x * 0.16 + t * 0.9) * 0.16 + Math.cos(z * 0.2 + t * 0.7) * 0.14); }
     a.needsUpdate = true; seaGeo.computeVertexNormals();
-    clouds.forEach((c, i) => { const a = c.userData.a0 + Math.sin(t * 0.03 * c.userData.s + i) * 0.25; c.position.x = Math.cos(a) * c.userData.r; c.position.z = Math.sin(a) * c.userData.r; });
+    clouds.forEach((c, i) => { const ang = c.userData.a0 + Math.sin(t * 0.03 * c.userData.s + i) * 0.25; c.position.x = Math.cos(ang) * c.userData.r; c.position.z = Math.sin(ang) * c.userData.r; });
+    boats.forEach((b) => { b.userData.a += b.userData.s * dt; b.position.set(Math.cos(b.userData.a) * b.userData.r, -1.1 + Math.sin(t * 1.3) * 0.08, Math.sin(b.userData.a) * b.userData.r); b.rotation.y = -b.userData.a; });
     flag.rotation.y = Math.sin(t * 2) * 0.15;
     ISL.forEach((d) => { const s = d.build.userData.spin; if (s) s.rotation.y += dt * 1.2; d.marker.rotation.y += dt * 1.5; d.marker.position.y = d.build.userData.h + 1.6 + Math.sin(t * 2.4 + d.i) * 0.15; });
     newsMarker.rotation.y += dt * 1.5;
     const boat = centerObj.links.userData.boat; boat.position.y = -1.15 + Math.sin(t * 1.4) * 0.08; boat.rotation.z = Math.sin(t * 1.1) * 0.05;
     teacher.position.y = Math.abs(Math.sin(t * 2)) * 0.03;
+    selRing.rotation.z += dt * 1.2;
+    stepNpcs(dt, t);
   }
+  selRing.visible = !!(panelView && panelView.startsWith("char"));
   stepWalk(dt, t);
   stepTween(now);
   controls.update();
@@ -1010,28 +1141,29 @@ resize();
 async function start() {
   try { await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]); } catch {}
   sph.set(80, HOME.phi, HOME.theta);
-  camera.position.setFromSpherical(sph); camera.lookAt(0, 0, 0); controls.update();
-  camera.zoom = homeZoom(); camera.updateProjectionMatrix();
-  if (!RM) { camera.zoom = 0.65; camera.updateProjectionMatrix(); sph.set(80, 1.12, HOME.theta - 0.9); camera.position.setFromSpherical(sph); controls.update(); }
+  camera.position.setFromSpherical(sph); camera.lookAt(0, 0, 0);
+  camera.zoom = RM ? homeZoom() : 0.62; camera.updateProjectionMatrix(); controls.update();
   refreshTimed();
   $("splash").classList.add("out");
   requestAnimationFrame(loop);
-  if (!RM) setTimeout(() => { sph.set(80, HOME.phi, HOME.theta); const off = new V3().setFromSpherical(sph); camera.position.copy(controls.target).add(off); flyTo(framed(new V3(0, 0, 0), homeZoom()), homeZoom(), 1600); }, 50);
+  setTimeout(() => flyTo(framed(new V3(0, 0, 0), homeZoom()), homeZoom(), 1600), 50);
   tick(); setInterval(tick, 6000);
   setInterval(refreshTimed, 60000);
   checkNotify();
-  const h = location.hash.slice(1);
-  const isle = h.startsWith("isle-") && isleOf(decodeURIComponent(h.slice(5)));
+  const h = decodeURIComponent(location.hash.slice(1));
+  const isle = h.startsWith("isle-") && isleOf(h.slice(5));
   if (isle) setTimeout(() => openIsle(isle.i), 500);
   else if (["office", "deadlines", "news", "links"].includes(h)) setTimeout(() => openSpot(h), 500);
-  else if (h === "passport") setTimeout(renderPassport, 500);
+  else if (h === "me") setTimeout(() => openChar("look"), 500);
+  else if (h === "list") setTimeout(renderList, 500);
   else if (!LS.get("intro", false)) {
     LS.set("intro", true);
-    startTalk([
-      `歡迎來到體能社團行政群島！中間這座是課外組，旁邊 ${ISL.length} 座小島，每座是一種行政分類：${ISL.map((d) => d.name.replace("島", "")).join("、")}。`,
-      "點一座島，資訊卡會打開，•ᴗ• 也會走過橋去幫你蓋章。島上有該分類的截止日、辦事步驟和相關公告。",
-      "島的上方出現黃色或紅色菱形，代表那裡有快到的截止日。下方的「截止日」「公告」可以一次看全部。",
-    ]);
-  }
+    talk("HELLO, 幹部", [
+      ["每座島是一類行政", `${ISL.length} 座小島各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一座島，或用右側清單探索每一類的截止日、流程與公告。`],
+      ["中心是課外組", "群島中間是課外組，旁邊有截止日鐘塔、公告欄和碼頭。七座島都有橋通到這裡，有問題就回來。"],
+      ["提醒會浮在島上", "島的名牌上有 D-倒數；7 天內截止，島上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
+      ["建立你的角色", "選你所屬的體能性社團與職位，換上球衣。角色會帶著社團道具走過橋，幫你在每座島蓋章。", "建立角色"],
+    ], () => openChar("look"));
+  } else if (!me.club) setTimeout(() => toast("點右上「角色」建立你的社團角色"), 1200);
 }
 start();
