@@ -69,9 +69,19 @@ const CENTER_SPOTS = [
   { id: "office", no: "00", name: "課外組", icon: "🏛" },
   { id: "deadlines", no: "◷", name: "截止日鐘塔", icon: "⏰" },
   { id: "news", no: "✎", name: "公告欄", icon: "📌" },
+  { id: "todo", no: "✓", name: "待辦看板", icon: "✅" },
   { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
 ];
 const STAMPS = [...CENTER_SPOTS.map((s) => ({ id: s.id, name: s.name, no: s.no })), ...ISL.map((d) => ({ id: "isle:" + d.key, name: d.name, no: d.no }))];
+
+/* 社團行政待辦：每學期共同項目 + 該學期項目；共同項目每學期各自打勾 */
+const TODO = Object.assign({ common: [], s1: [], s2: [] }, D.todos);
+const SEM_NAME = { s1: "第一學期", s2: "第二學期" };
+const curSem = () => { const m = tw().m; return m >= 2 && m <= 7 ? "s2" : "s1"; };
+const todoKey = "todo:" + ((D.term || "").match(/\d+/) || [""])[0]; // 依學年度分開記錄，新學年自動重來
+let todoDone = LS.get(todoKey, {});
+const todoList = (sem) => [...TODO.common.map((x) => ({ ...x, sem: "common", key: sem + ":" + x.id })), ...(TODO[sem] || []).map((x) => ({ ...x, sem, key: sem + ":" + x.id }))];
+const todoLeft = (sem = curSem()) => todoList(sem).filter((x) => !todoDone[x.key]).length;
 
 /* 角色 */
 const SHIRTS = ["#C8623F", "#3E6E9E", "#5F8F5A", "#E8B04B", "#7E5A9B", "#2A211C", "#E9E2D6", "#C97A8F"];
@@ -348,6 +358,24 @@ function bHall(g, col) {
   for (let k = 0; k < 6; k++) box(g, 0.3, 0.35, 0.3, C.wood, -1.1 + (k % 3) * 1.1, 0, 2.1 + Math.floor(k / 3) * 0.55);
   g.userData.h = 3.6;
 }
+function bTodo(g) {
+  [-0.9, 0.9].forEach((x) => { box(g, 0.12, 2.7, 0.12, C.dark, x, 0, 0).rotation.x = -0.1; });
+  box(g, 0.12, 2.5, 0.12, C.dark, 0, 0, -0.55).rotation.x = 0.28;
+  box(g, 2.3, 1.75, 0.1, 0xfffdf9, 0, 0.85, 0.05);
+  const face = textPlane(2.1, 1.55, (c, w, h) => {
+    const sem = curSem(), list = todoList(sem), left = list.filter((x) => !todoDone[x.key]);
+    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.15}px ${FONT}`; c.fillText(`${SEM_NAME[sem]}待辦`, 18, h * 0.19);
+    list.slice(0, 4).forEach((x, i) => {
+      const y = h * (0.33 + i * 0.15), done = !!todoDone[x.key];
+      c.strokeStyle = "#2A211C"; c.lineWidth = 5; c.strokeRect(20, y - h * 0.05, h * 0.09, h * 0.09);
+      if (done) { c.strokeStyle = "#5F8F5A"; c.lineWidth = 8; c.beginPath(); c.moveTo(24, y); c.lineTo(36, y + 12); c.lineTo(56, y - 14); c.stroke(); }
+      c.fillStyle = done ? "#9A8C80" : "#2A211C"; c.font = `700 ${h * 0.08}px ${FONT}`; c.fillText(x.title.length > 13 ? x.title.slice(0, 12) + "…" : x.title, 20 + h * 0.14, y + h * 0.035);
+    });
+    c.fillStyle = "#7A6B60"; c.font = `700 ${h * 0.08}px ${FONT}`; c.fillText(left.length ? `還有 ${left.length} 項` : "全部完成！", 20, h * 0.95);
+  });
+  face.position.set(0, 1.72, 0.11); g.add(face);
+  g.userData.sign = face; g.userData.h = 3.3;
+}
 function bHouse(g, col) {
   box(g, 2.4, 1.6, 2, C.wall, 0, 0, 0);
   const r = cone(g, 2, 1.2, col, 0, 1.6, 0, 4); r.rotation.y = Math.PI / 4;
@@ -388,6 +416,7 @@ const SPOT = {
   office: { a: mid(3), r: 6.4, build: bOffice },
   deadlines: { a: mid(4), r: 6.2, build: bClock },
   news: { a: mid(2), r: 6, build: bBoard },
+  todo: { a: mid(6), r: 6, build: bTodo },
   links: { a: mid(0), r: RC * 0.96, build: bDock },
 };
 const centerObj = {};
@@ -800,7 +829,7 @@ function openIsle(i, tour) {
 function openSpot(id) {
   touring = false;
   setSel(id);
-  ({ office: renderOffice, deadlines: renderDeadlines, news: renderNews, links: renderLinks })[id]();
+  ({ office: renderOffice, deadlines: renderDeadlines, news: renderNews, todo: () => renderTodo(), links: renderLinks })[id]();
   focusOn(SPOT[id].pos, innerWidth < 600 ? 2.1 : 1.8);
   walkTo("C", () => stamp(id, CENTER_SPOTS.find((s) => s.id === id).name));
 }
@@ -820,7 +849,7 @@ function tourNext() {
 
 /* ---------------- 資訊抽屜 ---------------- */
 let panelView = null;
-const RAIL = { char: "bChar", list: "bList", deadlines: "bDl", news: "bNews" };
+const RAIL = { char: "bChar", list: "bList", deadlines: "bDl", todo: "bTodo", news: "bNews" };
 function showSheet(view, html) {
   panelView = view;
   $("sbody").innerHTML = html;
@@ -887,6 +916,7 @@ function renderIsle(d, keepScroll) {
     <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span><span class="tag">${dl.length} 項截止</span><span class="tag">${steps} 個步驟</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
     <div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>
     ${d.guides.map((g) => `<div class="sec"><h4>${E(g.topic)}・辦事步驟</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 步</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
+    ${isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政待辦</h4>${todoItems(isleTodos(d), false)}</div>` : ""}
     <div class="sec"><h4>相關公告</h4>${newsItems(news)}</div>
     <div class="sec"><h4>這一島在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
     <p class="foot">還有問題？請在辦公時間到中心島的課外組詢問。</p>`;
@@ -923,6 +953,29 @@ function renderDeadlines() {
   showSheet("deadlines", html);
   renderNotifyBtn();
 }
+const isleTodos = (d) => todoList(curSem()).filter((x) => x.island === d.key);
+function todoItems(list, showIsle) {
+  if (!list.length) return '<p class="empty">沒有待辦項目。</p>';
+  return '<ul class="items">' + list.map((x) => {
+    const done = !!todoDone[x.key], d = isleOf(x.island);
+    const btns = (x.links || []).map((l) => (l[1] ? `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>` : `<span class="btn g pend" aria-disabled="true">${E(l[0])}・連結待補</span>`)).join("") + (showIsle && d ? `<button class="btn" type="button" data-isle="${d.i}">去${E(d.name)}</button>` : "");
+    return `<li class="item todo ${done ? "done" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><label class="row"><input type="checkbox" data-todo="${E(x.key)}" ${done ? "checked" : ""} aria-label="完成：${E(x.title)}"><span class="nm">${E(x.title)}${x.note ? `<small>${E(x.note)}</small>` : ""}</span><span class="meta">${x.when ? E(x.when) : ""}</span><span></span></label>${btns ? `<div class="more"><div class="acts">${btns}</div></div>` : ""}</li>`;
+  }).join("") + "</ul>";
+}
+let todoSem = null;
+function renderTodo(sem) {
+  todoSem = sem || todoSem || curSem();
+  const list = todoList(todoSem), n = list.filter((x) => todoDone[x.key]).length;
+  const html = `${head("✅", "TO-DO · 社團行政待辦", "社團行政待辦清單")}
+    <p class="lead">每學期都要完成的社團行政事項，完成後打勾。</p>
+    <div class="tabs two" role="tablist">${["s1", "s2"].map((s) => `<button type="button" role="tab" data-sem="${s}" aria-selected="${todoSem === s}">${SEM_NAME[s]}${s === curSem() ? "・本學期" : ""}</button>`).join("")}</div>
+    <div class="sec"><h4>完成進度・<span id="todoProg">${n}/${list.length}</span></h4><div class="prog"><i id="todoBar" style="width:${list.length ? (n / list.length) * 100 : 0}%"></i></div></div>
+    <div class="tags">${stampTag("todo")}</div>
+    <div class="sec"><h4>每學期共同項目</h4>${todoItems(list.filter((x) => x.sem === "common"), true)}</div>
+    <div class="sec"><h4>${SEM_NAME[todoSem]}待辦</h4>${todoItems(list.filter((x) => x.sem !== "common"), true)}</div>
+    <p class="foot">打勾紀錄只存在你自己的手機或電腦。標示「連結待補」的按鈕，課外組補上連結後就能點。</p>`;
+  showSheet("todo", html);
+}
 function renderNews() {
   const html = `${head("📌", "BULLETIN · 公告", "公告欄")}<p class="lead">學期間的行政公告都貼在這裡。</p><div class="tags"><span class="tag">${anns.length} 則公告</span>${unread().length ? `<span class="tag c" style="--c:#C8443A">${unread().length} 則未讀</span>` : ""}${stampTag("news")}</div><div class="sec"><h4>最新公告</h4>${newsItems(anns)}</div>`;
   showSheet("news", html);
@@ -934,13 +987,14 @@ function renderLinks() {
     <div class="sec"><h4>常用連結</h4><ul class="items">${row("課外組網站", "activity.thu.edu.tw", D.links.office)}${row("體能性社團各項作業期程", "整學期的正式時程表", D.links.schedule)}${row("體能性社團 Linktree", "表單、雲端資料夾與常用連結", D.links.linktree)}${row("本站文字版", "不顯示 3D，內容相同", "list.html", false)}</ul></div>`;
   showSheet("links", html);
 }
-const isleHits = (d, q) => d.name.includes(q) || d.guides.some((g) => [g.topic, g.title, g.summary, ...g.steps].some((s) => s.includes(q))) || isleDl(d).some((x) => (x.title + (x.detail || "")).includes(q)) || isleNews(d).some((a) => (a.title + a.body).includes(q));
+const isleHits = (d, q) => d.name.includes(q) || ["s1", "s2"].some((sem) => todoList(sem).some((x) => x.island === d.key && (x.title + (x.note || "")).includes(q))) || d.guides.some((g) => [g.topic, g.title, g.summary, ...g.steps].some((s) => s.includes(q))) || isleDl(d).some((x) => (x.title + (x.detail || "")).includes(q)) || isleNews(d).some((a) => (a.title + a.body).includes(q));
 function listResults(q) {
   const res = [];
   ISL.forEach((d) => {
     d.guides.forEach((g) => { const hit = [g.topic, g.title, g.summary, ...g.steps].find((s) => s.includes(q)); if (hit) res.push({ d, t: g.title, s: hit }); });
     isleDl(d).forEach((x) => { if ((x.title + (x.detail || "")).includes(q)) res.push({ d, t: x.title, s: `截止日・${fmt(x.at)}` }); });
     isleNews(d).forEach((a) => { if ((a.title + a.body).includes(q)) res.push({ d, t: a.title, s: "公告・" + a.body }); });
+    ["s1", "s2"].forEach((sem) => todoList(sem).filter((x) => x.island === d.key && (sem === "s1" || x.sem !== "common")).forEach((x) => { if ((x.title + (x.note || "")).includes(q)) res.push({ d, t: x.title, s: `${x.sem === "common" ? "每學期" : SEM_NAME[sem]}待辦${x.note ? "・" + x.note : ""}` }); }));
   });
   const hl = (s) => E(s).split(E(q)).join(`<mark>${E(q)}</mark>`);
   return `<div class="sec"><h4>搜尋結果・${res.length} 筆</h4>${res.length ? '<ul class="items">' + res.map((r) => `<li class="item" style="--c:${r.d.color}"><button type="button" data-isle="${r.d.i}"><span class="dot"></span><span class="nm">${hl(r.t)}<small>${E(r.d.name)}・${hl(r.s)}</small></span><span class="meta"></span><span class="chev">›</span></button></li>`).join("") + "</ul>" : `<p class="empty">找不到「${E(q)}」。可以在辦公時間到課外組當面詢問。</p>`}</div>`;
@@ -1013,6 +1067,7 @@ $("sbody").addEventListener("click", (e) => {
   if (b.dataset.isle !== undefined) return openIsle(+b.dataset.isle);
   if (b.dataset.spot) return openSpot(b.dataset.spot);
   if (b.dataset.tab) { charTab = b.dataset.tab; return renderChar(); }
+  if (b.dataset.sem) return renderTodo(b.dataset.sem);
   if (b.dataset.club) { me.club = b.dataset.club; return applyMe(true); }
   if (b.dataset.role) { me.role = b.dataset.role; return applyMe(true); }
   if (b.dataset.shirt) { me.shirt = b.dataset.shirt; return applyMe(true); }
@@ -1034,6 +1089,14 @@ $("sbody").addEventListener("click", (e) => {
   }
 });
 $("sbody").addEventListener("change", (e) => {
+  const k = e.target.dataset.todo;
+  if (k) {
+    todoDone[k] = e.target.checked; LS.set(todoKey, todoDone);
+    e.target.closest("li").classList.toggle("done", e.target.checked);
+    if ($("todoProg")) { const list = todoList(todoSem), n = list.filter((x) => todoDone[x.key]).length; $("todoProg").textContent = `${n}/${list.length}`; $("todoBar").style.width = `${(n / list.length) * 100}%`; if (n === list.length) { toast(`${SEM_NAME[todoSem]}待辦全部完成！`); confetti(); } }
+    centerObj.todo.userData.sign.userData.redraw(); updHud();
+    return;
+  }
   const i = e.target.dataset.task; if (i === undefined) return;
   tasks[D.onboarding[+i]] = e.target.checked; LS.set("tasks", tasks);
   const t = D.onboarding.filter((x) => tasks[x]).length;
@@ -1066,6 +1129,7 @@ $("bChar").addEventListener("click", () => (panelView && panelView.startsWith("c
 $("bList").addEventListener("click", () => (panelView === "list" ? closeSheet() : renderList()));
 $("bDl").addEventListener("click", () => (panelView === "deadlines" ? closeSheet() : openSpot("deadlines")));
 $("bNews").addEventListener("click", () => (panelView === "news" ? closeSheet() : openSpot("news")));
+$("bTodo").addEventListener("click", () => (panelView === "todo" ? closeSheet() : openSpot("todo")));
 $("pOffice").addEventListener("click", () => openSpot("office"));
 $("pNext").addEventListener("click", () => { const n = upcoming()[0], d = n && isleOf(n.category); d ? openIsle(d.i) : openSpot("deadlines"); });
 
@@ -1078,6 +1142,7 @@ function updHud() {
   const soon = upcoming().filter((x) => daysLeft(x.at) <= 7).length;
   $("dlN").hidden = !soon; $("dlN").textContent = soon;
   const u = unread().length; $("newsN").hidden = !u; $("newsN").textContent = u;
+  const tl = todoLeft(); $("todoN").hidden = !tl; $("todoN").textContent = tl;
   const s = Object.keys(stamps).length; $("stampN").hidden = !s; $("stampN").textContent = `${s}/${STAMPS.length}`;
 }
 let tkI = 0, tkCur = null;
@@ -1086,6 +1151,7 @@ function tickerMsgs() {
   ISL.filter(myDuty).forEach((d) => { const n = isleDl(d)[0]; if (n) m.push({ t: `${me.role}注意：${d.name}「${n.title}」還有 ${daysLeft(n.at)} 天`, go: () => openIsle(d.i) }); });
   upcoming().slice(0, 3).forEach((x) => { const d = isleOf(x.category); m.push({ t: `${d ? d.name + "：" : ""}「${x.title}」還有 ${daysLeft(x.at)} 天`, go: () => (d ? openIsle(d.i) : openSpot("deadlines")) }); });
   if (unread().length) m.push({ t: `公告欄有 ${unread().length} 則新公告`, go: () => openSpot("news") });
+  if (todoLeft()) m.push({ t: `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政待辦`, go: () => openSpot("todo") });
   m.push({ t: `課外組${st.text}`, go: () => openSpot("office") });
   m.push({ t: "拖曳移動群島，兩指縮放或旋轉", go: null });
   return m;
@@ -1117,6 +1183,7 @@ function teacherTalk() {
   const n = upcoming()[0], st = officeStatus(), L = [];
   if (n) { const d = isleOf(n.category); L.push(["最近的截止日", `「${n.title}」還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`]); }
   if (unread().length) L.push(["有新公告", `公告欄有 ${unread().length} 則你還沒看過的公告。`]);
+  if (todoLeft()) L.push(["行政待辦", `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政待辦，到待辦看板可以一項一項打勾。`]);
   L.push(["隨時來找我們", `課外組${st.text}。週一至週五 9:00–12:00、13:30–17:00 都可以來。`, "好"]);
   talk("課外組老師", L);
 }
@@ -1141,6 +1208,7 @@ function refreshTimed() {
   lamps.forEach((m) => (m.emissiveIntensity = night * 1.2));
   centerObj.office.userData.sign.userData.redraw();
   centerObj.deadlines.userData.sign.userData.redraw();
+  centerObj.todo.userData.sign.userData.redraw();
   updHud(); updMarkers(); buildLabels();
 }
 
@@ -1190,14 +1258,14 @@ async function start() {
   const h = decodeURIComponent(location.hash.slice(1));
   const isle = h.startsWith("isle-") && isleOf(h.slice(5));
   if (isle) setTimeout(() => openIsle(isle.i), 500);
-  else if (["office", "deadlines", "news", "links"].includes(h)) setTimeout(() => openSpot(h), 500);
+  else if (["office", "deadlines", "news", "todo", "links"].includes(h)) setTimeout(() => openSpot(h), 500);
   else if (h === "me") setTimeout(() => openChar("look"), 500);
   else if (h === "list") setTimeout(renderList, 500);
   else if (!LS.get("intro", false)) {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每座島是一類行政", `${ISL.length} 座小島各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一座島，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `群島中間是課外組，旁邊有截止日鐘塔、公告欄和碼頭。${ISL.length} 座島都有橋通到這裡，有問題就回來。`],
+      ["中心是課外組", `群島中間是課外組，旁邊有截止日鐘塔、公告欄、待辦看板和碼頭。${ISL.length} 座島都有橋通到這裡，有問題就回來。`],
       ["提醒會浮在島上", "島的名牌上有 D-倒數；7 天內截止，島上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的島，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);

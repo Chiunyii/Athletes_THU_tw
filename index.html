@@ -136,6 +136,12 @@ mark { background: #FBE2B5; color: inherit; border-radius: 3px; padding: 0 1px; 
 .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .tabs button { padding: 13px 0; border-radius: 16px; font: 700 16px/1 var(--f-body); color: var(--mut); }
 .tabs button[aria-selected="true"] { background: var(--terra); color: #fff; }
+.tabs.two { grid-template-columns: 1fr 1fr; }
+.item.todo label.row { cursor: pointer; }
+.item.todo input { width: 20px; height: 20px; accent-color: var(--ok); margin: 0; }
+.item.todo.done .nm { text-decoration: line-through; color: var(--mut); }
+.item.todo .more { padding-left: 48px; }
+.btn.pend { opacity: .55; cursor: not-allowed; border-style: dashed; }
 .field { display: grid; gap: 8px; }
 .field > label, .field > span { font-size: 14px; color: var(--mut); }
 .choices { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -227,6 +233,7 @@ mark { background: #FBE2B5; color: inherit; border-radius: 3px; padding: 0 1px; 
   <button class="rb" type="button" id="bChar" aria-pressed="false"><i>☺</i><span>角色</span><em class="badge n" id="stampN" hidden></em></button>
   <button class="rb" type="button" id="bList" aria-pressed="false"><i>≡</i><span>清單</span></button>
   <button class="rb" type="button" id="bDl" aria-pressed="false"><i>◷</i><span>截止</span><em class="badge" id="dlN" hidden></em></button>
+  <button class="rb" type="button" id="bTodo" aria-pressed="false"><i>✓</i><span>待辦</span><em class="badge n" id="todoN" hidden></em></button>
   <button class="rb" type="button" id="bNews" aria-pressed="false"><i>✎</i><span>公告</span><em class="badge" id="newsN" hidden></em></button>
 </nav>
 

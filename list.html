@@ -49,6 +49,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { scroll-behavior: smooth; scroll-padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
@@ -198,6 +199,14 @@ mark { background: var(--whistle-soft); color: inherit; padding: 0 1px; }
 .progress { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; margin-bottom: 14px; }
 .progress i { display: block; height: 100%; width: 0; background: var(--field); transition: width .3s; }
 .tasks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.todo-h { font-size: 14px; color: var(--muted); margin: 14px 0 8px; letter-spacing: .08em; }
+.todo-i { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; display: grid; gap: 8px; margin-bottom: 8px; }
+.todo-i label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-weight: 700; }
+.todo-i input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--field); flex: none; }
+.todo-i.done label span { text-decoration: line-through; color: var(--muted); }
+.todo-i p { margin: 0 0 0 28px; font-size: 14px; color: var(--muted); }
+.todo-i .row { margin-left: 28px; }
+.pend { opacity: .55; border-style: dashed !important; cursor: not-allowed; }
 .tasks label {
   display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; cursor: pointer;
   background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); font-size: 15px;
@@ -255,6 +264,7 @@ footer a { color: var(--band-fg); }
       <a href="#deadlines">截止日</a>
       <a href="#news">公告<span class="dot" id="unreadDot" hidden></span></a>
       <a href="#guide">資訊站</a>
+      <a href="#todo">待辦</a>
       <a href="#onboard">新任幹部</a>
       <a href="#office">課外組</a>
       <a href="index.html">3D 群島</a>
@@ -321,6 +331,16 @@ footer a { color: var(--band-fg); }
         </aside>
       </div>
     </div>
+
+    <section id="todo" aria-labelledby="h-todo">
+      <div class="sec-head">
+        <div><h2 id="h-todo">社團行政待辦清單</h2><p class="sub">每學期都要完成的行政事項，完成後打勾（紀錄只存在你的手機或電腦）。</p></div>
+        <span class="score" style="font-size:28px;font-weight:700" id="todoCount">0/0</span>
+      </div>
+      <div class="chips" id="semChips" role="group" aria-label="選擇學期"></div>
+      <div class="progress" aria-hidden="true"><i id="todoBar"></i></div>
+      <div id="todoList"></div>
+    </section>
 
     <section id="guide" aria-labelledby="h-guide">
       <div class="sec-head"><div><h2 id="h-guide">資訊站</h2><p class="sub">依主題查找行政流程，也可以搜尋公告內容。</p></div></div>
@@ -580,6 +600,30 @@ footer a { color: var(--band-fg); }
   $("gChips").addEventListener("click", function (e) { var b = e.target.closest("[data-t]"); if (b) { gTopic = b.dataset.t; renderGuides(); } });
   $("q").addEventListener("input", function () { renderGuides(); renderNews($("q").value); });
 
+  // ---------- 社團行政待辦 ----------
+  var TODO = Object.assign({ common: [], s1: [], s2: [] }, D.todos || {});
+  var SEM = { s1: "第一學期", s2: "第二學期" };
+  var curSem = twParts(new Date()).m >= 2 && twParts(new Date()).m <= 7 ? "s2" : "s1", sem = curSem;
+  var todoKey = "todo:" + ((D.term || "").match(/\d+/) || [""])[0];
+  var todoDone = store.get(todoKey, {});
+  function todoList(s) { return TODO.common.map(function (x) { return Object.assign({}, x, { grp: "每學期共同項目", key: s + ":" + x.id }); }).concat((TODO[s] || []).map(function (x) { return Object.assign({}, x, { grp: SEM[s] + "待辦", key: s + ":" + x.id }); })); }
+  function renderTodo() {
+    $("semChips").innerHTML = ["s1", "s2"].map(function (s) { return '<button type="button" class="chip" aria-pressed="' + (s === sem) + '" data-sem="' + s + '">' + SEM[s] + (s === curSem ? "・本學期" : "") + "</button>"; }).join("");
+    var list = todoList(sem), html = "", grp = "";
+    list.forEach(function (x) {
+      if (x.grp !== grp) { grp = x.grp; html += '<div class="todo-h">' + esc(grp) + "</div>"; }
+      var done = !!todoDone[x.key];
+      var btns = (x.links || []).map(function (l) { return l[1] ? '<a class="btn small plain" target="_blank" rel="noopener" href="' + esc(l[1]) + '">' + esc(l[0]) + " ↗</a>" : '<span class="btn small plain pend" aria-disabled="true">' + esc(l[0]) + "・連結待補</span>"; }).join("");
+      html += '<div class="todo-i' + (done ? " done" : "") + '"><label><input type="checkbox" data-todo="' + esc(x.key) + '"' + (done ? " checked" : "") + "><span>" + esc(x.title) + (x.when ? '　<span class="tag">' + esc(x.when) + "</span>" : "") + "</span></label>" + (x.note ? "<p>" + esc(x.note) + "</p>" : "") + (btns ? '<div class="row">' + btns + "</div>" : "") + "</div>";
+    });
+    $("todoList").innerHTML = html;
+    var n = list.filter(function (x) { return todoDone[x.key]; }).length;
+    $("todoCount").textContent = n + "/" + list.length;
+    $("todoBar").style.width = (list.length ? n / list.length * 100 : 0) + "%";
+  }
+  $("semChips").addEventListener("click", function (e) { var b = e.target.closest("[data-sem]"); if (b) { sem = b.dataset.sem; renderTodo(); } });
+  $("todoList").addEventListener("change", function (e) { var k = e.target.dataset.todo; if (!k) return; todoDone[k] = e.target.checked; store.set(todoKey, todoDone); renderTodo(); });
+
   // ---------- 上任清單 ----------
   var done = store.get("tasks", {});
   function renderTasks() {
@@ -627,7 +671,7 @@ footer a { color: var(--band-fg); }
   });
 
   // ---------- 啟動 ----------
-  renderOffice(); renderDeadlines(); renderNews(""); renderGuides(); renderTasks(); renderNotifyBtn(); checkNotify();
+  renderOffice(); renderDeadlines(); renderNews(""); renderGuides(); renderTodo(); renderTasks(); renderNotifyBtn(); checkNotify();
   setInterval(function () { renderOffice(); renderDeadlines(); }, 60000);
 })();
 </script>

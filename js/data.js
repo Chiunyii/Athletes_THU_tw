@@ -157,29 +157,66 @@ var SITE_DATA = {
    * 行政公告：pinned=true 會置頂；date 為公告日期
    * --------------------------------------------------------- */
   announcements: [
-    {
-      id: "a-welcome",
-      date: "2026-10-20",
-      pinned: true,
-      tag: "行政",
-      title: "新任幹部請先完成「上任任務清單」",
-      body: "本站「新任幹部」區有一份上任必做清單，完成後打勾，進度會記在你的手機裡。有問題請在辦公時間到課外組詢問。",
-    },
-    {
-      id: "a-insurance",
-      date: "2026-10-22",
-      tag: "安全",
-      title: "校外練習一律需事先投保",
-      body: "所有校外練習、比賽、移地訓練，請於出發前完成保險名冊送件；未投保之活動不得以社團名義進行。",
-    },
-    {
-      id: "a-venue",
-      date: "2026-10-24",
-      tag: "場地",
-      title: "12 月場地借用開放登記",
-      body: "12 月份場地借用開放登記，截止日請見「截止日」區。重複登記或未使用將影響下次借用優先順序。",
-    },
+    // 目前沒有公告。新增時複製下面的格式（拿掉 //）：
+    // { id: "a-001", date: "2026-11-01", pinned: false, tag: "行政", title: "公告標題", body: "公告內容" },
   ],
+
+  /* ---------------------------------------------------------
+   * 社團行政待辦清單：common 為每學期共同項目，s1 第一學期、s2 第二學期
+   * island：同時顯示在哪一座島；when：時間提醒（文字）；note：注意事項
+   * links：按鈕 [名稱, 網址]；網址留空 "" 會顯示為「連結待補」
+   * --------------------------------------------------------- */
+  todos: {
+    common: [
+      { id: "t-doc", island: "活動", title: "社課活動公文申請", note: "", links: [] },
+      {
+        id: "t-contest", island: "評鑑", title: "填報校外競賽參與狀況",
+        note: "需上傳獲獎狀況及照片至指定表單。",
+        links: [["校外競賽填報表單", ""]],
+      },
+    ],
+    s1: [
+      {
+        id: "t1-advisor-in", island: "行政", title: "校內指導老師申請", note: "",
+        links: [["課外組網站公告", "https://activity.thu.edu.tw/"], ["相關文件", ""]],
+      },
+      {
+        id: "t1-advisor-out", island: "行政", title: "校外指導老師申請",
+        note: "各社團須於社課結束後繳交社課記錄表。",
+        links: [["法規及相關文件", ""]],
+      },
+      {
+        id: "t1-roster", island: "行政", title: "社員及幹部名單登錄", note: "",
+        links: [["操作說明", "https://t365-my.sharepoint.com/:b:/g/personal/yccchiang_tdrive_thu_edu_tw/IQARwEaENFzHRKtlo05rcNa5AeKQeHE1Oxh7W4pjIA7qHok?e=3BMwrG"]],
+      },
+      {
+        id: "t1-bankbook-doc", island: "經費", title: "繳交變更存摺文件至課外組核章", note: "",
+        links: [["相關文件", ""]],
+      },
+      {
+        id: "t1-bankbook-upload", island: "經費", title: "存摺上傳", note: "",
+        links: [["存摺上傳表單", "https://form2.thu.edu.tw/4821779"]],
+      },
+    ],
+    s2: [
+      {
+        id: "t2-advisor-out", island: "行政", title: "校外指導老師申請",
+        note: "已於第一學期申請者，僅需繳交授課大綱；欲新聘任者需繳交完整文件。各社團須於社課結束後繳交社課記錄表。",
+        links: [["法規及相關文件", ""]],
+      },
+      {
+        id: "t2-roster", island: "行政", title: "社員及幹部名單更新", note: "",
+        links: [["操作說明", "https://t365-my.sharepoint.com/:b:/g/personal/yccchiang_tdrive_thu_edu_tw/IQARwEaENFzHRKtlo05rcNa5AeKQeHE1Oxh7W4pjIA7qHok?e=3BMwrG"]],
+      },
+      {
+        id: "t2-inventory", island: "器材", when: "每年 5 月", title: "財產盤點",
+        note: "課外組峮老師提供盤點表件，請各社團將盤點結果上傳至表單。",
+        links: [["盤點結果上傳表單", "https://form2.thu.edu.tw/5282503"]],
+      },
+      { id: "t2-election", island: "行政", when: "6 月初", title: "繳交新任社團基本資料表及改選報告書", note: "", links: [] },
+      { id: "t2-handover", island: "行政", when: "7 月底前", title: "繳交交接清冊至課外組用印", note: "", links: [] },
+    ],
+  },
 
   /* ---------------------------------------------------------
    * 資訊站：各主題的說明，可搜尋
