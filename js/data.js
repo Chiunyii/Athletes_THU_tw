@@ -43,9 +43,15 @@ var SITE_DATA = {
   /* ---------------------------------------------------------
    * 群島：每個行政分類是一座島，中心島是課外組
    * key 要和截止日的 category、公告的 tag、資訊站的 island 一致
-   * building 可用：track、tent、bank、gym、aid、store、podium、house
+   * building 可用：hall、track、tent、bank、gym、aid、store、podium、house
    * --------------------------------------------------------- */
   islands: [
+    {
+      key: "會議", name: "期初會議島", icon: "📣", color: "#8C9A5B", building: "hall",
+      tagline: "每學期初召開的體能性社團會議，請先到指定表單報名。",
+      // links：島上最醒目的按鈕；每學期換成新的會議資料與報名表單
+      links: [["115-1 期初會議資料", "https://reurl.cc/8YYKp4"]],
+    },
     { key: "行政", name: "行政島", icon: "📋", color: "#6E8FB5", building: "track", tagline: "幹部交接、名冊繳交，新任幹部的第一站。" },
     { key: "活動", name: "活動島", icon: "⛺", color: "#D98B4E", building: "tent", tagline: "辦活動前要送什麼、活動後要交什麼。" },
     { key: "經費", name: "經費島", icon: "💰", color: "#D9B24E", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。" },
@@ -181,6 +187,20 @@ var SITE_DATA = {
  * steps 為步驟；links 為相關連結 [名稱, 網址]
    * --------------------------------------------------------- */
   guides: [
+    {
+      id: "g-meeting",
+      island: "會議",
+      topic: "期初會議",
+      title: "115-1 期初會議",
+      summary: "每學期初都會召開會議，所有社團都要先到指定表單報名。",
+      steps: [
+        "打開「115-1 期初會議資料」，確認會議日期、時間與地點。",
+        "依會議資料中的指定表單完成報名（每個社團都要報名）。",
+        "會議當天準時出席，帶著會議資料與要提問的事項。",
+        "會後把重點轉達給社內幹部，並留意會議提到的截止日。",
+      ],
+      links: [["115-1 期初會議資料", "https://reurl.cc/8YYKp4"]],
+    },
     {
       id: "g-handover",
       island: "行政",

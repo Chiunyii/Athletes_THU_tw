@@ -1,5 +1,5 @@
 /* 體能社團行政群島：Three.js
- * 中心島 = 課外組（辦公室、截止日鐘塔、公告欄、碼頭），外圍七座島 = 行政分類。
+ * 中心島 = 課外組（辦公室、截止日鐘塔、公告欄、碼頭），外圍一圈島 = 行政分類（數量由 data.js 的 islands 決定）。
  * 玩家先建立角色（所屬體能性社團、職位、外觀），角色會走過橋到各島蓋章。
  * 內容全部來自 js/data.js；這個檔案只負責群島、角色與資訊卡。 */
 import * as THREE from "three";
@@ -58,7 +58,7 @@ const unread = () => anns.filter((a) => !read.includes(a.id));
 const CLUBS = D.clubs || [];
 const ROLES = D.roles || ["社長", "幹部", "社員"];
 // 每種行政分類主要由哪些職位負責（用來提醒「這是你的事」）
-const DUTY = { 行政: ["社長", "副社長"], 活動: ["社長", "活動長", "輔導老師"], 經費: ["社長", "財務", "輔導老師"], 場地: ["活動長", "器材長"], 安全: ["社長", "副社長", "活動長", "幹部", "輔導老師"], 器材: ["器材長", "幹部"], 評鑑: ["社長", "公關"] };
+const DUTY = { 會議: ["社長", "副社長", "幹部", "輔導老師"], 行政: ["社長", "副社長"], 活動: ["社長", "活動長", "輔導老師"], 經費: ["社長", "財務", "輔導老師"], 場地: ["活動長", "器材長"], 安全: ["社長", "副社長", "活動長", "幹部", "輔導老師"], 器材: ["器材長", "幹部"], 評鑑: ["社長", "公關"] };
 
 const ISL = D.islands.map((d, i) => ({ ...d, i, no: pad2(i + 1), guides: D.guides.filter((g) => g.island === d.key) }));
 const isleOf = (key) => ISL.find((d) => d.key === key);
@@ -95,7 +95,7 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 const scene = new THREE.Scene();
 
-/* 群島佈局：中心島 + 七座島圍成一圈，正前方（鏡頭方向）留給碼頭 */
+/* 群島佈局：中心島 + 分類島圍成一圈，正前方（鏡頭方向）留給碼頭 */
 const FACE = Math.PI / 4;
 const FACE_DIR = new V3(Math.sin(FACE), 0, Math.cos(FACE));
 const RC = 9;
@@ -336,13 +336,25 @@ function bPodium(g) {
   g.userData.spin = cyl(g, 0.42, 0.18, 0.55, gold, 0, 1.9, 0);
   g.userData.h = 3.4;
 }
+function bHall(g, col) {
+  box(g, 3.8, 0.3, 2.8, 0xe2d6c3, 0, 0, 0);
+  box(g, 3.4, 2, 2.4, C.wall, 0, 0.3, 0);
+  const r = cone(g, 2.9, 1.1, col, 0, 2.3, 0, 4); r.rotation.y = Math.PI / 4; r.scale.set(1, 1, 0.72);
+  [-1.35, -0.45, 0.45, 1.35].forEach((x) => cyl(g, 0.12, 0.12, 2, 0xffffff, x, 0.3, 1.3, 6));
+  box(g, 0.9, 1.3, 0.08, C.dark, 0, 0.3, 1.21);
+  const banner = textPlane(2.4, 0.5, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 14); c.fillStyle = "#C8623F"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.55}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("期初會議", w / 2, h / 2 + 2); });
+  banner.position.set(0, 1.95, 1.22); g.add(banner);
+  // 前方排好的椅子
+  for (let k = 0; k < 6; k++) box(g, 0.3, 0.35, 0.3, C.wood, -1.1 + (k % 3) * 1.1, 0, 2.1 + Math.floor(k / 3) * 0.55);
+  g.userData.h = 3.6;
+}
 function bHouse(g, col) {
   box(g, 2.4, 1.6, 2, C.wall, 0, 0, 0);
   const r = cone(g, 2, 1.2, col, 0, 1.6, 0, 4); r.rotation.y = Math.PI / 4;
   box(g, 0.7, 1, 0.08, C.dark, 0, 0, 1.02);
   g.userData.h = 3.4;
 }
-const BUILD = { track: bTrack, tent: bTent, bank: bBank, gym: bGym, aid: bAid, store: bStore, podium: bPodium, house: bHouse };
+const BUILD = { hall: bHall, track: bTrack, tent: bTent, bank: bBank, gym: bGym, aid: bAid, store: bStore, podium: bPodium, house: bHouse };
 
 function tree(p, x, z, s, k) {
   cyl(p, 0.12 * s, 0.16 * s, 0.7 * s, 0x8b5e3c, x, 0, z, 5);
@@ -370,7 +382,7 @@ cyl(center, 0.18, 0.25, 1.2, 0xd9cbb4, 0, 0.5, 0);
 ball(center, 0.35, 0xbfe2e2, 0, 1.85, 0);
 const flag = box(center, 1.4, 0.8, 0.04, C.roof, 2.1, 3.3, -1.6);
 cyl(center, 0.06, 0.06, 4.2, 0xdddddd, 1.4, 0, -1.6, 6);
-// 七座橋的方位是 front + (2i+1)π/7，所以 mid(k) 一定落在兩座橋中間；行走環道半徑 3.9，建築都放在環道外
+// 橋的方位是 front + (2i+1)π/N，所以 mid(k) 一定落在兩座橋中間；行走環道半徑 3.9，建築都放在環道外
 const mid = (k) => front + (k * 2 * Math.PI) / NI;
 const SPOT = {
   office: { a: mid(3), r: 6.4, build: bOffice },
@@ -384,7 +396,7 @@ Object.entries(SPOT).forEach(([id, s]) => {
   s.build(g);
   g.position.set(Math.cos(s.a) * s.r, 0, Math.sin(s.a) * s.r);
   g.rotation.y = id === "links" ? Math.atan2(Math.cos(s.a), Math.sin(s.a)) : FACE; // 碼頭沿 +z 伸向海面
-  if (id === "office") g.scale.setScalar(0.92);
+  if (id === "office") g.scale.setScalar(NI > 7 ? 0.8 : 0.92); // 島越多，橋越密，課外組要縮小才不會擋到走道
   center.add(g);
   tag(g, { t: "spot", id });
   centerObj[id] = g;
@@ -695,7 +707,7 @@ function buildLabels() {
     let extra = "";
     if (s.id === "office") extra = `<span class="d" style="background:${st.open ? "#5F8F5A" : "#7A6B60"}">${E(st.short)}</span>`;
     if (s.id === "news" && unread().length) extra = `<span class="d hot">${unread().length}</span>`;
-    s.label = mkLabel(`<span class="no">${s.no}</span>${E(s.name)}${extra}`, o.position.clone().setY((o.userData.h || 3) * (s.id === "office" ? 0.92 : 1) + 0.4), () => openSpot(s.id));
+    s.label = mkLabel(`<span class="no">${s.no}</span>${E(s.name)}${extra}`, o.position.clone().setY((o.userData.h || 3) * o.scale.y + 0.4), () => openSpot(s.id));
   });
   mkLabel(`<b>${E(me.name || "我")}</b><span>${E(me.club || "未選身份")}</span>`, () => av.position.clone().setY(av.position.y + 2.25), () => openChar("look"), "me");
   refreshLabelState();
@@ -801,7 +813,7 @@ function closeSheet(keepSel) {
   try { history.replaceState(null, "", location.pathname + location.search); } catch {}
 }
 $("sx").addEventListener("click", () => closeSheet());
-addEventListener("keydown", (e) => { if (e.key === "Escape") { if (!$("modal").hidden) endTalk(); else closeSheet(); } });
+addEventListener("keydown", (e) => { if (e.key === "Escape") { if (!$("modal").hidden) endTalk(true); else closeSheet(); } });
 const head = (tile, kick, title) => `<div class="sh"><div class="tile">${tile}</div><div><div class="kick">${kick}</div><h2>${E(title)}</h2></div></div>`;
 const stampTag = (id) => (stamps[id] ? '<span class="tag ok">✓ 已蓋章</span>' : '<span class="tag">走到這裡可蓋章</span>');
 
@@ -848,6 +860,7 @@ function renderIsle(d, keepScroll) {
   const html = `${head(d.icon, `ISLAND ${d.no} · ${E(d.key)}`, d.name)}
     <p class="lead">${E(d.guides[0]?.title || d.tagline)}</p>
     <p class="quote">「${E(d.tagline)}」</p>
+    ${d.links?.length ? `<div class="acts">${d.links.map((l) => `<a class="btn big t ring" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}
     <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span><span class="tag">${dl.length} 項截止</span><span class="tag">${steps} 個步驟</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
     <div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>
     ${d.guides.map((g) => `<div class="sec"><h4>${E(g.topic)}・辦事步驟</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 步</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
@@ -866,13 +879,13 @@ function renderOffice() {
   const st = officeStatus(), p = tw(), slots = D.office.hours.slots.map((s) => s.join("–")).join("、");
   const rows = [1, 2, 3, 4, 5, 6, 0].map((wd) => { const on = D.office.hours.days.includes(wd); return `<tr class="${wd === p.wd ? "today" : ""}"><td>週${WEEK[wd]}${wd === p.wd ? "（今天）" : ""}</td><td class="${on ? "" : "closed"}">${on ? slots : "不辦公"}</td></tr>`; }).join("");
   const html = `${head("🏛", "CENTER 00 · 群島中心", D.office.name)}
-    <p class="lead">七座行政島都有橋通到這裡，有問題就回來找我們。</p>
+    <p class="lead">${ISL.length} 座行政島都有橋通到這裡，有問題就回來找我們。</p>
     <div class="bigst"><span class="lamp ${st.open ? "on" : "off"}"></span>${E(st.text)}</div>
     <div class="tags"><span class="tag">週一至週五</span><span class="tag">9:00–12:00</span><span class="tag">13:30–17:00</span>${stampTag("office")}</div>
     <div class="sec"><h4>辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
     <div class="sec"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : '<span class="btn g" aria-disabled="true">導航建置中</span>'}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div></div>
     <div class="sec"><h4>洽公小提醒</h4><ul class="items">${D.office.tips.map((t) => `<li class="item"><div class="row"><span class="dot"></span><span class="nm">${E(t)}</span><span></span><span></span></div></li>`).join("")}</ul></div>
-    <div class="sec"><h4>七座行政島</h4>${placeItems()}</div>`;
+    <div class="sec"><h4>${ISL.length} 座行政島</h4>${placeItems()}</div>`;
   showSheet("office", html);
 }
 function renderDeadlines() {
@@ -1074,9 +1087,9 @@ function showTalk() {
   $("modal").hidden = false;
   $("mNext").focus();
 }
-function endTalk() { $("modal").hidden = true; const f = talkEnd; talkEnd = null; f && f(); }
+function endTalk(skip) { $("modal").hidden = true; const f = talkEnd; talkEnd = null; if (!skip) f && f(); else if (!me.club) toast("之後可以點右上「角色」建立你的角色"); }
 $("mNext").addEventListener("click", () => { if (talkI < talkQ.length - 1) { talkI++; showTalk(); } else endTalk(); });
-$("mSkip").addEventListener("click", endTalk);
+$("mSkip").addEventListener("click", () => endTalk(true));
 function teacherTalk() {
   const n = upcoming()[0], st = officeStatus(), L = [];
   if (n) { const d = isleOf(n.category); L.push(["最近的截止日", `「${n.title}」還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`]); }
@@ -1161,7 +1174,7 @@ async function start() {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每座島是一類行政", `${ISL.length} 座小島各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一座島，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", "群島中間是課外組，旁邊有截止日鐘塔、公告欄和碼頭。七座島都有橋通到這裡，有問題就回來。"],
+      ["中心是課外組", `群島中間是課外組，旁邊有截止日鐘塔、公告欄和碼頭。${ISL.length} 座島都有橋通到這裡，有問題就回來。`],
       ["提醒會浮在島上", "島的名牌上有 D-倒數；7 天內截止，島上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["建立你的角色", "選你的身份（課外組或所屬的體能性社團）與職位，換上球衣。角色會帶著招牌道具走過橋，幫你在每座島蓋章。", "建立角色"],
     ], () => openChar("look"));
