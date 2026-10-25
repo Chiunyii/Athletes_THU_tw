@@ -58,7 +58,7 @@ const unread = () => anns.filter((a) => !read.includes(a.id));
 const CLUBS = D.clubs || [];
 const ROLES = D.roles || ["社長", "幹部", "社員"];
 // 每種行政分類主要由哪些職位負責（用來提醒「這是你的事」）
-const DUTY = { 行政: ["社長", "副社長"], 活動: ["社長", "活動長"], 經費: ["社長", "財務"], 場地: ["活動長", "器材長"], 安全: ["社長", "副社長", "活動長", "幹部"], 器材: ["器材長", "幹部"], 評鑑: ["社長", "公關"] };
+const DUTY = { 行政: ["社長", "副社長"], 活動: ["社長", "活動長", "輔導老師"], 經費: ["社長", "財務", "輔導老師"], 場地: ["活動長", "器材長"], 安全: ["社長", "副社長", "活動長", "幹部", "輔導老師"], 器材: ["器材長", "幹部"], 評鑑: ["社長", "公關"] };
 
 const ISL = D.islands.map((d, i) => ({ ...d, i, no: pad2(i + 1), guides: D.guides.filter((g) => g.island === d.key) }));
 const isleOf = (key) => ISL.find((d) => d.key === key);
@@ -515,6 +515,7 @@ function addProp(g, type, o) {
     case "bib": box(g, 0.34, 0.26, 0.02, soft(0xffffff), 0, 0.68, 0.31); mesh(new THREE.TorusGeometry(0.4, 0.05, 6, 20), soft(0xc8443a), 0, 1.55, 0, g).rotation.x = Math.PI / 2; break;
     case "pompom": ball(g, 0.18, soft(0xe8b04b), 0.46, 0.52, 0.12, 0); ball(g, 0.18, soft(0xe8b04b), -0.46, 0.52, 0.12, 0); break;
     case "kit": box(g, 0.34, 0.26, 0.16, soft(0xc8443a), H.x + 0.06, H.y - 0.2, H.z); box(g, 0.14, 0.04, 0.17, 0xffffff, H.x + 0.06, H.y - 0.09, H.z); box(g, 0.04, 0.14, 0.17, 0xffffff, H.x + 0.06, H.y - 0.14, H.z); break;
+    case "clipboard": box(g, 0.32, 0.42, 0.03, soft(0x8a5a3b), H.x + 0.02, H.y - 0.18, H.z + 0.16); box(g, 0.26, 0.32, 0.01, soft(0xfffdf9), H.x + 0.02, H.y - 0.14, H.z + 0.18); box(g, 0.1, 0.04, 0.03, soft(0x555555), H.x + 0.02, H.y + 0.21, H.z + 0.18); mesh(new THREE.TorusGeometry(0.33, 0.015, 4, 20), soft(0xc8623f), 0, 1.0, 0, g).rotation.x = Math.PI / 2.6; box(g, 0.14, 0.18, 0.02, soft(0xffffff), 0, 0.62, 0.32); break;
     case "helmet": mesh(new THREE.SphereGeometry(0.46, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), soft(0x2a211c), 0, 1.55, -0.02, g).scale.set(1, 0.85, 1); box(g, 0.4, 0.03, 0.16, 0x2a211c, 0, 1.52, 0.45); break;
   }
 }
@@ -696,7 +697,7 @@ function buildLabels() {
     if (s.id === "news" && unread().length) extra = `<span class="d hot">${unread().length}</span>`;
     s.label = mkLabel(`<span class="no">${s.no}</span>${E(s.name)}${extra}`, o.position.clone().setY((o.userData.h || 3) * (s.id === "office" ? 0.92 : 1) + 0.4), () => openSpot(s.id));
   });
-  mkLabel(`<b>${E(me.name || "我")}</b><span>${E(me.club || "未選社團")}</span>`, () => av.position.clone().setY(av.position.y + 2.25), () => openChar("look"), "me");
+  mkLabel(`<b>${E(me.name || "我")}</b><span>${E(me.club || "未選身份")}</span>`, () => av.position.clone().setY(av.position.y + 2.25), () => openChar("look"), "me");
   refreshLabelState();
 }
 function refreshLabelState() {
@@ -928,12 +929,12 @@ function renderChar() {
   let body = "";
   if (charTab === "look") {
     body = `<div class="field"><label for="meName">名字</label><input id="meName" class="search" maxlength="12" autocomplete="off" placeholder="替角色取個名字" value="${E(me.name)}"></div>
-      <div class="field"><span>身分・所屬社團</span><div class="choices">${CLUBS.map((c) => `<button type="button" data-club="${E(c.name)}" aria-pressed="${me.club === c.name}">${E(c.name)}</button>`).join("")}</div></div>
+      <div class="field"><span>身份</span><div class="choices">${CLUBS.map((c) => `<button type="button" data-club="${E(c.name)}" aria-pressed="${me.club === c.name}">${E(c.name)}</button>`).join("")}</div></div>
       <div class="field"><span>職位</span><div class="choices sm">${ROLES.map((r) => `<button type="button" data-role="${E(r)}" aria-pressed="${me.role === r}">${E(r)}</button>`).join("")}</div></div>
       <div class="field"><span>球衣顏色</span><div class="sw">${SHIRTS.map((c) => `<button type="button" data-shirt="${c}" style="--c:${c}" aria-pressed="${me.shirt === c}" aria-label="球衣顏色 ${c}"></button>`).join("")}</div></div>
       <div class="field"><span>髮色</span><div class="sw">${HAIRS.map((c) => `<button type="button" data-hair="${c}" style="--c:${c}" aria-pressed="${me.hair === c}" aria-label="髮色 ${c}"></button>`).join("")}</div></div>
       <div class="field"><span>膚色</span><div class="sw">${SKINS.map((c) => `<button type="button" data-skin="${c}" style="--c:${c}" aria-pressed="${me.skin === c}" aria-label="膚色 ${c}"></button>`).join("")}</div></div>
-      <div class="acts"><button class="btn big t" type="button" id="meDone">${me.club ? "完成，開始逛群島" : "先選一個社團"}</button></div>
+      <div class="acts"><button class="btn big t" type="button" id="meDone">${me.club ? "完成，開始逛群島" : "先選一個身份"}</button></div>
       <p class="foot">角色只存在你自己的手機或電腦，不會上傳。</p>`;
   } else if (charTab === "trip") {
     const n = Object.keys(stamps).length, t = D.onboarding.filter((x) => tasks[x]).length, mine = ISL.filter(myDuty);
@@ -981,7 +982,7 @@ $("sbody").addEventListener("click", (e) => {
   if (b.dataset.shirt) { me.shirt = b.dataset.shirt; return applyMe(true); }
   if (b.dataset.hair) { me.hair = b.dataset.hair; return applyMe(true); }
   if (b.dataset.skin) { me.skin = b.dataset.skin; return applyMe(true); }
-  if (b.id === "meDone") { if (!me.club) return toast("請先選擇你的社團"); goHome(); toast(`${me.club}的${me.role}，歡迎登島！`); return; }
+  if (b.id === "meDone") { if (!me.club) return toast("請先選擇你的身份"); goHome(); toast(`${me.club}的${me.role}，歡迎登島！`); return; }
   if (b.id === "tourBtn") { closeSheet(true); return startTour(); }
   if (b.id === "shoot") return shoot();
   if (b.id === "savePhoto" && lastPhoto) return fetch(lastPhoto).then((r) => r.blob()).then((bl) => saveFile(`行政群島-${me.name || "合照"}.png`, bl, "已下載合照"));
@@ -1046,7 +1047,7 @@ function updHud() {
 let tkI = 0, tkCur = null;
 function tickerMsgs() {
   const m = [], st = officeStatus();
-  if (!me.club) m.push({ t: "先建立角色：選你的社團與職位", go: () => openChar("look") });
+  if (!me.club) m.push({ t: "先建立角色：選你的身份與職位", go: () => openChar("look") });
   ISL.filter(myDuty).forEach((d) => { const n = isleDl(d)[0]; if (n) m.push({ t: `${me.role}注意：${d.name}「${n.title}」還有 ${daysLeft(n.at)} 天`, go: () => openIsle(d.i) }); });
   upcoming().slice(0, 3).forEach((x) => { const d = isleOf(x.category); m.push({ t: `${d ? d.name + "：" : ""}「${x.title}」還有 ${daysLeft(x.at)} 天`, go: () => (d ? openIsle(d.i) : openSpot("deadlines")) }); });
   if (unread().length) m.push({ t: `公告欄有 ${unread().length} 則新公告`, go: () => openSpot("news") });
@@ -1162,8 +1163,8 @@ async function start() {
       ["每座島是一類行政", `${ISL.length} 座小島各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一座島，或用右側清單探索每一類的截止日、流程與公告。`],
       ["中心是課外組", "群島中間是課外組，旁邊有截止日鐘塔、公告欄和碼頭。七座島都有橋通到這裡，有問題就回來。"],
       ["提醒會浮在島上", "島的名牌上有 D-倒數；7 天內截止，島上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
-      ["建立你的角色", "選你所屬的體能性社團與職位，換上球衣。角色會帶著社團道具走過橋，幫你在每座島蓋章。", "建立角色"],
+      ["建立你的角色", "選你的身份（課外組或所屬的體能性社團）與職位，換上球衣。角色會帶著招牌道具走過橋，幫你在每座島蓋章。", "建立角色"],
     ], () => openChar("look"));
-  } else if (!me.club) setTimeout(() => toast("點右上「角色」建立你的社團角色"), 1200);
+  } else if (!me.club) setTimeout(() => toast("點右上「角色」建立你的角色"), 1200);
 }
 start();

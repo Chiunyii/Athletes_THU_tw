@@ -56,12 +56,13 @@ var SITE_DATA = {
   ],
 
   /* ---------------------------------------------------------
-   * 角色身分：體能性社團（資料來源：東海大學社團島）
+   * 角色身份：課外組 + 體能性社團（社團名單來源：東海大學社團島）
    * prop 是角色手上的道具：basketball、soccer、volleyball、rugby、bat、racket、bow、
    * sword、gloves、belt、frisbee、skateboard、skates、mat、backpack、dumbbell、ring、
-   * bowling、bib、pompom、kit、helmet；新增社團時挑一個最接近的即可
+   * bowling、bib、pompom、kit、helmet、clipboard；新增社團時挑一個最接近的即可
    * --------------------------------------------------------- */
   clubs: [
+    { name: "課外組", prop: "clipboard" },
     { name: "籃球社", prop: "basketball" },
     { name: "排球社", prop: "volleyball" },
     { name: "足球社", prop: "soccer" },
@@ -89,7 +90,7 @@ var SITE_DATA = {
     { name: "競技啦啦社", prop: "pompom" },
     { name: "運動防護社", prop: "kit" },
   ],
-  roles: ["社長", "副社長", "財務", "活動長", "器材長", "公關", "幹部", "社員"],
+  roles: ["社長", "副社長", "財務", "活動長", "器材長", "公關", "幹部", "社員", "輔導老師"],
 
   /* ---------------------------------------------------------
    * 截止日：會依日期自動排序、倒數，並可加入行事曆
