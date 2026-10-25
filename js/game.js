@@ -138,7 +138,7 @@ controls.addEventListener("change", () => {
 const HOME = { phi: 0.98, theta: FACE };
 const homeZoom = () => (innerWidth >= 900 ? 0.84 : 1);
 
-const hemi = new THREE.HemisphereLight(0xfff6ea, 0x8a9a72, 1.2);
+const hemi = new THREE.HemisphereLight(0xe8f8ff, 0x7cc850, 1.35);
 const sun = new THREE.DirectionalLight(0xfff0dc, 2);
 sun.position.set(25, 40, 12);
 sun.castShadow = true;
@@ -151,7 +151,7 @@ scene.add(hemi, sun);
 let night = 0;
 function applySky() {
   const h = tw().h;
-  const s = h >= 6 && h < 17 ? { bg: 0xe6eadf, sun: 2, hemi: 1.2, n: 0 } : h >= 17 && h < 19 ? { bg: 0xf1d6bd, sun: 1.4, hemi: 0.95, n: 0.5 } : h === 5 ? { bg: 0xdcdfe6, sun: 1.2, hemi: 0.9, n: 0.4 } : { bg: 0x3b4763, sun: 0.7, hemi: 0.75, n: 1 };
+  const s = h >= 6 && h < 17 ? { bg: 0x9fdcf5, sun: 2.3, hemi: 1.35, n: 0 } : h >= 17 && h < 19 ? { bg: 0xf7c9a0, sun: 1.6, hemi: 1.05, n: 0.5 } : h === 5 ? { bg: 0xc9def5, sun: 1.3, hemi: 1, n: 0.4 } : { bg: 0x2f4a7a, sun: 0.8, hemi: 0.85, n: 1 };
   scene.background = new THREE.Color(s.bg);
   document.body.style.background = "#" + s.bg.toString(16).padStart(6, "0");
   sun.intensity = s.sun; hemi.intensity = s.hemi; night = s.n;
@@ -173,7 +173,7 @@ const cone = (p, r, h, c, x, y, z, seg = 6) => mesh(new THREE.ConeGeometry(r, h,
 const ball = (p, r, c, x, y, z, det = 0) => mesh(new THREE.IcosahedronGeometry(r, det), c, x, y, z, p);
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
 const FONT = '"Noto Sans TC", "PingFang TC", sans-serif';
-const MONO = '"Space Mono", ui-monospace, monospace';
+const MONO = '"Baloo 2", "Arial Rounded MT Bold", sans-serif';
 function textPlane(w, h, draw) {
   const cv = document.createElement("canvas");
   cv.width = Math.round(w * 128); cv.height = Math.round(h * 128);
@@ -185,24 +185,23 @@ function textPlane(w, h, draw) {
   return m;
 }
 const rr = (c, x, y, w, h, r) => { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); };
-const C = { grass: 0xb7c893, sand: 0xebddbe, cliff: 0xb49a7a, plaza: 0xf3e9d6, path: 0xe8d9bc, wall: 0xfbf3e6, roof: 0xc8623f, wood: 0xb98a5e, dark: 0x6e4a33, tree1: 0x7e9c5a, tree2: 0x93ae6a, tree3: 0xa3bb78, pine: 0x6d8c55 };
+const C = { grass: 0x78c850, sand: 0xf8e3a3, cliff: 0xe3cfa2, plaza: 0xf6ecd4, path: 0x9aa4b0, road: 0x8d97a5, wall: 0xfff6e8, roof: 0xff7a59, wood: 0xd99a5b, dark: 0x8a5a33, tree1: 0x4fb83f, tree2: 0x6fcf4a, tree3: 0x8ddc5a, pine: 0x3fa64a, shallow: 0x8fe6ef };
 
 /* ---- 海、遠山 ---- */
 const seaGeo = new THREE.PlaneGeometry(360, 360, 80, 80);
 seaGeo.rotateX(-Math.PI / 2);
 const seaBase = seaGeo.attributes.position.array.slice();
-const sea = mesh(seaGeo, mat(0x86b7b8, { roughness: 0.5 }), 0, -1.15, 0);
+const sea = mesh(seaGeo, mat(0x34bfdc, { roughness: 0.35, flatShading: false }), 0, -1.15, 0);
 sea.castShadow = false;
 scene.add(sea);
-// 群島後方的山：平行投影下會出現在畫面上方，像政策島背後的山林
-for (let i = 0; i < 16; i++) {
-  const a = front + Math.PI + (i / 15 - 0.5) * 2.6, r = 70 + hash("mr" + i) * 22, h = 10 + hash("mh" + i) * 14, rad = 12 + hash("md" + i) * 10;
-  const m = cone(scene, rad, h, [0xa9b98c, 0x9fb083, 0xb4c299][i % 3], Math.cos(a) * r, -1.3, Math.sin(a) * r, 7);
-  m.castShadow = false; m.rotation.y = hash("mo" + i) * 3;
-  for (let k = 0; k < 5; k++) {
-    const ta = a + (hash("ta" + i + k) - 0.5) * 0.18, tr = r - rad * (0.3 + hash("tr" + i + k) * 0.5);
-    cone(scene, 1.2, 3.4, C.pine, Math.cos(ta) * tr, -1.2 + h * 0.2 + hash("ty" + i + k) * h * 0.3, Math.sin(ta) * tr, 5).castShadow = false;
-  }
+// 遠方的綠色小島：平行投影下會出現在畫面上方，讓群島像浮在大海中
+for (let i = 0; i < 12; i++) {
+  const a = front + Math.PI + (i / 11 - 0.5) * 2.8, r = 70 + hash("mr" + i) * 26, rad = 4.5 + hash("md" + i) * 4.5;
+  const x = Math.cos(a) * r, z = Math.sin(a) * r;
+  cyl(scene, rad * 1.15, rad * 1.25, 0.4, C.sand, x, -1.2, z, 20).castShadow = false;
+  const hill = mesh(new THREE.SphereGeometry(rad, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), soft(i % 2 ? 0x5fbf45 : 0x72c955), x, -1, z, scene);
+  hill.scale.y = 0.45 + hash("mh" + i) * 0.35; hill.castShadow = false;
+  for (let k = 0; k < 4; k++) { const ta = hash("ta" + i + k) * 6.28, tr = rad * 0.5 * hash("tr" + i + k); mesh(new THREE.SphereGeometry(1.4, 10, 8), soft(C.tree1), x + Math.cos(ta) * tr, -1 + rad * hill.scale.y * 0.85, z + Math.sin(ta) * tr, scene).castShadow = false; }
 }
 
 /* ---- 島 ---- */
@@ -216,9 +215,11 @@ function landmass(parent, r, seed) {
     g.computeVertexNormals();
     return mesh(g, c, 0, y, 0, parent);
   };
-  const top = layer(r, r * 0.96, 0.8, -0.4, C.grass);
-  layer(r * 1.1, r * 1.12, 0.5, -0.95, C.sand);
-  layer(r * 0.96, r * 0.6, 2.6, -2.1, C.cliff);
+  const top = layer(r, r * 0.97, 0.8, -0.4, soft(C.grass));
+  layer(r * 1.1, r * 1.13, 0.5, -0.95, soft(C.sand));
+  layer(r * 0.97, r * 0.62, 2.6, -2.1, C.cliff);
+  const sh = layer(r * 1.45, r * 1.45, 0.05, -1.08, mat(C.shallow, { flatShading: false, transparent: true, opacity: 0.75, roughness: 0.3 })); // 淺灘
+  sh.castShadow = false; sh.receiveShadow = false;
   return { top, wob };
 }
 const world = new THREE.Group();
@@ -384,10 +385,13 @@ function bHouse(g, col) {
 }
 const BUILD = { hall: bHall, track: bTrack, tent: bTent, bank: bBank, gym: bGym, aid: bAid, store: bStore, podium: bPodium, house: bHouse };
 
+// 圓滾滾的樹：兩三顆球疊在一起
 function tree(p, x, z, s, k) {
-  cyl(p, 0.12 * s, 0.16 * s, 0.7 * s, 0x8b5e3c, x, 0, z, 5);
-  if (k > 0.5) { cone(p, 0.75 * s, 1.5 * s, C.pine, x, 0.6 * s, z); cone(p, 0.55 * s, 1.1 * s, C.tree1, x, 1.4 * s, z); }
-  else ball(p, 0.78 * s, [C.tree1, C.tree2, C.tree3][Math.floor(k * 6) % 3], x, 1.3 * s, z);
+  cyl(p, 0.12 * s, 0.16 * s, 0.7 * s, 0x9a6a3c, x, 0, z, 6);
+  const col = soft([C.tree1, C.tree2, C.tree3][Math.floor(k * 6) % 3]);
+  mesh(new THREE.SphereGeometry(0.78 * s, 14, 10), col, x, 1.25 * s, z, p);
+  mesh(new THREE.SphereGeometry(0.5 * s, 12, 8), col, x + 0.35 * s, 1.75 * s, z + 0.1 * s, p);
+  if (k > 0.5) mesh(new THREE.SphereGeometry(0.42 * s, 12, 8), col, x - 0.4 * s, 1.6 * s, z - 0.15 * s, p);
 }
 const lamps = [];
 function lampPost(p, x, z) {
@@ -403,7 +407,10 @@ const center = new THREE.Group();
 world.add(center);
 const CL = landmass(center, RC, 1.3);
 tag(CL.top, { t: "center" });
-cyl(center, 3.4, 3.4, 0.06, C.plaza, 0, 0, 0, 24).castShadow = false;
+cyl(center, 3.2, 3.2, 0.06, C.plaza, 0, 0, 0, 24).castShadow = false;
+// 環狀道路（角色走的路線）與白色虛線
+{ const road = mesh(new THREE.RingGeometry(3.2, 4.6, 48), soft(C.road), 0, 0.045, 0, center); road.rotation.x = -Math.PI / 2; road.castShadow = false;
+  for (let k = 0; k < 28; k++) { const a = (k / 28) * Math.PI * 2, dsh = box(center, 0.06, 0.02, 0.38, 0xffffff, Math.cos(a) * 3.9, 0.05, Math.sin(a) * 3.9); dsh.rotation.y = -a; dsh.castShadow = false; } }
 cyl(center, 1.3, 1.5, 0.5, 0xd9cbb4, 0, 0, 0, 10);
 cyl(center, 1.05, 1.05, 0.12, 0x9fcfd0, 0, 0.45, 0, 10);
 cyl(center, 0.18, 0.25, 1.2, 0xd9cbb4, 0, 0.5, 0);
@@ -454,8 +461,9 @@ ISL.forEach((d) => {
   const col = new THREE.Color(d.color).getHex();
   cyl(g, 2.4, 2.4, 0.06, new THREE.Color(d.color).lerp(new THREE.Color(0xfbf3e6), 0.65).getHex(), 0, 0, 0, 20).castShadow = false;
   const toC = Math.atan2(-d.dir.z, -d.dir.x), len = d.r - 2.2;
-  const path = box(g, len, 0.05, 1.2, C.path, Math.cos(toC) * (2.2 + len / 2), 0, Math.sin(toC) * (2.2 + len / 2));
+  const path = box(g, len, 0.05, 1.3, C.path, Math.cos(toC) * (2.2 + len / 2), 0, Math.sin(toC) * (2.2 + len / 2));
   path.rotation.y = -toC; path.castShadow = false;
+  for (let k = 0; k < 3; k++) { const rr2 = 2.6 + (k + 0.5) * (len - 0.8) / 3, dsh = box(g, 0.34, 0.02, 0.06, 0xffffff, Math.cos(toC) * rr2, 0.05, Math.sin(toC) * rr2); dsh.rotation.y = -toC; dsh.castShadow = false; }
   const b = new THREE.Group();
   (BUILD[d.building] || bHouse)(b, col);
   b.position.copy(FACE_DIR).multiplyScalar(-0.9);
@@ -482,7 +490,7 @@ ISL.forEach((d) => {
   const g = new THREE.Group();
   g.position.copy(m); g.rotation.y = -d.a;
   world.add(g);
-  const plank = mat(0xd2ab7f), rail = mat(C.dark);
+  const plank = mat(0xe0a866), rail = mat(0xa86a3a);
   const n = Math.round(len / 0.5);
   for (let k = 0; k < n; k++) {
     const x = -len / 2 + (k + 0.5) * (len / n), y = Math.sin(((k + 0.5) / n) * Math.PI) * 0.35;
@@ -699,8 +707,8 @@ function stepTween(now) {
 // 讓目標落在 HUD 與資訊抽屜都沒蓋住的區域中央
 function freeCenter() {
   const W = innerWidth, H = innerHeight, sh = $("sheet"), desk = W >= 900;
-  let top = desk ? 0 : $("brand").getBoundingClientRect().bottom + 8, bottom = H, left = 0, right = desk ? $("rail").getBoundingClientRect().left - 8 : W;
-  if (!sh.hidden) { const r = sh.getBoundingClientRect(); if (desk) right = r.left - 8; else { bottom = r.top - 8; top = 60; } }
+  let top = $("res").getBoundingClientRect().bottom + 8, bottom = $("dock").getBoundingClientRect().top - 8, left = 0, right = W;
+  if (!sh.hidden) { const r = sh.getBoundingClientRect(); if (desk) { right = r.left - 8; bottom = H - 8; } else { bottom = r.top - 8; top = $("brand").getBoundingClientRect().bottom + 6; } }
   if (bottom - top < 120) bottom = top + 120;
   return { cx: (left + right) / 2, cy: (top + bottom) / 2, W, H };
 }
@@ -734,7 +742,7 @@ function isleBadge(d) { const n = isleDl(d)[0]; if (!n) return ""; const k = day
 function buildLabels() {
   lblEl.innerHTML = ""; labels.length = 0;
   ISL.forEach((d) => {
-    d.label = mkLabel(`<span class="no">${d.no}</span>${E(d.name)}${isleBadge(d)}${stamps["isle:" + d.key] ? '<span class="ok">✓</span>' : ""}`,
+    d.label = mkLabel(`<span class="no" style="--nc:${d.color}">${d.no}</span>${E(d.name)}${isleBadge(d)}${stamps["isle:" + d.key] ? '<span class="ok">✓</span>' : ""}`,
       d.pos.clone().add(d.build.position).setY(d.build.userData.h + 0.5), () => openIsle(d.i), "", { pri: 100 + (isleBadge(d).includes("hot") ? 5 : 0), selId: "isle:" + d.key });
   });
   CENTER_SPOTS.forEach((s) => {
@@ -842,8 +850,9 @@ function startTour() {
   tourNext();
 }
 function tourNext() {
+  updGo();
   if (!touring) return;
-  if (!tourQ.length) { touring = false; openSpot("office"); toast("導覽結束，回到課外組"); return; }
+  if (!tourQ.length) { touring = false; updGo(); openSpot("office"); toast("導覽結束，回到課外組"); return; }
   openIsle(tourQ.shift(), true);
 }
 
@@ -888,20 +897,20 @@ function saveFile(name, blob, okMsg) {
 }
 const download = (name, text) => saveFile(name, new Blob([text], { type: "text/calendar;charset=utf-8" }), "已下載行事曆檔，開啟即可加入");
 const subUrl = () => (location.protocol === "https:" ? "webcal://" + location.host + location.pathname.replace(/[^/]*$/, "") + "calendar.ics" : "calendar.ics");
-const noTag = (no) => `<span style="font:700 13px var(--f-mono);color:var(--terra);margin-right:8px">${no}</span>`;
+const noTag = (no) => `<span style="font:700 13px var(--f-num);color:var(--orange);margin-right:8px">${no}</span>`;
 
 function dlItems(list, showIsle, openFirst) {
   if (!list.length) return '<p class="empty">目前沒有待辦的截止日。</p>';
   return '<ul class="items">' + list.map((x, k) => {
     const n = daysLeft(x.at), d = isleOf(x.category), l = lvl(n), open = openFirst && k === 0;
-    return `<li class="item ${l === "hot" ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="${open}"><span class="dot"></span><span class="nm">${E(x.title)}<small>${fmt(x.at)} 截止${showIsle && d ? "・" + E(d.name) : ""}</small></span><span class="meta ${l}">${n === 0 ? "今天" : "D-" + n}</span><span class="chev">›</span></button>
+    return `<li class="item ${l === "hot" ? "hl" : ""}" style="--c:${d ? d.color : "var(--orange)"}"><button type="button" aria-expanded="${open}"><span class="dot"></span><span class="nm">${E(x.title)}<small>${fmt(x.at)} 截止${showIsle && d ? "・" + E(d.name) : ""}</small></span><span class="meta ${l}">${n === 0 ? "今天" : "D-" + n}</span><span class="chev">›</span></button>
       <div class="more" ${open ? "" : "hidden"}>${x.detail ? `<p>${E(x.detail)}</p>` : ""}<div class="acts"><a class="btn g" target="_blank" rel="noopener" href="${E(gcal(x))}">Google 日曆</a><button class="btn g" type="button" data-ics="${E(x.id)}">iPhone／其他</button>${x.link ? `<a class="btn g" target="_blank" rel="noopener" href="${E(x.link)}">相關文件 ↗</a>` : ""}${showIsle && d ? `<button class="btn" type="button" data-isle="${d.i}">去${E(d.name)}</button>` : ""}</div></div></li>`;
   }).join("") + "</ul>";
 }
 function newsItems(list) {
   if (!list.length) return '<p class="empty">目前沒有公告。</p>';
   return '<ul class="items">' + list.map((a) => { const d = isleOf(a.tag), nw = !read.includes(a.id);
-    return `<li class="item ${nw ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="${nw}"><span class="dot"></span><span class="nm">${E(a.title)}<small>${[a.date, d && d.name].filter(Boolean).map(E).join("・")}</small></span><span class="meta ${nw ? "hot" : ""}">${a.pinned ? "置頂" : nw ? "NEW" : ""}</span><span class="chev">›</span></button><div class="more" ${nw ? "" : "hidden"}>${a.body ? `<p>${E(a.body)}</p>` : ""}${a.link ? `<div class="acts"><a class="btn t" target="_blank" rel="noopener" href="${E(a.link)}">查看公告 ↗</a></div>` : ""}</div></li>`; }).join("") + "</ul>";
+    return `<li class="item ${nw ? "hl" : ""}" style="--c:${d ? d.color : "var(--orange)"}"><button type="button" aria-expanded="${nw}"><span class="dot"></span><span class="nm">${E(a.title)}<small>${[a.date, d && d.name].filter(Boolean).map(E).join("・")}</small></span><span class="meta ${nw ? "hot" : ""}">${a.pinned ? "置頂" : nw ? "NEW" : ""}</span><span class="chev">›</span></button><div class="more" ${nw ? "" : "hidden"}>${a.body ? `<p>${E(a.body)}</p>` : ""}${a.link ? `<div class="acts"><a class="btn t" target="_blank" rel="noopener" href="${E(a.link)}">查看公告 ↗</a></div>` : ""}</div></li>`; }).join("") + "</ul>";
 }
 function markRead(list) { let ch = false; list.forEach((a) => { if (!read.includes(a.id)) { read.push(a.id); ch = true; } }); if (ch) { LS.set("read", read); updHud(); updMarkers(); buildLabels(); } }
 
@@ -966,7 +975,7 @@ function todoItems(list) {
   return '<ul class="items">' + list.map((x) => {
     const done = !!todoDone[x.key], d = isleOf(x.island);
     const btns = (x.links || []).map((l) => (l[1] ? `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>` : `<span class="btn g pend" aria-disabled="true">${E(l[0])}・連結待補</span>`)).join("");
-    return `<li class="item todo ${done ? "done" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><label class="row"><input type="checkbox" data-todo="${E(x.key)}" ${done ? "checked" : ""} aria-label="完成：${E(x.title)}"><span class="nm">${E(x.title)}${x.note ? `<small>${E(x.note)}</small>` : ""}</span><span class="meta">${x.when ? E(x.when) : ""}</span><span></span></label>${btns ? `<div class="more"><div class="acts">${btns}</div></div>` : ""}</li>`;
+    return `<li class="item todo ${done ? "done" : ""}" style="--c:${d ? d.color : "var(--orange)"}"><label class="row"><input type="checkbox" data-todo="${E(x.key)}" ${done ? "checked" : ""} aria-label="完成：${E(x.title)}"><span class="nm">${E(x.title)}${x.note ? `<small>${E(x.note)}</small>` : ""}</span><span class="meta">${x.when ? E(x.when) : ""}</span><span></span></label>${btns ? `<div class="more"><div class="acts">${btns}</div></div>` : ""}</li>`;
   }).join("") + "</ul>";
 }
 let todoSem = null;
@@ -1060,8 +1069,8 @@ function shoot() {
   const cv = document.createElement("canvas"); cv.width = W; cv.height = H + 150;
   const c = cv.getContext("2d");
   c.drawImage(src, 0, 0, W, H);
-  c.fillStyle = "#FBF6EE"; c.fillRect(0, H, W, 150);
-  c.fillStyle = "#C8623F"; c.font = "900 54px Archivo, sans-serif"; c.fillText("CLUB ON.", 40, H + 72);
+  c.fillStyle = "#FFF8E7"; c.fillRect(0, H, W, 150);
+  c.fillStyle = "#FF9A1F"; c.font = `800 56px ${MONO}`; c.fillText("CLUB ON.", 40, H + 74);
   c.fillStyle = "#2A211C"; c.font = `900 34px ${FONT}`; c.fillText(`${me.name || "我"}・${me.club || "體能性社團"}・${me.role}`, 40, H + 124);
   c.textAlign = "right"; c.fillStyle = "#7A6B60"; c.font = `700 24px ${FONT}`;
   const p = tw(); c.fillText(`東海體能社團行政群島・集章 ${Object.keys(stamps).length}/${STAMPS.length}・${p.y}/${p.m}/${p.d}`, W - 40, H + 124);
@@ -1133,6 +1142,9 @@ function checkNotify() {
 
 /* ---------------- HUD、跑馬燈、對話 ---------------- */
 $("bHome").addEventListener("click", goHome);
+$("brand").addEventListener("click", () => openChar(panelView && panelView.startsWith("char") ? undefined : "look"));
+$("bGo").addEventListener("click", () => { if (touring) { touring = false; toast("已停止導覽"); updGo(); return; } closeSheet(true); startTour(); updGo(); });
+function updGo() { $("goTxt").textContent = touring ? "停止導覽" : "逛群島"; }
 $("bChar").addEventListener("click", () => (panelView && panelView.startsWith("char") ? closeSheet() : openChar()));
 $("bList").addEventListener("click", () => (panelView === "list" ? closeSheet() : renderList()));
 $("bDl").addEventListener("click", () => (panelView === "deadlines" ? closeSheet() : openSpot("deadlines")));
@@ -1141,6 +1153,7 @@ $("bTodo").addEventListener("click", () => (panelView === "todo" ? closeSheet() 
 $("pOffice").addEventListener("click", () => openSpot("office"));
 $("pNext").addEventListener("click", () => { const n = upcoming()[0], d = n && isleOf(n.category); d ? openIsle(d.i) : openSpot("deadlines"); });
 
+const PROP_EMOJI = { clipboard: "📋", basketball: "🏀", volleyball: "🏐", soccer: "⚽", bat: "⚾", rugby: "🏉", racket: "🏸", frisbee: "🥏", bowling: "🎳", bow: "🏹", helmet: "🏇", sword: "🤺", belt: "🥋", gloves: "🥊", dumbbell: "🏋️", mat: "🧘", bib: "🏃", backpack: "🥾", ring: "🏊", skateboard: "🛹", skates: "⛸️", pompom: "📣", kit: "⛑️" };
 function updHud() {
   const st = officeStatus();
   $("lamp").className = "lamp " + (st.open ? "on" : "off");
@@ -1151,7 +1164,13 @@ function updHud() {
   $("dlN").hidden = !soon; $("dlN").textContent = soon;
   const u = unread().length; $("newsN").hidden = !u; $("newsN").textContent = u;
   const tl = todoLeft(); $("todoN").hidden = !tl; $("todoN").textContent = tl;
-  const s = Object.keys(stamps).length; $("stampN").hidden = !s; $("stampN").textContent = `${s}/${STAMPS.length}`;
+  const s = Object.keys(stamps).length;
+  $("stampN").textContent = `${s}/${STAMPS.length}`; $("pBar").style.width = `${(s / STAMPS.length) * 100}%`;
+  $("pName").textContent = me.name ? `${me.name}的幹部日誌` : "我的幹部日誌";
+  $("pSub").textContent = me.club ? `${me.club}・${me.role}` : "點這裡建立角色（選填）";
+  $("pAv").textContent = PROP_EMOJI[myProp()] || "🙂";
+  $("dlR").textContent = n ? (daysLeft(n.at) === 0 ? "今天截止" : "D-" + daysLeft(n.at)) : "截止日"; $("dlR").classList.toggle("hot", !!n && daysLeft(n.at) <= 3);
+  $("todoR").textContent = tl ? `待辦 ${tl}` : "待辦完成"; $("newsR").textContent = u ? `公告 ${u}` : "公告";
 }
 let tkI = 0, tkCur = null;
 function tickerMsgs() {
@@ -1228,7 +1247,7 @@ function loop(now) {
   const dt = Math.min(0.05, (now - last) / 1000), t = now / 1000; last = now;
   if (!RM) {
     const a = seaGeo.attributes.position;
-    for (let i = 0; i < a.count; i++) { const x = seaBase[i * 3], z = seaBase[i * 3 + 2]; a.setY(i, Math.sin(x * 0.16 + t * 0.9) * 0.16 + Math.cos(z * 0.2 + t * 0.7) * 0.14); }
+    for (let i = 0; i < a.count; i++) { const x = seaBase[i * 3], z = seaBase[i * 3 + 2]; a.setY(i, Math.sin(x * 0.16 + t * 0.9) * 0.08 + Math.cos(z * 0.2 + t * 0.7) * 0.07); }
     a.needsUpdate = true; seaGeo.computeVertexNormals();
     clouds.forEach((c, i) => { const ang = c.userData.a0 + Math.sin(t * 0.03 * c.userData.s + i) * 0.25; c.position.x = Math.cos(ang) * c.userData.r; c.position.z = Math.sin(ang) * c.userData.r; });
     boats.forEach((b) => { b.userData.a += b.userData.s * dt; b.position.set(Math.cos(b.userData.a) * b.userData.r, -1.1 + Math.sin(t * 1.3) * 0.08, Math.sin(b.userData.a) * b.userData.r); b.rotation.y = -b.userData.a; });
@@ -1272,10 +1291,10 @@ async function start() {
   else if (!LS.get("intro", false)) {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
-      ["每座島是一類行政", `${ISL.length} 座小島各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一座島，或用右側清單探索每一類的截止日、流程與公告。`],
+      ["每座島是一類行政", `${ISL.length} 座小島各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一座島，或用左下的「清單」探索每一類的截止日、流程與公告。`],
       ["中心是課外組", `群島中間是課外組，旁邊有截止日鐘塔、公告欄、待辦看板和碼頭。${ISL.length} 座島都有橋通到這裡，有問題就回來。`],
       ["提醒會浮在島上", "島的名牌上有 D-倒數；7 天內截止，島上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
-      ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的島，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
+      ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的島，隨時可以點左上的幹部日誌，或左下的「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
   }
 }
