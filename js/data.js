@@ -41,6 +41,21 @@ var SITE_DATA = {
   },
 
   /* ---------------------------------------------------------
+   * 群島：每個行政分類是一座島，中心島是課外組
+   * key 要和截止日的 category、公告的 tag、資訊站的 island 一致
+   * building 可用：track、tent、bank、gym、aid、store、podium、house
+   * --------------------------------------------------------- */
+  islands: [
+    { key: "行政", name: "行政島", icon: "📋", color: "#5D9FE3", building: "track", tagline: "幹部交接、名冊繳交，新任幹部的第一站。" },
+    { key: "活動", name: "活動島", icon: "⛺", color: "#F2A65A", building: "tent", tagline: "辦活動前要送什麼、活動後要交什麼。" },
+    { key: "經費", name: "經費島", icon: "💰", color: "#F4C95D", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。" },
+    { key: "場地", name: "場地島", icon: "🏟", color: "#5FBFA8", building: "gym", tagline: "練習場地借用與使用規範。" },
+    { key: "安全", name: "安全島", icon: "⛑", color: "#F28C72", building: "aid", tagline: "保險、急救、校外活動安全，體能性社團最重要的事。" },
+    { key: "器材", name: "器材島", icon: "🏐", color: "#B98BD9", building: "store", tagline: "器材清冊、借用與保管。" },
+    { key: "評鑑", name: "評鑑島", icon: "🏆", color: "#E88AAE", building: "podium", tagline: "成果與評鑑資料，平常就要存。" },
+  ],
+
+  /* ---------------------------------------------------------
    * 截止日：會依日期自動排序、倒數，並可加入行事曆
    * category 建議使用：行政、經費、活動、場地、評鑑、安全
    * --------------------------------------------------------- */
@@ -125,11 +140,13 @@ var SITE_DATA = {
 
   /* ---------------------------------------------------------
    * 資訊站：各主題的說明，可搜尋
-   * steps 為步驟；links 為相關連結 [名稱, 網址]
+   * island 為所在的島（對應上方 islands 的 key）
+ * steps 為步驟；links 為相關連結 [名稱, 網址]
    * --------------------------------------------------------- */
   guides: [
     {
       id: "g-handover",
+      island: "行政",
       topic: "幹部交接",
       title: "新舊幹部怎麼交接？",
       summary: "帳冊、器材、帳號密碼、未完成事項，一次交接清楚。",
@@ -143,6 +160,7 @@ var SITE_DATA = {
     },
     {
       id: "g-activity",
+      island: "活動",
       topic: "活動申請",
       title: "辦活動要送什麼？",
       summary: "活動前送申請，活動後交成果，校外活動另需安全計畫。",
@@ -155,6 +173,7 @@ var SITE_DATA = {
     },
     {
       id: "g-money",
+      island: "經費",
       topic: "經費核銷",
       title: "經費申請與核銷注意事項",
       summary: "收據抬頭、統編、日期正確，活動後儘速核銷。",
@@ -167,6 +186,7 @@ var SITE_DATA = {
     },
     {
       id: "g-venue",
+      island: "場地",
       topic: "場地借用",
       title: "練習場地怎麼借？",
       summary: "固定練習與臨時活動都要登記，提早申請。",
@@ -179,6 +199,7 @@ var SITE_DATA = {
     },
     {
       id: "g-safety",
+      island: "安全",
       topic: "安全與保險",
       title: "體能性社團安全守則",
       summary: "保險、熱身、急救資訊，是體能性社團最重要的事。",
@@ -192,6 +213,7 @@ var SITE_DATA = {
     },
     {
       id: "g-equipment",
+      island: "器材",
       topic: "器材管理",
       title: "社團器材借用與保管",
       summary: "建立器材清冊，借出歸還都有紀錄。",
@@ -204,6 +226,7 @@ var SITE_DATA = {
     },
     {
       id: "g-review",
+      island: "評鑑",
       topic: "社團評鑑",
       title: "評鑑資料平常就要存",
       summary: "照片、簽到表、成果報告，每次活動後就整理。",
