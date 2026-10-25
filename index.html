@@ -4,632 +4,288 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- /PREVIEW-STRIP -->
-<title>東海體能社團站</title>
+<title>東海體能島</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="東海大學體能性社團幹部的行政公告、截止日提醒、主題資訊與課外組辦公資訊。">
-<meta name="theme-color" content="#14263a">
+<meta name="description" content="東海大學體能性社團幹部的互動島嶼：走訪各建築查看行政公告、截止日、辦事流程與課外組辦公時間。">
+<meta name="theme-color" content="#5ec4dc">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
 <style>
-/* Layout: 深色「跑道」頁首帶 + 計分板倒數；下方為單欄資訊流，桌機時截止日與公告並排。 */
+/* Layout: 全螢幕 3D 島嶼為底；上方狀態貼紙、下方遊戲按鈕列、右側（手機為底部）資訊卡。 */
 :root {
-  --ink: #14263a;          /* 頁首、主要文字 */
-  --paper: #f5f7f6;        /* 頁面底色（帶一點綠的白） */
-  --surface: #ffffff;
-  --line: #d8e0dd;
-  --muted: #5b6b70;
-  --field: #0b7a55;        /* 球場綠：主色 */
-  --field-soft: #e2f2ea;
-  --whistle: #f2b705;      /* 哨子黃：提醒 */
-  --whistle-soft: #fdf3d3;
-  --alarm: #c9352b;        /* 緊急 */
-  --alarm-soft: #fbe6e3;
-  --band: #14263a;
-  --band-fg: #f1f5f4;
-  --band-muted: #a9bac0;
-  --lane: rgba(255,255,255,.06);
+  --ink: #1d3142;          /* 外框、文字 */
+  --card: #fffdf6;         /* 卡片底 */
+  --card-2: #f1f6f2;       /* 卡片內區塊 */
+  --muted: #5d6f78;
+  --line: #1d3142;
+  --soft-line: #d9e2df;
+  --grass: #3f9a52;        /* 主色：草地綠 */
+  --grass-soft: #e0f1e2;
+  --sun: #ffc83d;          /* 提醒黃 */
+  --sun-soft: #fff1c9;
+  --coral: #e5483b;        /* 緊急紅 */
+  --coral-soft: #fde3e0;
+  --sea: #5ec4dc;
+  --shadow: rgba(29,49,66,.9);
   --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
-  --font-score: "Barlow Condensed", "Arial Narrow", "Noto Sans TC", sans-serif;
-  --r: 10px;
+  --font-num: "Barlow Condensed", "Arial Narrow", "Noto Sans TC", sans-serif;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ink: #e8eeec; --paper: #0e1a24; --surface: #15242f; --line: #263a46; --muted: #9aabb0;
-    --field: #3cc48f; --field-soft: #143a2d; --whistle: #f5c53a; --whistle-soft: #3a3214;
-    --alarm: #ff7a6e; --alarm-soft: #42201d; --band: #0a141c; --band-fg: #f1f5f4; --band-muted: #93a6ad;
-    --lane: rgba(255,255,255,.05); color-scheme: dark;
+    --ink: #eef4f1; --card: #182733; --card-2: #203341; --muted: #a2b4bb; --line: #0b141b; --soft-line: #2c4352;
+    --grass: #5cc777; --grass-soft: #17392a; --sun: #ffd25e; --sun-soft: #3d3317; --coral: #ff7b6f; --coral-soft: #44221f;
+    --shadow: rgba(0,0,0,.75); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --ink: #e8eeec; --paper: #0e1a24; --surface: #15242f; --line: #263a46; --muted: #9aabb0;
-  --field: #3cc48f; --field-soft: #143a2d; --whistle: #f5c53a; --whistle-soft: #3a3214;
-  --alarm: #ff7a6e; --alarm-soft: #42201d; --band: #0a141c; --band-fg: #f1f5f4; --band-muted: #93a6ad;
-  --lane: rgba(255,255,255,.05); color-scheme: dark;
+  --ink: #eef4f1; --card: #182733; --card-2: #203341; --muted: #a2b4bb; --line: #0b141b; --soft-line: #2c4352;
+  --grass: #5cc777; --grass-soft: #17392a; --sun: #ffd25e; --sun-soft: #3d3317; --coral: #ff7b6f; --coral-soft: #44221f;
+  --shadow: rgba(0,0,0,.75); color-scheme: dark;
 }
-
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: calc(64px + env(safe-area-inset-top, 0px)); }
-@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
 body {
-  margin: 0; background: var(--paper); color: var(--ink);
-  font-family: var(--font-body); font-size: 16px; line-height: 1.65;
+  margin: 0; overflow: hidden; background: var(--sea); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.6;
+  -webkit-tap-highlight-color: transparent;
 }
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--band); }
-a { color: var(--field); }
-:focus-visible { outline: 3px solid var(--whistle); outline-offset: 2px; border-radius: 4px; }
-.wrap {
-  max-width: 1080px; margin: 0 auto;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-}
-h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.3; }
-.score { font-family: var(--font-score); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+a { color: var(--grass); }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
 
-/* ---- 導覽列 ---- */
-.nav {
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
-  background: var(--band); color: var(--band-fg); border-bottom: 1px solid rgba(255,255,255,.08);
-}
-.nav .wrap { display: flex; align-items: center; gap: 12px; height: 56px; }
-.brand { font-weight: 900; letter-spacing: .04em; white-space: nowrap; color: var(--band-fg); text-decoration: none; }
-.brand span { color: var(--whistle); }
-.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; margin-left: auto; }
-.tabs::-webkit-scrollbar { display: none; }
-.tabs a {
-  color: var(--band-muted); text-decoration: none; font-size: 14px; font-weight: 500;
-  padding: 6px 10px; border-radius: 999px; white-space: nowrap; position: relative;
-}
-.tabs a:hover { color: var(--band-fg); background: rgba(255,255,255,.08); }
-.dot { display: inline-block; min-width: 18px; padding: 0 5px; margin-left: 4px; border-radius: 999px; background: var(--alarm); color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+#scene { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#scene.pointer { cursor: pointer; }
 
-/* ---- 頁首帶 ---- */
-.hero {
-  background: var(--band); color: var(--band-fg);
-  background-image: repeating-linear-gradient(180deg, transparent 0 46px, var(--lane) 46px 48px);
+/* 貼紙風格 */
+.sticker { background: var(--card); border: 2px solid var(--line); border-radius: 14px; box-shadow: 0 3px 0 var(--shadow); }
+
+/* 上方狀態列 */
+.top {
+  position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); left: 0; right: 0; z-index: 4; pointer-events: none;
+  padding-left: max(12px, env(safe-area-inset-left, 0px)); padding-right: max(12px, env(safe-area-inset-right, 0px));
+  display: flex; gap: 8px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;
 }
-.hero .wrap { padding-block: 28px 32px; display: grid; gap: 20px; grid-template-columns: 1.1fr 1fr; align-items: stretch; }
-.eyebrow { font-size: 13px; letter-spacing: .12em; color: var(--band-muted); }
-.hero h1 { font-size: clamp(26px, 5vw, 40px); font-weight: 900; margin: 6px 0 10px; }
-.hero p { margin: 0; color: var(--band-muted); max-width: 34em; }
-.quick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.top > * { pointer-events: auto; }
+.title { padding: 8px 14px; }
+.title h1 { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: .06em; line-height: 1.2; }
+.title small { color: var(--muted); font-size: 12px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.chip { display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+.chip:hover { transform: translateY(-1px); }
+.lamp { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+.lamp.on { background: var(--grass); box-shadow: 0 0 0 3px var(--grass-soft); }
+.lamp.off { background: var(--coral); }
+.chip .num { font-size: 20px; line-height: 1; color: var(--coral); }
+
+/* 下方按鈕列 */
+.dock {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 4;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex; gap: 6px; padding: 6px; max-width: calc(100% - 24px); overflow-x: auto; scrollbar-width: none;
+}
+.dock::-webkit-scrollbar { display: none; }
+.dock button {
+  position: relative; border: 0; background: transparent; cursor: pointer; border-radius: 10px;
+  padding: 6px 12px; display: grid; justify-items: center; gap: 0; font-size: 13px; font-weight: 700; white-space: nowrap;
+}
+.dock button:hover { background: var(--card-2); }
+.dock svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.badge {
+  position: absolute; top: 0; right: 4px; min-width: 18px; padding: 0 5px; border-radius: 999px;
+  background: var(--coral); color: #fff; font-size: 11px; line-height: 18px; text-align: center; border: 2px solid var(--card);
+}
+
+/* 3D 標籤 */
+#labels { position: fixed; inset: 0; pointer-events: none; z-index: 2; }
+.label {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); white-space: nowrap;
+  padding: 2px 10px; font-size: 13px; font-weight: 700; border-radius: 999px; pointer-events: auto; cursor: pointer;
+  background: var(--card); border: 2px solid var(--line); box-shadow: 0 2px 0 var(--shadow);
+  display: flex; align-items: center; gap: 5px; transition: opacity .2s;
+}
+.label .stamp { width: 14px; height: 14px; border-radius: 50%; border: 2px dashed var(--muted); flex: none; }
+.label.done .stamp { border: 0; background: var(--grass); box-shadow: inset 0 0 0 3px var(--card), 0 0 0 1px var(--grass); }
+.label.hidden { opacity: 0; pointer-events: none; }
+
+/* 對話框（老師 NPC） */
+.talk {
+  position: fixed; z-index: 6; left: 50%; transform: translateX(-50%);
+  bottom: calc(92px + env(safe-area-inset-bottom, 0px)); width: min(560px, calc(100% - 24px));
+  padding: 16px 18px 14px; display: grid; gap: 10px;
+}
+.talk .who { font-weight: 900; color: var(--grass); font-size: 14px; }
+.talk p { margin: 0; font-size: 15px; }
+.talk .row { justify-content: flex-end; }
+
+/* 資訊卡 */
+.panel {
+  position: fixed; z-index: 5; right: max(12px, env(safe-area-inset-right, 0px));
+  top: calc(78px + env(safe-area-inset-top, 0px)); bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+  width: min(420px, calc(100% - 24px)); display: flex; flex-direction: column; overflow: hidden;
+}
+.panel header { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px 10px; border-bottom: 2px solid var(--soft-line); }
+.panel .kicker { font-size: 12px; letter-spacing: .12em; color: var(--grass); font-weight: 900; }
+.panel h2 { margin: 0; font-size: 20px; font-weight: 900; line-height: 1.3; text-wrap: balance; }
+.close { margin-left: auto; border: 2px solid var(--line); background: var(--card-2); border-radius: 10px; width: 36px; height: 36px; cursor: pointer; font-size: 18px; line-height: 1; flex: none; }
+.panel .body { padding: 14px 16px 18px; overflow-y: auto; display: grid; gap: 14px; align-content: start; }
+.panel .body p { margin: 0; }
+.stamped { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--grass); background: var(--grass-soft); padding: 2px 10px; border-radius: 999px; width: fit-content; }
+
 .btn {
-  display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 14px; font-weight: 700;
-  padding: 9px 14px; border-radius: 8px; border: 1px solid transparent; cursor: pointer; text-decoration: none;
-  background: var(--field); color: #fff;
+  display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; text-decoration: none; cursor: pointer;
+  padding: 7px 12px; border-radius: 10px; border: 2px solid var(--line); background: var(--card); color: var(--ink); box-shadow: 0 2px 0 var(--shadow);
 }
-.btn:hover { filter: brightness(1.08); }
-.btn.ghost { background: transparent; color: inherit; border-color: currentColor; }
-.btn.light { background: rgba(255,255,255,.1); color: var(--band-fg); border-color: rgba(255,255,255,.18); }
-.btn.small { padding: 6px 10px; font-size: 13px; }
-.btn.plain { background: var(--surface); color: var(--ink); border-color: var(--line); }
-
-.board {
-  background: rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.1); border-radius: var(--r);
-  padding: 18px 20px; display: grid; gap: 14px; min-width: 0;
-}
-.board .label { font-size: 12px; letter-spacing: .14em; color: var(--band-muted); }
-.next-title { font-weight: 700; font-size: 18px; }
-.countdown { display: flex; align-items: baseline; gap: 8px; }
-.countdown .big { font-size: 64px; line-height: .9; color: var(--whistle); font-weight: 700; }
-.countdown .unit { font-size: 15px; color: var(--band-muted); }
-.status { display: flex; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,.15); font-size: 14px; }
-.lamp { width: 10px; height: 10px; border-radius: 50%; background: var(--band-muted); flex: none; }
-.lamp.on { background: #36d68f; box-shadow: 0 0 0 4px rgba(54,214,143,.2); }
-.lamp.off { background: #ff7a6e; }
-
-.sample {
-  background: var(--whistle-soft); color: var(--ink); font-size: 14px; border-bottom: 1px solid var(--line);
-}
-.sample .wrap { padding-block: 8px; }
-
-/* ---- 區塊 ---- */
-main .wrap { padding-block: 8px 48px; display: grid; gap: 40px; }
-section { min-width: 0; }
-.sec-head { display: flex; align-items: end; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
-.sec-head h2 { font-size: 22px; font-weight: 900; }
-.sec-head .sub { color: var(--muted); font-size: 14px; margin: 2px 0 0; }
-.two { display: grid; grid-template-columns: 1.15fr 1fr; gap: 32px; }
-.two > * { min-width: 0; }
-.first { padding-top: 28px; }
-
-.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-.chip {
-  font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; cursor: pointer;
-  border: 1px solid var(--line); background: var(--surface); color: var(--muted);
-}
-.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-
-/* 截止日列表 */
-.dl { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
-.dl li {
-  display: grid; grid-template-columns: 76px 1fr; gap: 14px; align-items: start;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px;
-}
-.days { text-align: center; border-radius: 8px; padding: 6px 0 4px; background: var(--field-soft); color: var(--field); }
-.days b { display: block; font-size: 34px; line-height: 1; }
-.days small { font-size: 12px; }
-.lvl-warn .days { background: var(--whistle-soft); color: var(--ink); }
-.lvl-warn .days b { color: var(--ink); }
-.lvl-hot .days { background: var(--alarm-soft); color: var(--alarm); }
-.lvl-past { opacity: .6; }
-.lvl-past .days { background: var(--paper); color: var(--muted); }
-.dl h3 { font-size: 16px; font-weight: 700; }
-.meta { font-size: 13px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; margin: 2px 0 6px; }
-.tag { font-size: 12px; padding: 1px 8px; border-radius: 4px; background: var(--paper); border: 1px solid var(--line); color: var(--muted); }
-.dl p { margin: 0 0 8px; font-size: 14px; }
+.btn:active { transform: translateY(2px); box-shadow: none; }
+.btn.go { background: var(--grass); color: #fff; }
 .row { display: flex; gap: 6px; flex-wrap: wrap; }
-.past-toggle { margin-top: 10px; font-size: 14px; }
+.muted { color: var(--muted); font-size: 13px; }
+.box { background: var(--card-2); border-radius: 12px; padding: 12px 14px; }
+ol.steps { margin: 0; padding-left: 1.4em; display: grid; gap: 6px; }
+ul.tips { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-size: 14px; }
+
+/* 截止日 */
+.dl { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.dl li { display: grid; grid-template-columns: 58px 1fr; gap: 12px; padding: 12px; border-radius: 12px; background: var(--card-2); }
+.dl li > div { min-width: 0; }
+.days { text-align: center; border-radius: 10px; padding: 4px 0; background: var(--grass-soft); color: var(--grass); align-self: start; }
+.days b { display: block; font-size: 28px; line-height: 1.05; }
+.days small { font-size: 11px; }
+.lvl-warn .days { background: var(--sun-soft); color: var(--ink); }
+.lvl-hot .days { background: var(--coral-soft); color: var(--coral); }
+.dl h3 { margin: 0; font-size: 15px; }
+.meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; margin: 2px 0 6px; }
+.tag { font-size: 11px; padding: 0 7px; border-radius: 4px; border: 1px solid var(--soft-line); color: var(--muted); }
+.dl p { margin: 0 0 8px; font-size: 13px; }
 
 /* 公告 */
-.news { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-.news li { border-bottom: 1px solid var(--line); }
-.news button {
-  all: unset; box-sizing: border-box; display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; width: 100%;
-  padding: 12px 4px; cursor: pointer;
-}
-.news button:focus-visible { outline: 3px solid var(--whistle); }
-.news .t { font-weight: 700; }
-.news .unread .t::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--alarm); margin-right: 8px; vertical-align: middle; }
-.news .d { font-size: 13px; color: var(--muted); grid-column: 1 / -1; display: flex; gap: 8px; align-items: center; }
-.news .chev { color: var(--muted); transition: transform .2s; }
-.news [aria-expanded="true"] .chev { transform: rotate(90deg); }
-.news .body { padding: 0 4px 14px; font-size: 15px; }
-.pin { color: var(--alarm); font-weight: 700; font-size: 12px; }
+.news { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.news li { background: var(--card-2); border-radius: 12px; padding: 10px 12px; }
+.news h3 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+.news .new { font-size: 11px; color: #fff; background: var(--coral); border-radius: 4px; padding: 0 6px; }
+.news .pin { font-size: 11px; color: var(--coral); font-weight: 900; }
+.news p { margin: 4px 0 0; font-size: 14px; }
 
-/* 資訊站 */
-.search {
-  width: 100%; font: inherit; padding: 12px 14px; border-radius: var(--r);
-  border: 1px solid var(--line); background: var(--surface); color: var(--ink); margin-bottom: 14px;
-}
-.guides { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-.guide { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; }
-.guide .topic { font-size: 12px; letter-spacing: .1em; color: var(--field); font-weight: 700; }
-.guide h3 { font-size: 17px; margin: 4px 0 4px; }
-.guide p { margin: 0; color: var(--muted); font-size: 14px; }
-.guide details { margin-top: 10px; }
-.guide summary { cursor: pointer; font-size: 14px; font-weight: 700; color: var(--field); }
-.guide ol { margin: 8px 0 0; padding-left: 1.3em; font-size: 14px; display: grid; gap: 4px; }
-.guide .row { margin-top: 10px; }
-.empty { color: var(--muted); padding: 20px 0; }
-mark { background: var(--whistle-soft); color: inherit; padding: 0 1px; }
+/* 週表 */
+.week { width: 100%; border-collapse: collapse; font-size: 14px; }
+.week td { padding: 6px 4px; border-bottom: 1px solid var(--soft-line); }
+.week td:first-child { font-weight: 700; white-space: nowrap; width: 7.5em; }
+.week .today td { background: var(--grass-soft); }
+.big-status { display: flex; gap: 10px; align-items: center; font-size: 17px; font-weight: 900; }
 
-/* 任務清單 */
-.progress { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; margin-bottom: 14px; }
-.progress i { display: block; height: 100%; width: 0; background: var(--field); transition: width .3s; }
-.tasks { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
-.tasks label {
-  display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; cursor: pointer;
-  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); font-size: 15px;
+/* 地圖清單與搜尋 */
+.places { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.places button { text-align: left; border: 2px solid var(--soft-line); background: var(--card-2); border-radius: 12px; padding: 10px; cursor: pointer; display: grid; gap: 2px; }
+.places button:hover { border-color: var(--line); }
+.places b { font-size: 14px; }
+.places span { font-size: 12px; color: var(--muted); }
+.places .ok { color: var(--grass); font-weight: 700; }
+.search { width: 100%; font: inherit; padding: 10px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--card); color: var(--ink); }
+.results { display: grid; gap: 8px; }
+.results button { text-align: left; border: 0; background: var(--card-2); border-radius: 12px; padding: 10px 12px; cursor: pointer; display: grid; gap: 2px; }
+.results small { color: var(--muted); }
+mark { background: var(--sun-soft); color: inherit; }
+
+/* 集章本 */
+.stamps { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; }
+.stampcell { display: grid; justify-items: center; gap: 4px; font-size: 12px; text-align: center; border: 0; background: none; cursor: pointer; padding: 0; }
+.stampcell i {
+  width: 58px; height: 58px; border-radius: 50%; border: 2px dashed var(--soft-line); display: grid; place-items: center;
+  font-style: normal; font-weight: 900; font-size: 13px; color: var(--muted);
 }
-.tasks input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--field); flex: none; }
+.stampcell.done i { border: 3px double var(--coral); color: var(--coral); transform: rotate(-12deg); background: var(--coral-soft); }
+.progress { height: 10px; border-radius: 999px; background: var(--soft-line); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--grass); transition: width .4s; }
+.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.tasks label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; padding: 8px 10px; border-radius: 10px; background: var(--card-2); font-size: 14px; }
+.tasks input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--grass); flex: none; }
 .tasks input:checked + span { text-decoration: line-through; color: var(--muted); }
 
-/* 課外組 */
-.office { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.office > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; min-width: 0; }
-.week { width: 100%; border-collapse: collapse; font-size: 14px; }
-.week td { padding: 7px 4px; border-bottom: 1px solid var(--line); }
-.week td:first-child { font-weight: 700; width: 8.5em; white-space: nowrap; }
-.week .today td { background: var(--field-soft); }
-.week .closed { color: var(--muted); }
-.office ul { margin: 10px 0 0; padding-left: 1.2em; font-size: 14px; }
-.note { font-size: 14px; color: var(--muted); }
-.big-status { display: flex; gap: 10px; align-items: center; font-size: 18px; font-weight: 700; margin: 6px 0 12px; }
-.big-status .lamp.on { background: var(--field); box-shadow: 0 0 0 4px var(--field-soft); }
-.big-status .lamp.off { background: var(--alarm); }
-
-/* 提醒設定 */
-.remind { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 10px; }
-.remind h3 { font-size: 16px; }
-.remind p { margin: 0; font-size: 14px; color: var(--muted); }
-
-footer { background: var(--band); color: var(--band-muted); font-size: 13px; }
-footer .wrap { padding-block: 22px; display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
-footer a { color: var(--band-fg); }
-
+.hint {
+  position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  padding: 6px 14px; font-size: 13px; font-weight: 700; white-space: nowrap;
+}
 .toast {
-  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px));
-  background: var(--ink); color: var(--paper); padding: 10px 16px; border-radius: 8px; font-size: 14px; z-index: 20;
+  position: fixed; z-index: 9; left: 50%; transform: translateX(-50%); top: calc(84px + env(safe-area-inset-top, 0px));
+  padding: 8px 16px; font-weight: 700; font-size: 14px;
 }
+.loading { position: fixed; inset: 0; z-index: 8; display: grid; place-items: center; background: var(--sea); }
+.loading div { padding: 14px 22px; font-weight: 900; }
+.nogl { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; z-index: 9; background: var(--sea); }
+.nogl > div { padding: 20px; max-width: 420px; display: grid; gap: 10px; }
 
-@media (max-width: 820px) {
-  .hero .wrap, .two, .office { grid-template-columns: 1fr; }
-  .brand { font-size: 15px; }
-}
-@media (max-width: 480px) {
-  .dl li { grid-template-columns: 62px 1fr; gap: 10px; }
-  .days b { font-size: 28px; }
-  .countdown .big { font-size: 52px; }
+.confetti { position: fixed; inset: 0; pointer-events: none; z-index: 10; overflow: hidden; }
+.confetti i { position: absolute; top: -20px; width: 10px; height: 14px; border-radius: 2px; animation: fall 2.6s ease-in forwards; }
+@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+@media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
+
+@media (max-width: 700px) {
+  .panel { left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); width: auto; top: auto; max-height: 62vh; bottom: calc(94px + env(safe-area-inset-bottom, 0px)); }
+  .toast { top: auto; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); z-index: 9; }
+  .title h1 { font-size: 17px; }
+  .chip { font-size: 12px; padding: 5px 10px; }
+  .chip .num { font-size: 17px; }
+  .dock button { padding: 5px 9px; font-size: 12px; }
+  .label { font-size: 12px; padding: 1px 8px; }
 }
 </style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
 <!-- PREVIEW-STRIP -->
 </head>
 <body>
 <!-- /PREVIEW-STRIP -->
 
-<nav class="nav" aria-label="主選單">
-  <div class="wrap">
-    <a class="brand" href="#top">東海<span>體能</span>社團站</a>
-    <div class="tabs">
-      <a href="#deadlines">截止日</a>
-      <a href="#news">公告<span class="dot" id="unreadDot" hidden></span></a>
-      <a href="#guide">資訊站</a>
-      <a href="#onboard">新任幹部</a>
-      <a href="#office">課外組</a>
-    </div>
+<canvas id="scene" aria-label="東海體能島 3D 地圖，點建築物可查看資訊"></canvas>
+<div id="labels" aria-hidden="true"></div>
+
+<div class="top">
+  <div class="title sticker">
+    <h1>東海體能島</h1>
+    <small id="term">學期</small>
   </div>
+  <div class="chips">
+    <button class="chip sticker" id="chipOffice" type="button"><span class="lamp" id="lamp"></span><span id="officeText">課外組</span></button>
+    <button class="chip sticker" id="chipNext" type="button"><span>下個截止</span><span class="num" id="nextDays">--</span><span id="nextUnit">天</span></button>
+  </div>
+</div>
+
+<div class="hint sticker" id="hint">點建築物，角色會走過去；拖曳可旋轉島嶼</div>
+
+<nav class="dock sticker" aria-label="遊戲選單">
+  <button type="button" data-open="map"><svg viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>地圖</button>
+  <button type="button" data-open="deadlines"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>截止日</button>
+  <button type="button" data-open="news"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/></svg>公告<span class="badge" id="unread" hidden></span></button>
+  <button type="button" data-open="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>搜尋</button>
+  <button type="button" data-open="book"><svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="6"/><path d="m8.5 15-1.5 7 5-3 5 3-1.5-7"/></svg>集章 <span class="num" id="stampCount">0/0</span></button>
+  <button type="button" data-open="links"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>連結</button>
 </nav>
 
-<header class="hero" id="top">
-  <div class="wrap">
-    <div>
-      <div class="eyebrow" id="termLabel">學期</div>
-      <h1>體能性社團幹部<br>行政資訊站</h1>
-      <p>公告、截止日、辦活動要送什麼，一個地方查得到。把截止日加入行事曆，手機會自動提醒你。</p>
-      <div class="quick">
-        <a class="btn" href="#deadlines">看截止日</a>
-        <a class="btn light" id="lkSchedule" href="#" target="_blank" rel="noopener">作業期程總表</a>
-        <a class="btn light" id="lkTree" href="#" target="_blank" rel="noopener">Linktree</a>
-        <a class="btn light" id="lkOffice" href="#" target="_blank" rel="noopener">課外組網站</a>
-      </div>
-    </div>
-    <div class="board" aria-live="polite">
-      <div class="label">下一個截止日</div>
-      <div class="next-title" id="nextTitle">—</div>
-      <div class="countdown"><span class="big score" id="nextDays">--</span><span class="unit" id="nextUnit">天</span></div>
-      <div class="note" style="color:var(--band-muted)" id="nextWhen"></div>
-      <div class="status"><span class="lamp" id="lampTop"></span><span id="statusTop">課外組辦公狀態</span></div>
-    </div>
-  </div>
-</header>
+<section class="panel sticker" id="panel" hidden aria-live="polite">
+  <header>
+    <div><div class="kicker" id="pKicker"></div><h2 id="pTitle"></h2></div>
+    <button class="close" id="pClose" type="button" aria-label="關閉">×</button>
+  </header>
+  <div class="body" id="pBody"></div>
+</section>
 
-<div class="sample" id="sampleBar" hidden><div class="wrap">目前顯示的公告與截止日為範例資料，正式日期請以<a id="lkSchedule2" href="#" target="_blank" rel="noopener">作業期程表</a>為準。</div></div>
+<section class="talk sticker" id="talk" hidden>
+  <div class="who" id="talkWho">課外組老師</div>
+  <p id="talkText"></p>
+  <div class="row"><a class="btn" href="list.html">文字版</a><button class="btn go" id="talkNext" type="button">下一句</button></div>
+</section>
 
-<main>
-  <div class="wrap">
-
-    <div class="two first">
-      <section id="deadlines" aria-labelledby="h-dl">
-        <div class="sec-head">
-          <div><h2 id="h-dl">截止日提醒</h2><p class="sub">依日期排序，7 天內轉黃、3 天內轉紅。</p></div>
-          <button class="btn small plain" id="allIcs" type="button">全部加入行事曆</button>
-        </div>
-        <div class="chips" id="dlChips" role="group" aria-label="依類別篩選"></div>
-        <ul class="dl" id="dlList"></ul>
-        <button class="btn small ghost past-toggle" id="pastToggle" type="button" hidden></button>
-      </section>
-
-      <div style="display:grid; gap:24px; align-content:start; min-width:0">
-        <section id="news" aria-labelledby="h-news">
-          <div class="sec-head">
-            <div><h2 id="h-news">行政公告</h2><p class="sub" id="newsSub">點開即標記為已讀。</p></div>
-            <button class="btn small plain" id="markAll" type="button">全部已讀</button>
-          </div>
-          <ul class="news" id="newsList"></ul>
-        </section>
-
-        <aside class="remind" aria-labelledby="h-remind">
-          <h3 id="h-remind">讓提醒找到你</h3>
-          <p>訂閱社團行事曆後，新的截止日會自動出現在你的手機行事曆，並在截止前 3 天與 1 天提醒。</p>
-          <div class="row">
-            <a class="btn small" id="subIcs" href="calendar.ics">訂閱社團行事曆</a>
-            <button class="btn small plain" id="notifyBtn" type="button">開啟網頁通知</button>
-          </div>
-          <p id="notifyMsg"></p>
-        </aside>
-      </div>
-    </div>
-
-    <section id="guide" aria-labelledby="h-guide">
-      <div class="sec-head"><div><h2 id="h-guide">資訊站</h2><p class="sub">依主題查找行政流程，也可以搜尋公告內容。</p></div></div>
-      <label for="q" class="sub" style="display:block;margin-bottom:6px">搜尋</label>
-      <input id="q" class="search" type="search" placeholder="例如：保險、核銷、場地" autocomplete="off">
-      <div class="chips" id="gChips" role="group" aria-label="依主題篩選"></div>
-      <div class="guides" id="guideList"></div>
-    </section>
-
-    <section id="onboard" aria-labelledby="h-onb">
-      <div class="sec-head">
-        <div><h2 id="h-onb">新任幹部上任清單</h2><p class="sub">勾選紀錄只存在你自己的手機或電腦。</p></div>
-        <span class="score" style="font-size:28px;font-weight:700" id="taskCount">0/0</span>
-      </div>
-      <div class="progress" aria-hidden="true"><i id="taskBar"></i></div>
-      <ul class="tasks" id="taskList"></ul>
-    </section>
-
-    <section id="office" aria-labelledby="h-office">
-      <div class="sec-head"><div><h2 id="h-office">課外組在哪裡？什麼時候有人？</h2><p class="sub" id="officeName"></p></div></div>
-      <div class="office">
-        <div>
-          <div class="big-status"><span class="lamp" id="lampBig"></span><span id="statusBig">—</span></div>
-          <table class="week"><tbody id="weekRows"></tbody></table>
-        </div>
-        <div>
-          <h3 style="font-size:16px">位置與導航</h3>
-          <p class="note" id="locNote"></p>
-          <div class="row" id="mapRow"></div>
-          <h3 style="font-size:16px;margin-top:16px">洽公小提醒</h3>
-          <ul id="officeTips"></ul>
-        </div>
-      </div>
-    </section>
-
-  </div>
-</main>
-
-<footer>
-  <div class="wrap">
-    <span>東海大學 學務處課外活動組 · 體能性社團</span>
-    <span><a id="lkOffice2" href="#" target="_blank" rel="noopener">課外組網站</a> · <a id="lkTree2" href="#" target="_blank" rel="noopener">Linktree</a></span>
-  </div>
-</footer>
-
-<div class="toast" id="toast" role="status" hidden></div>
+<div class="toast sticker" id="toast" role="status" hidden></div>
+<div class="loading" id="loading"><div class="sticker">島嶼載入中…</div></div>
 
 <script src="js/data.js"></script>
-<script>
-(function () {
-  "use strict";
-  var D = window.SITE_DATA || SITE_DATA;
-  var TZ = "Asia/Taipei";
-  var WEEK = ["日", "一", "二", "三", "四", "五", "六"];
-  var $ = function (id) { return document.getElementById(id); };
-  var store = {
-    get: function (k, d) { try { var v = localStorage.getItem("thuath:" + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
-    set: function (k, v) { try { localStorage.setItem("thuath:" + k, JSON.stringify(v)); } catch (e) {} }
-  };
-  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
-  function toast(msg) { var t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(function () { t.hidden = true; }, 2600); }
-
-  // 所有日期都以台灣時間解讀
-  function parse(s) {
-    var m = String(s).trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/);
-    if (!m) return null;
-    return new Date(m[1] + "-" + m[2] + "-" + m[3] + "T" + (m[4] || "23") + ":" + (m[5] || "59") + ":00+08:00");
-  }
-  function twParts(d) {
-    var p = {};
-    new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", weekday: "short" })
-      .formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
-    return { y: +p.year, m: +p.month, d: +p.day, h: +p.hour, min: +p.minute, wd: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(p.weekday) };
-  }
-  function dayKey(d) { var p = twParts(d); return Date.UTC(p.y, p.m - 1, p.d); }
-  function daysLeft(due, now) { return Math.round((dayKey(due) - dayKey(now)) / 864e5); }
-  function fmt(d) { var p = twParts(d); return p.m + "/" + p.d + "（" + WEEK[p.wd] + "）" + String(p.h).padStart(2, "0") + ":" + String(p.min).padStart(2, "0"); }
-  function toMin(hhmm) { var a = hhmm.split(":"); return +a[0] * 60 + +a[1]; }
-
-  // ---------- 連結 ----------
-  [["lkSchedule", "schedule"], ["lkSchedule2", "schedule"], ["lkTree", "linktree"], ["lkTree2", "linktree"], ["lkOffice", "office"], ["lkOffice2", "office"]]
-    .forEach(function (x) { $(x[0]).href = D.links[x[1]]; });
-  $("termLabel").textContent = D.term;
-  $("sampleBar").hidden = !D.isSample;
-  // 用 webcal:// 開啟時，手機會直接詢問是否「訂閱」，之後新增的截止日會自動同步
-  if (location.protocol === "https:") $("subIcs").href = "webcal://" + location.host + location.pathname.replace(/[^/]*$/, "") + "calendar.ics";
-
-  // ---------- 課外組辦公狀態 ----------
-  function officeStatus(now) {
-    var h = D.office.hours, p = twParts(now), cur = p.h * 60 + p.min;
-    var openToday = h.days.indexOf(p.wd) >= 0;
-    if (openToday) {
-      for (var i = 0; i < h.slots.length; i++) {
-        var s = toMin(h.slots[i][0]), e = toMin(h.slots[i][1]);
-        if (cur >= s && cur < e) return { open: true, text: "辦公中 · " + h.slots[i][1] + " 前都有人" };
-        if (cur < s) return { open: false, text: (i === 0 ? "尚未開始 · " : "午休中 · ") + h.slots[i][0] + " 開始辦公" };
-      }
-    }
-    for (var k = 1; k <= 7; k++) {
-      var wd = (p.wd + k) % 7;
-      if (h.days.indexOf(wd) >= 0) return { open: false, text: (openToday ? "下班了" : "今天不辦公") + " · " + (k === 1 ? "明天" : "週" + WEEK[wd]) + " " + h.slots[0][0] + " 開始辦公" };
-    }
-    return { open: false, text: "目前休息" };
-  }
-  function renderOffice() {
-    var now = new Date(), st = officeStatus(now), p = twParts(now);
-    ["lampTop", "lampBig"].forEach(function (id) { $(id).className = "lamp " + (st.open ? "on" : "off"); });
-    $("statusTop").textContent = "課外組：" + st.text;
-    $("statusBig").textContent = st.text;
-    var slots = D.office.hours.slots.map(function (s) { return s[0] + "–" + s[1]; }).join("、");
-    var rows = "";
-    [1, 2, 3, 4, 5, 6, 0].forEach(function (wd) {
-      var on = D.office.hours.days.indexOf(wd) >= 0;
-      rows += '<tr class="' + (wd === p.wd ? "today" : "") + '"><td>週' + WEEK[wd] + (wd === p.wd ? "（今天）" : "") + '</td><td class="' + (on ? "" : "closed") + '">' + (on ? slots : "不辦公") + "</td></tr>";
-    });
-    $("weekRows").innerHTML = rows;
-  }
-  $("officeName").textContent = D.office.name + "｜週一至週五 9:00–12:00、13:30–17:00";
-  $("locNote").textContent = D.office.locationNote;
-  $("mapRow").innerHTML = D.office.mapUrl
-    ? '<a class="btn small" href="' + esc(D.office.mapUrl) + '" target="_blank" rel="noopener">開啟 Google 地圖導航</a>'
-    : '<span class="tag">導航建置中</span><a class="btn small plain" href="' + esc(D.links.office) + '" target="_blank" rel="noopener">課外組網站</a>';
-  $("officeTips").innerHTML = D.office.tips.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("");
-
-  // ---------- 截止日 ----------
-  var deadlines = D.deadlines.map(function (x) { return Object.assign({}, x, { at: parse(x.due) }); })
-    .filter(function (x) { return x.at; }).sort(function (a, b) { return a.at - b.at; });
-  var dlCat = "全部", showPast = false;
-
-  function gcal(x) {
-    var z = function (d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); };
-    var start = new Date(x.at.getTime() - 30 * 6e4);
-    return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent("【截止】" + x.title) +
-      "&dates=" + z(start) + "/" + z(x.at) + "&ctz=" + TZ + "&details=" + encodeURIComponent((x.detail || "") + "\n" + (x.link || D.links.schedule));
-  }
-  function icsFor(list) {
-    var z = function (d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); };
-    var e = function (s) { return String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, "\\$&"); };
-    var L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//THU Athletic Clubs//ZH-TW", "CALSCALE:GREGORIAN", "X-WR-CALNAME:東海體能性社團截止日"];
-    list.forEach(function (x) {
-      L.push("BEGIN:VEVENT", "UID:" + x.id + "@thuathletic", "DTSTAMP:" + z(new Date()),
-        "DTSTART:" + z(new Date(x.at.getTime() - 30 * 6e4)), "DTEND:" + z(x.at),
-        "SUMMARY:" + e("【截止】" + x.title), "DESCRIPTION:" + e((x.detail || "") + "\n" + (x.link || D.links.schedule)),
-        "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + e("3 天後截止：" + x.title), "TRIGGER:-P3D", "END:VALARM",
-        "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + e("明天截止：" + x.title), "TRIGGER:-P1D", "END:VALARM",
-        "END:VEVENT");
-    });
-    L.push("END:VCALENDAR");
-    return L.join("\r\n");
-  }
-  function download(name, text) {
-    try {
-      var a = document.createElement("a");
-      a.href = URL.createObjectURL(new Blob([text], { type: "text/calendar;charset=utf-8" }));
-      a.download = name; document.body.appendChild(a); a.click(); a.remove();
-      toast("已下載行事曆檔，開啟即可加入");
-    } catch (err) { toast("無法下載，請改用「Google 日曆」按鈕"); }
-  }
-
-  function renderDeadlines() {
-    var now = new Date();
-    var cats = ["全部"].concat(deadlines.map(function (x) { return x.category; }).filter(function (c, i, a) { return c && a.indexOf(c) === i; }));
-    $("dlChips").innerHTML = cats.map(function (c) { return '<button type="button" class="chip" aria-pressed="' + (c === dlCat) + '" data-c="' + esc(c) + '">' + esc(c) + "</button>"; }).join("");
-    var list = deadlines.filter(function (x) { return dlCat === "全部" || x.category === dlCat; });
-    var future = list.filter(function (x) { return x.at >= now; }), past = list.filter(function (x) { return x.at < now; });
-    var shown = showPast ? past.concat(future) : future;
-    $("dlList").innerHTML = shown.length ? shown.map(function (x) {
-      var n = daysLeft(x.at, now), isPast = x.at < now;
-      var lvl = isPast ? "past" : n <= 3 ? "hot" : n <= 7 ? "warn" : "ok";
-      var num = isPast ? "✓" : n === 0 ? "今" : n;
-      var unit = isPast ? "已截止" : n === 0 ? "今天截止" : "天後";
-      return '<li class="lvl-' + lvl + '"><div class="days"><b class="score">' + num + "</b><small>" + unit + "</small></div><div>" +
-        "<h3>" + esc(x.title) + '</h3><div class="meta"><span>' + fmt(x.at) + '</span><span class="tag">' + esc(x.category) + "</span></div>" +
-        (x.detail ? "<p>" + esc(x.detail) + "</p>" : "") +
-        (isPast ? "" : '<div class="row"><a class="btn small plain" target="_blank" rel="noopener" href="' + esc(gcal(x)) + '">Google 日曆</a>' +
-          '<button type="button" class="btn small plain" data-ics="' + esc(x.id) + '">iPhone／其他行事曆</button>' +
-          (x.link ? '<a class="btn small ghost" target="_blank" rel="noopener" href="' + esc(x.link) + '">相關文件</a>' : "") + "</div>") +
-        "</div></li>";
-    }).join("") : '<li style="display:block" class="empty">這個類別目前沒有截止日。</li>';
-    $("pastToggle").hidden = !past.length;
-    $("pastToggle").textContent = showPast ? "隱藏已截止項目" : "顯示已截止項目（" + past.length + "）";
-
-    var next = deadlines.filter(function (x) { return x.at >= now; })[0];
-    if (next) {
-      var n = daysLeft(next.at, now);
-      $("nextTitle").textContent = next.title;
-      $("nextDays").textContent = n === 0 ? "今天" : n;
-      $("nextUnit").textContent = n === 0 ? "截止" : "天後截止";
-      $("nextWhen").textContent = fmt(next.at) + " 截止";
-    } else {
-      $("nextTitle").textContent = "目前沒有待辦截止日";
-      $("nextDays").textContent = "0"; $("nextUnit").textContent = "項"; $("nextWhen").textContent = "";
-    }
-  }
-  $("dlChips").addEventListener("click", function (e) { var b = e.target.closest("[data-c]"); if (b) { dlCat = b.dataset.c; renderDeadlines(); } });
-  $("dlList").addEventListener("click", function (e) {
-    var b = e.target.closest("[data-ics]"); if (!b) return;
-    var x = deadlines.filter(function (d) { return d.id === b.dataset.ics; })[0];
-    if (x) download(x.id + ".ics", icsFor([x]));
-  });
-  $("pastToggle").addEventListener("click", function () { showPast = !showPast; renderDeadlines(); });
-  $("allIcs").addEventListener("click", function () { download("東海體能性社團截止日.ics", icsFor(deadlines.filter(function (x) { return x.at >= new Date(); }))); });
-
-  // ---------- 公告 ----------
-  var anns = D.announcements.slice().sort(function (a, b) { return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0) || (parse(b.date) - parse(a.date)); });
-  var read = store.get("read", []);
-  function renderNews(filter) {
-    var q = (filter || "").trim();
-    var list = anns.filter(function (a) { return !q || (a.title + a.body + a.tag).indexOf(q) >= 0; });
-    $("newsList").innerHTML = list.length ? list.map(function (a) {
-      var unread = read.indexOf(a.id) < 0;
-      return '<li class="' + (unread ? "unread" : "") + '"><button type="button" aria-expanded="false" data-id="' + esc(a.id) + '">' +
-        '<span class="t">' + hl(a.title, q) + '</span><span class="chev" aria-hidden="true">›</span>' +
-        '<span class="d">' + (a.pinned ? '<span class="pin">置頂</span>' : "") + "<span>" + esc(a.date) + '</span><span class="tag">' + esc(a.tag) + "</span></span>" +
-        '</button><div class="body" hidden>' + hl(a.body, q) + "</div></li>";
-    }).join("") : '<li class="empty">沒有符合的公告。</li>';
-    var n = anns.filter(function (a) { return read.indexOf(a.id) < 0; }).length;
-    $("unreadDot").hidden = !n; $("unreadDot").textContent = n;
-    $("newsSub").textContent = n ? "還有 " + n + " 則未讀，點開即標記為已讀。" : "全部已讀。";
-  }
-  $("newsList").addEventListener("click", function (e) {
-    var b = e.target.closest("button[data-id]"); if (!b) return;
-    var open = b.getAttribute("aria-expanded") !== "true";
-    b.setAttribute("aria-expanded", open); b.nextElementSibling.hidden = !open;
-    if (open && read.indexOf(b.dataset.id) < 0) {
-      read.push(b.dataset.id); store.set("read", read);
-      b.parentNode.classList.remove("unread");
-      var n = anns.filter(function (a) { return read.indexOf(a.id) < 0; }).length;
-      $("unreadDot").hidden = !n; $("unreadDot").textContent = n;
-      $("newsSub").textContent = n ? "還有 " + n + " 則未讀，點開即標記為已讀。" : "全部已讀。";
-    }
-  });
-  $("markAll").addEventListener("click", function () { read = anns.map(function (a) { return a.id; }); store.set("read", read); renderNews($("q").value); toast("已全部標記為已讀"); });
-
-  // ---------- 資訊站 ----------
-  var gTopic = "全部";
-  function hl(text, q) {
-    var s = esc(text); if (!q) return s;
-    var eq = esc(q).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return s.replace(new RegExp(eq, "g"), "<mark>$&</mark>");
-  }
-  function renderGuides() {
-    var q = $("q").value.trim();
-    var topics = ["全部"].concat(D.guides.map(function (g) { return g.topic; }));
-    $("gChips").innerHTML = topics.map(function (t) { return '<button type="button" class="chip" aria-pressed="' + (t === gTopic) + '" data-t="' + esc(t) + '">' + esc(t) + "</button>"; }).join("");
-    var list = D.guides.filter(function (g) {
-      return (gTopic === "全部" || g.topic === gTopic) && (!q || (g.topic + g.title + g.summary + g.steps.join("")).indexOf(q) >= 0);
-    });
-    $("guideList").innerHTML = list.length ? list.map(function (g) {
-      var hit = q && g.steps.join("").indexOf(q) >= 0;
-      return '<article class="guide"><div class="topic">' + hl(g.topic, q) + "</div><h3>" + hl(g.title, q) + "</h3><p>" + hl(g.summary, q) + "</p>" +
-        "<details" + (hit || gTopic !== "全部" ? " open" : "") + "><summary>看步驟</summary><ol>" + g.steps.map(function (s) { return "<li>" + hl(s, q) + "</li>"; }).join("") + "</ol></details>" +
-        (g.links && g.links.length ? '<div class="row">' + g.links.map(function (l) { return '<a class="btn small plain" target="_blank" rel="noopener" href="' + esc(l[1]) + '">' + esc(l[0]) + "</a>"; }).join("") + "</div>" : "") +
-        "</article>";
-    }).join("") : '<p class="empty">找不到「' + esc(q) + '」相關的主題，可以到課外組辦公時間當面詢問。</p>';
-  }
-  $("gChips").addEventListener("click", function (e) { var b = e.target.closest("[data-t]"); if (b) { gTopic = b.dataset.t; renderGuides(); } });
-  $("q").addEventListener("input", function () { renderGuides(); renderNews($("q").value); });
-
-  // ---------- 上任清單 ----------
-  var done = store.get("tasks", {});
-  function renderTasks() {
-    $("taskList").innerHTML = D.onboarding.map(function (t, i) {
-      return '<li><label for="task' + i + '"><input type="checkbox" id="task' + i + '" data-i="' + i + '"' + (done[t] ? " checked" : "") + "><span>" + esc(t) + "</span></label></li>";
-    }).join("");
-    countTasks();
-  }
-  function countTasks() {
-    var n = D.onboarding.filter(function (t) { return done[t]; }).length;
-    $("taskCount").textContent = n + "/" + D.onboarding.length;
-    $("taskBar").style.width = (D.onboarding.length ? n / D.onboarding.length * 100 : 0) + "%";
-  }
-  $("taskList").addEventListener("change", function (e) {
-    var t = D.onboarding[+e.target.dataset.i]; done[t] = e.target.checked; store.set("tasks", done); countTasks();
-    if (D.onboarding.every(function (x) { return done[x]; })) toast("上任清單全部完成！");
-  });
-
-  // ---------- 網頁通知（開啟網站時提醒 3 天內的截止日） ----------
-  function notifySupported() { return "Notification" in window; }
-  function checkNotify() {
-    if (!notifySupported() || Notification.permission !== "granted") return;
-    var today = dayKey(new Date()), last = store.get("notified", 0);
-    if (last === today) return;
-    var soon = deadlines.filter(function (x) { var n = daysLeft(x.at, new Date()); return x.at >= new Date() && n <= 3; });
-    soon.forEach(function (x) {
-      var n = daysLeft(x.at, new Date());
-      try { new Notification(n === 0 ? "今天截止" : n + " 天後截止", { body: x.title + "｜" + fmt(x.at) }); } catch (e) {}
-    });
-    store.set("notified", today);
-  }
-  function renderNotifyBtn() {
-    var b = $("notifyBtn"), m = $("notifyMsg");
-    if (!notifySupported()) { b.hidden = true; m.textContent = "這個瀏覽器不支援網頁通知，請使用訂閱行事曆。"; return; }
-    if (Notification.permission === "granted") { b.textContent = "網頁通知已開啟"; b.disabled = true; m.textContent = "每天第一次開啟本站時，會通知 3 天內的截止日。"; }
-    else if (Notification.permission === "denied") { b.disabled = true; m.textContent = "通知已被封鎖，可到瀏覽器網站設定中重新允許。"; }
-  }
-  $("notifyBtn").addEventListener("click", function () {
-    try {
-      Notification.requestPermission().then(function (p) {
-        renderNotifyBtn();
-        if (p === "granted") { toast("已開啟網頁通知"); checkNotify(); } else toast("沒有開啟通知，仍可使用訂閱行事曆");
-      }).catch(function () { toast("此環境無法開啟通知，請使用訂閱行事曆"); });
-    } catch (e) { toast("此環境無法開啟通知，請使用訂閱行事曆"); }
-  });
-
-  // ---------- 啟動 ----------
-  renderOffice(); renderDeadlines(); renderNews(""); renderGuides(); renderTasks(); renderNotifyBtn(); checkNotify();
-  setInterval(function () { renderOffice(); renderDeadlines(); }, 60000);
-})();
-</script>
+<script type="module" src="js/game.js"></script>
 <!-- PREVIEW-STRIP -->
 </body>
 </html>
