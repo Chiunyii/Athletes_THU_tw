@@ -33,16 +33,39 @@ const dayKey = (d) => { const p = tw(d); return Date.UTC(p.y, p.m - 1, p.d); };
 const daysLeft = (due) => Math.round((dayKey(due) - dayKey(new Date())) / 864e5);
 const fmt = (d) => { const p = tw(d); return `${p.m}/${p.d}（${WEEK[p.wd]}）${pad2(p.h)}:${pad2(p.min)}`; };
 const toMin = (s) => { const [h, m] = s.split(":"); return +h * 60 + +m; };
+/* 辦公日判斷：國定假日、補假、學校停止辦公日不上班；補班日即使是週末也上班 */
+const HOLIDAYS = Object.assign({}, D.office.holidays || {}, D.office.closedDates || {});
+const WORKDAYS = new Set(D.office.workdays || []);
+const ymd = (p) => `${p.y}-${pad2(p.m)}-${pad2(p.d)}`;
+const dayInfo = (date) => { const p = tw(date), k = ymd(p), name = HOLIDAYS[k];
+  const open = WORKDAYS.has(k) || (!name && D.office.hours.days.includes(p.wd));
+  return { p, key: k, open, holiday: !WORKDAYS.has(k) && name ? name : "" }; };
+// 正式網站上自動抓最新的政府行政機關辦公日曆（當年與下一年）；抓不到就用 data.js 裡的清單
+async function loadHolidays() {
+  const y = tw().y;
+  await Promise.all([y, y + 1].map(async (yr) => {
+    try {
+      const r = await fetch(`https://raw.githubusercontent.com/ruyut/TaiwanCalendar/master/data/${yr}.json`, { cache: "force-cache" });
+      if (!r.ok) return;
+      (await r.json()).forEach((x) => {
+        const k = `${x.date.slice(0, 4)}-${x.date.slice(4, 6)}-${x.date.slice(6)}`, weekend = x.week === "六" || x.week === "日";
+        if (x.isHoliday && !weekend && !HOLIDAYS[k]) HOLIDAYS[k] = x.description || "放假";
+        if (!x.isHoliday && weekend) WORKDAYS.add(k);
+      });
+    } catch {}
+  }));
+}
 function officeStatus() {
-  const h = D.office.hours, p = tw(), cur = p.h * 60 + p.min, openToday = h.days.includes(p.wd);
-  if (openToday) for (let i = 0; i < h.slots.length; i++) {
+  const h = D.office.hours, now = new Date(), today = dayInfo(now), p = today.p, cur = p.h * 60 + p.min;
+  if (today.open) for (let i = 0; i < h.slots.length; i++) {
     const s = toMin(h.slots[i][0]), e = toMin(h.slots[i][1]);
     if (cur >= s && cur < e) return { open: true, short: "辦公中", text: `辦公中 · ${h.slots[i][1]} 前都有人` };
     if (cur < s) return { open: false, short: i ? "午休中" : "尚未開門", text: `${i ? "午休中" : "尚未開始"} · ${h.slots[i][0]} 開始辦公` };
   }
-  for (let k = 1; k <= 7; k++) {
-    const wd = (p.wd + k) % 7;
-    if (h.days.includes(wd)) return { open: false, short: "休息中", text: `${openToday ? "下班了" : "今天不辦公"} · ${k === 1 ? "明天" : "週" + WEEK[wd]} ${h.slots[0][0]} 開始辦公` };
+  const why = today.holiday ? `今天${today.holiday}不辦公` : today.open ? "下班了" : "今天不辦公";
+  for (let k = 1; k <= 14; k++) {
+    const nx = dayInfo(new Date(now.getTime() + k * 864e5));
+    if (nx.open) return { open: false, short: today.holiday ? "放假中" : "休息中", holiday: today.holiday, text: `${why} · ${k === 1 ? "明天" : `${nx.p.m}/${nx.p.d}（週${WEEK[nx.p.wd]}）`} ${h.slots[0][0]} 開始辦公` };
   }
   return { open: false, short: "休息中", text: "目前休息" };
 }
@@ -1076,12 +1099,15 @@ function placeItems(filter) {
 }
 function renderOffice() {
   const st = officeStatus(), p = tw(), slots = D.office.hours.slots.map((s) => s.join("–")).join("、");
-  const rows = [1, 2, 3, 4, 5, 6, 0].map((wd) => { const on = D.office.hours.days.includes(wd); return `<tr class="${wd === p.wd ? "today" : ""}"><td>週${WEEK[wd]}${wd === p.wd ? "（今天）" : ""}</td><td class="${on ? "" : "closed"}">${on ? slots : "不辦公"}</td></tr>`; }).join("");
+  // 本週（週一到週日）的實際日期，國定假日與補假標示不辦公
+  const now = new Date(), monday = new Date(now.getTime() - ((p.wd + 6) % 7) * 864e5);
+  const rows = [0, 1, 2, 3, 4, 5, 6].map((k) => { const di = dayInfo(new Date(monday.getTime() + k * 864e5)), isToday = di.key === ymd(p);
+    return `<tr class="${isToday ? "today" : ""}"><td>${di.p.m}/${di.p.d}（${WEEK[di.p.wd]}）${isToday ? "今天" : ""}</td><td class="${di.open ? "" : "closed"}">${di.open ? slots : di.holiday ? `不辦公（${E(di.holiday)}）` : "不辦公"}</td></tr>`; }).join("");
   const html = `${head("🏛", "CENTER 00 · 群島中心", D.office.name)}
     <p class="lead">島上 ${ISL.length} 個行政建築區都有道路通到這裡，有問題就回來找我們。</p>
     <div class="bigst"><span class="lamp ${st.open ? "on" : "off"}"></span>${E(st.text)}</div>
-    <div class="tags"><span class="tag">週一至週五</span><span class="tag">9:00–12:00</span><span class="tag">13:30–17:00</span>${stampTag("office")}</div>
-    <div class="sec"><h4>辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
+    <div class="tags"><span class="tag">週一至週五</span><span class="tag">9:00–12:00</span><span class="tag">13:30–17:00</span><span class="tag">國定假日不辦公</span>${stampTag("office")}</div>
+    <div class="sec"><h4>本週辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
     <div class="sec"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : '<span class="btn g" aria-disabled="true">導航建置中</span>'}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div></div>
     <div class="sec"><h4>洽公小提醒</h4><ul class="items">${D.office.tips.map((t) => `<li class="item"><div class="row"><span class="dot"></span><span class="nm">${E(t)}</span><span></span><span></span></div></li>`).join("")}</ul></div>
     <div class="sec"><h4>${ISL.length} 座行政島</h4>${placeItems()}</div>`;
@@ -1331,7 +1357,7 @@ function teacherTalk() {
   if (n) { const d = isleOf(n.category); L.push(["最近的截止日", `「${n.title}」還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`]); }
   if (unread().length) L.push(["有新公告", `公告欄有 ${unread().length} 則你還沒看過的公告。`]);
   if (todoLeft()) L.push(["行政任務", `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務，找社團小秘書（那頭乳牛）可以一項一項打勾。`]);
-  L.push(["隨時來找我們", `課外組${st.text}。週一至週五 9:00–12:00、13:30–17:00 都可以來。`, "好"]);
+  L.push(["隨時來找我們", `課外組${st.text}。週一至週五 9:00–12:00、13:30–17:00（國定假日除外）都可以來。`, "好"]);
   talk("課外組老師", L);
 }
 
@@ -1400,6 +1426,7 @@ async function start() {
   camera.position.setFromSpherical(sph); camera.lookAt(0, 0, 0);
   camera.zoom = RM ? homeZoom() : 0.62; camera.updateProjectionMatrix(); controls.update();
   refreshTimed();
+  loadHolidays().then(refreshTimed);
   $("splash").classList.add("out");
   requestAnimationFrame(loop);
   setTimeout(() => flyTo(framed(HOME_C, homeZoom()), homeZoom(), 1600), 50);

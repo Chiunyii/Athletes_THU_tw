@@ -221,7 +221,7 @@ mark { background: var(--whistle-soft); color: inherit; padding: 0 1px; }
 .office > div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; min-width: 0; }
 .week { width: 100%; border-collapse: collapse; font-size: 14px; }
 .week td { padding: 7px 4px; border-bottom: 1px solid var(--line); }
-.week td:first-child { font-weight: 700; width: 8.5em; white-space: nowrap; }
+.week td:first-child { font-weight: 700; width: 9.5em; white-space: nowrap; }
 .week .today td { background: var(--field-soft); }
 .week .closed { color: var(--muted); }
 .office ul { margin: 10px 0 0; padding-left: 1.2em; font-size: 14px; }
@@ -431,22 +431,41 @@ footer a { color: var(--band-fg); }
   if (location.protocol === "https:") $("subIcs").href = "webcal://" + location.host + location.pathname.replace(/[^/]*$/, "") + "calendar.ics";
 
   // ---------- 課外組辦公狀態 ----------
+  // 辦公日判斷：國定假日、補假、學校停止辦公日不上班；補班日即使是週末也上班
+  var HOLIDAYS = Object.assign({}, D.office.holidays || {}, D.office.closedDates || {});
+  var WORKDAYS = (D.office.workdays || []).slice();
+  function ymd(p) { return p.y + "-" + String(p.m).padStart(2, "0") + "-" + String(p.d).padStart(2, "0"); }
+  function dayInfo(date) {
+    var p = twParts(date), k = ymd(p), name = HOLIDAYS[k], isWork = WORKDAYS.indexOf(k) >= 0;
+    return { p: p, key: k, open: isWork || (!name && D.office.hours.days.indexOf(p.wd) >= 0), holiday: !isWork && name ? name : "" };
+  }
+  function loadHolidays(done) {
+    var y = twParts(new Date()).y, left = 2;
+    [y, y + 1].forEach(function (yr) {
+      fetch("https://raw.githubusercontent.com/ruyut/TaiwanCalendar/master/data/" + yr + ".json", { cache: "force-cache" })
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (list) { list.forEach(function (x) { var k = x.date.slice(0, 4) + "-" + x.date.slice(4, 6) + "-" + x.date.slice(6), we = x.week === "六" || x.week === "日"; if (x.isHoliday && !we && !HOLIDAYS[k]) HOLIDAYS[k] = x.description || "放假"; if (!x.isHoliday && we && WORKDAYS.indexOf(k) < 0) WORKDAYS.push(k); }); })
+        .catch(function () {})
+        .then(function () { if (--left === 0) done(); });
+    });
+  }
   function officeStatus(now) {
-    var h = D.office.hours, p = twParts(now), cur = p.h * 60 + p.min;
-    var openToday = h.days.indexOf(p.wd) >= 0;
-    if (openToday) {
+    var h = D.office.hours, today = dayInfo(now), p = today.p, cur = p.h * 60 + p.min;
+    if (today.open) {
       for (var i = 0; i < h.slots.length; i++) {
         var s = toMin(h.slots[i][0]), e = toMin(h.slots[i][1]);
         if (cur >= s && cur < e) return { open: true, text: "辦公中 · " + h.slots[i][1] + " 前都有人" };
         if (cur < s) return { open: false, text: (i === 0 ? "尚未開始 · " : "午休中 · ") + h.slots[i][0] + " 開始辦公" };
       }
     }
-    for (var k = 1; k <= 7; k++) {
-      var wd = (p.wd + k) % 7;
-      if (h.days.indexOf(wd) >= 0) return { open: false, text: (openToday ? "下班了" : "今天不辦公") + " · " + (k === 1 ? "明天" : "週" + WEEK[wd]) + " " + h.slots[0][0] + " 開始辦公" };
+    var why = today.holiday ? "今天" + today.holiday + "不辦公" : today.open ? "下班了" : "今天不辦公";
+    for (var k = 1; k <= 14; k++) {
+      var nx = dayInfo(new Date(now.getTime() + k * 864e5));
+      if (nx.open) return { open: false, text: why + " · " + (k === 1 ? "明天" : nx.p.m + "/" + nx.p.d + "（週" + WEEK[nx.p.wd] + "）") + " " + h.slots[0][0] + " 開始辦公" };
     }
     return { open: false, text: "目前休息" };
   }
+
   function renderOffice() {
     var now = new Date(), st = officeStatus(now), p = twParts(now);
     ["lampTop", "lampBig"].forEach(function (id) { $(id).className = "lamp " + (st.open ? "on" : "off"); });
@@ -454,13 +473,14 @@ footer a { color: var(--band-fg); }
     $("statusBig").textContent = st.text;
     var slots = D.office.hours.slots.map(function (s) { return s[0] + "–" + s[1]; }).join("、");
     var rows = "";
-    [1, 2, 3, 4, 5, 6, 0].forEach(function (wd) {
-      var on = D.office.hours.days.indexOf(wd) >= 0;
-      rows += '<tr class="' + (wd === p.wd ? "today" : "") + '"><td>週' + WEEK[wd] + (wd === p.wd ? "（今天）" : "") + '</td><td class="' + (on ? "" : "closed") + '">' + (on ? slots : "不辦公") + "</td></tr>";
+    var monday = new Date(now.getTime() - ((p.wd + 6) % 7) * 864e5), todayKey = ymd(p);
+    [0, 1, 2, 3, 4, 5, 6].forEach(function (k) {
+      var di = dayInfo(new Date(monday.getTime() + k * 864e5)), isToday = di.key === todayKey;
+      rows += '<tr class="' + (isToday ? "today" : "") + '"><td>' + di.p.m + "/" + di.p.d + "（" + WEEK[di.p.wd] + "）" + (isToday ? "今天" : "") + '</td><td class="' + (di.open ? "" : "closed") + '">' + (di.open ? slots : di.holiday ? "不辦公（" + esc(di.holiday) + "）" : "不辦公") + "</td></tr>";
     });
     $("weekRows").innerHTML = rows;
   }
-  $("officeName").textContent = D.office.name + "｜週一至週五 9:00–12:00、13:30–17:00";
+  $("officeName").textContent = D.office.name + "｜週一至週五 9:00–12:00、13:30–17:00（國定假日不辦公）";
   $("locNote").textContent = D.office.locationNote;
   $("mapRow").innerHTML = D.office.mapUrl
     ? '<a class="btn small" href="' + esc(D.office.mapUrl) + '" target="_blank" rel="noopener">開啟 Google 地圖導航</a>'
@@ -686,6 +706,7 @@ footer a { color: var(--band-fg); }
   });
 
   // ---------- 啟動 ----------
+  loadHolidays(renderOffice);
   renderOffice(); renderDeadlines(); renderNews(""); renderGuides(); renderTodo(); renderTasks(); renderNotifyBtn(); checkNotify();
   setInterval(function () { renderOffice(); renderDeadlines(); }, 60000);
 })();
