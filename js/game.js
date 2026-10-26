@@ -147,7 +147,7 @@ MAIN.forEach((d, i) => {
 });
 // 圓環到外圈的連絡道路：每隔一個建築區一條
 const SPOKES = MAIN.filter((d, i) => i % 2 === 0).map((d) => d.a);
-// 獨立小島（例如借用島）：放在本島右前方兩個建築區之間，以橋相連
+// 獨立小島（例如場地器材島）：放在本島右前方兩個建築區之間，以橋相連
 const ISLET = OFF.length ? (() => {
   const a = front - Math.PI / NM * 2, dir = new V3(Math.cos(a), 0, Math.sin(a)), r = 8;
   const pos = dir.clone().multiplyScalar(R_ISLE + r + 5.5);
@@ -316,12 +316,34 @@ function bOffice(g) {
   sign.position.set(0, 0.95, 2.4); g.add(sign);
   g.userData.sign = sign; g.userData.h = 6.5;
 }
+// 截止日鐘塔：以路思義教堂的造型呈現（兩片弧形屋面在頂端留一道天窗縫，黃色菱格琉璃瓦），門前立著倒數鐘面
+function tileTex() {
+  const cv = document.createElement("canvas"); cv.width = cv.height = 128; const c = cv.getContext("2d");
+  c.fillStyle = "#D9B45E"; c.fillRect(0, 0, 128, 128);
+  c.strokeStyle = "#B8913F"; c.lineWidth = 3;
+  for (let k = -128; k <= 256; k += 32) { c.beginPath(); c.moveTo(k, 0); c.lineTo(k + 128, 128); c.stroke(); c.beginPath(); c.moveTo(k, 128); c.lineTo(k + 128, 0); c.stroke(); }
+  const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 4); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
 function bClock(g) {
-  box(g, 2.4, 0.4, 2.4, 0xe2d6c3, 0, 0, 0);
-  box(g, 1.8, 5.2, 1.8, 0xf1e6d4, 0, 0.4, 0);
-  box(g, 2.1, 0.3, 2.1, 0xcdb99c, 0, 5.6, 0);
-  const r = cone(g, 1.7, 1.8, C.roof, 0, 5.9, 0, 4); r.rotation.y = Math.PI / 4;
-  const face = textPlane(1.5, 1.5, (c, w, h) => {
+  box(g, 4, 0.25, 3.4, 0xe2d6c3, 0, 0, 0);
+  const W = 1.7, H = 5.4, D = 1.45, GAP = 0.07, nu = 14, nv = 6;
+  const curve = (s) => GAP + W * Math.pow(1 - s, 1.8); // 由下往上收窄的弧線
+  const tx = tileTex(), tiles = new THREE.MeshStandardMaterial({ map: tx, emissiveMap: tx, emissive: 0xffffff, emissiveIntensity: 0.22, roughness: 0.6, side: THREE.DoubleSide });
+  const ch = new THREE.Group(); ch.rotation.y = -0.65; g.add(ch); // 斜放，讓弧形屋面朝向鏡頭
+  [-1, 1].forEach((side) => {
+    const pos = [], uv = [], idx = [];
+    for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) { const s = i / nu, t = j / nv * 2 - 1; pos.push(side * curve(s), 0.25 + H * s, t * D * (1 - 0.18 * s)); uv.push(j / nv, s); }
+    for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) { const a = i * (nv + 1) + j, b = a + nv + 1; side > 0 ? idx.push(a, b, a + 1, b, b + 1, a + 1) : idx.push(a, a + 1, b, b, a + 1, b + 1); }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, tiles); m.castShadow = m.receiveShadow = true; ch.add(m);
+  });
+  // 前後的玻璃立面
+  const sh = new THREE.Shape(); sh.moveTo(-curve(0) * 0.96, 0); for (let i = 1; i <= nu; i++) { const s = i / nu; sh.lineTo(-curve(s) * 0.96, H * s); } for (let i = nu; i >= 0; i--) { const s = i / nu; sh.lineTo(curve(s) * 0.96, H * s); }
+  [1, -1].forEach((k) => { const f = mesh(new THREE.ShapeGeometry(sh), mat(0x8fa3a0, { side: THREE.DoubleSide }), 0, 0.25, k * D * 0.9, ch); f.rotation.x = -k * 0.12; });
+  box(ch, 0.7, 1.1, 0.06, 0x8a5a33, 0, 0.25, D * 0.93);
+  // 倒數鐘面立在門前
+  cyl(g, 0.07, 0.07, 0.9, C.dark, 0, 0.25, D + 0.75, 6);
+  const face = textPlane(1.3, 1.3, (c, w, h) => {
     const n = upcoming()[0], d = n ? daysLeft(n.at) : null;
     c.fillStyle = "#FFFDF9"; c.beginPath(); c.arc(w / 2, h / 2, w / 2 - 6, 0, Math.PI * 2); c.fill();
     c.lineWidth = 9; c.strokeStyle = "#2A211C"; c.stroke();
@@ -329,8 +351,8 @@ function bClock(g) {
     c.font = `700 ${h * 0.3}px ${MONO}`; c.fillText(d === null ? "--" : d === 0 ? "今天" : "D-" + d, w / 2, h * 0.47);
     c.fillStyle = "#C8623F"; c.font = `700 ${h * 0.12}px ${FONT}`; c.fillText("下個截止", w / 2, h * 0.75);
   });
-  face.position.set(0, 4.4, 0.92); g.add(face);
-  g.userData.sign = face; g.userData.h = 8.3;
+  face.position.set(0, 1.75, D + 0.8); g.add(face);
+  g.userData.sign = face; g.userData.h = H + 0.6;
 }
 function bBoard(g) {
   [-1.3, 1.3].forEach((x) => box(g, 0.2, 2.6, 0.2, C.dark, x, 0, 0));
@@ -363,12 +385,40 @@ function bDock(g) {
   g.add(boat);
   g.userData.boat = boat; g.userData.h = 3;
 }
-function bGym(g, col) {
-  cyl(g, 2.4, 2.5, 1.2, C.wall, 0, 0, 0, 12);
-  mesh(new THREE.SphereGeometry(2.4, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), col, 0, 1.2, 0, g);
-  box(g, 1.2, 1, 0.3, C.dark, 0, 0, 2.35);
-  ball(g, 0.35, 0xd98b4e, 1.9, 0.35, 2.1);
-  g.userData.h = 4.3;
+// 場地借用館：以銘賢堂的造型呈現（紅磚牆、整排木格窗、深灰大斜屋頂與深出簷）
+function bGym(g) {
+  const brick = soft(0xb5533c), wallTop = 1.4;
+  box(g, 4, 0.25, 2.6, 0xcfcac0, 0, 0, 0);
+  box(g, 3.5, 1.15, 1.8, brick, 0, 0.25, 0);
+  const win = textPlane(3.3, 0.48, (c, w, h) => { c.fillStyle = "#E9E1D2"; c.fillRect(0, 0, w, h); for (let k = 0; k < 6; k++) { const x = 12 + (k * (w - 24)) / 6; c.fillStyle = "#33403F"; c.fillRect(x + 6, 8, (w - 24) / 6 - 12, h - 16); c.strokeStyle = "#E9E1D2"; c.lineWidth = 3; for (let q = 1; q < 4; q++) { c.beginPath(); c.moveTo(x + 6 + (q * ((w - 24) / 6 - 12)) / 4, 8); c.lineTo(x + 6 + (q * ((w - 24) / 6 - 12)) / 4, h - 8); c.stroke(); } c.beginPath(); c.moveTo(x + 6, h / 2); c.lineTo(x + (w - 24) / 6 - 6, h / 2); c.stroke(); } });
+  win.position.set(0, 1.08, 0.91); g.add(win);
+  [-1.75, -1.05, -0.35, 0.35, 1.05, 1.75].forEach((x) => box(g, 0.09, 1.15, 0.06, 0xd8d2c4, x, 0.25, 0.92));
+  box(g, 0.5, 0.62, 0.05, 0x33403f, 0, 0.25, 0.93);
+  const sh = new THREE.Shape(); sh.moveTo(-0.9, 0); sh.lineTo(0.9, 0); sh.lineTo(0, 0.9); sh.closePath();
+  const gable = mesh(new THREE.ExtrudeGeometry(sh, { depth: 3.5, bevelEnabled: false }), brick, -1.75, wallTop, 0, g); gable.rotation.y = Math.PI / 2;
+  const roof = soft(0x4f5357), ang = Math.atan2(0.9, 0.9);
+  [1, -1].forEach((k) => { const r = box(g, 4.2, 0.1, 1.7, roof, 0, 0, 0); r.position.set(0, wallTop + 0.36, k * 0.6); r.rotation.x = k * ang; });
+  box(g, 4.2, 0.1, 0.16, 0x3c3f42, 0, wallTop + 0.9, 0);
+  g.userData.h = 3.1;
+}
+// 器材借用館：大扳手、鐵鎚、螺絲起子與工具箱
+function bStore(g) {
+  box(g, 3.6, 0.15, 2.6, 0xe2d6c3, 0, 0, 0);
+  const steel = mat(0xb8c0c8, { metalness: 0.6, roughness: 0.35 });
+  const wr = new THREE.Group(); wr.position.set(0.2, 0.45, -0.2); wr.rotation.z = -0.55; g.add(wr); // 斜立的大扳手
+  box(wr, 0.38, 1.9, 0.14, steel, 0, 0.45, 0);
+  const jaw = mesh(new THREE.TorusGeometry(0.42, 0.2, 6, 18, Math.PI * 1.5), steel, 0, 2.75, 0, wr); jaw.rotation.z = -Math.PI * 0.25;
+  mesh(new THREE.TorusGeometry(0.3, 0.13, 6, 16), steel, 0, 0.2, 0, wr);
+  // 工具箱
+  box(g, 1.1, 0.55, 0.6, 0xc8443a, -1.05, 0.15, 0.25); box(g, 1.14, 0.08, 0.64, 0x9a2f28, -1.05, 0.62, 0.25);
+  mesh(new THREE.TorusGeometry(0.2, 0.035, 6, 12, Math.PI), soft(0x2a211c), -1.05, 0.72, 0.25, g);
+  box(g, 0.12, 0.1, 0.04, 0xe8b04b, -1.05, 0.48, 0.56);
+  // 鐵鎚斜靠、螺絲起子躺在地上
+  const hm = new THREE.Group(); hm.position.set(1.35, 0.15, 0.1); hm.rotation.z = 0.35; g.add(hm);
+  cyl(hm, 0.07, 0.08, 1.3, soft(0xd99a5b), 0, 0, 0, 8); box(hm, 0.62, 0.24, 0.24, soft(0x3c3f42), 0, 1.25, 0);
+  const sd = new THREE.Group(); sd.position.set(-0.3, 0.22, 0.85); sd.rotation.set(0, 0.5, Math.PI / 2); g.add(sd);
+  cyl(sd, 0.1, 0.12, 0.5, soft(0xe8b04b), 0, 0, 0, 8); cyl(sd, 0.03, 0.03, 0.6, steel, 0, 0.5, 0, 6);
+  g.userData.h = 3.4;
 }
 function bAid(g) {
   box(g, 3, 1.9, 2.4, C.wall, 0, 0, 0);
@@ -376,14 +426,6 @@ function bAid(g) {
   box(g, 1, 0.3, 0.06, 0xc8443a, 0, 0.95, 1.22); box(g, 0.3, 1, 0.06, 0xc8443a, 0, 0.6, 1.22);
   box(g, 0.5, 0.6, 0.25, 0x5f8f5a, 1.9, 0.4, 0.6);
   g.userData.h = 3.3;
-}
-function bStore(g, col) {
-  box(g, 3.4, 1.6, 2.4, C.wall, 0, 0, 0);
-  const roof = mesh(new THREE.CylinderGeometry(1.25, 1.25, 3.5, 10, 1, false, 0, Math.PI), col, 0, 1.6, 0, g);
-  roof.rotation.z = Math.PI / 2;
-  box(g, 1.4, 1.2, 0.08, C.dark, 0, 0, 1.21);
-  ball(g, 0.32, 0xd98b4e, -1.6, 0.32, 1.7); ball(g, 0.3, 0xffffff, -1.0, 0.3, 1.9); ball(g, 0.28, 0xe8b04b, -1.3, 0.28, 2.4);
-  g.userData.h = 3.5;
 }
 // 館內的小角色（坐著或站著）
 const mini = (p, o, s, x, y, z, ry = 0) => { const m = person(o); m.scale.setScalar(s); m.position.set(x, y, z); m.rotation.y = ry; p.add(m); return m; };
@@ -820,6 +862,7 @@ const NPC_MAX = 10, SIDE = new V3(-FACE_DIR.z, 0, FACE_DIR.x);
 ISL.filter((d, i) => i < NPC_MAX - 2).forEach((d, i) => { const perp = new V3(-d.dir.z, 0, d.dir.x); addNpc(i, d.pos.clone().add(perp.multiplyScalar(i % 2 ? 1.6 : -1.6)).sub(d.dir.clone().multiplyScalar(0.6)), 0.6); });
 [0, 1].forEach((k) => addNpc(40 + k, new V3(0, 0, 0), 3));
 const NPC_MIN_ZOOM = 1.3; // 全景時隱藏路人，畫面只留島與名牌
+const ISLET_LOD = 1.4; // 小於這個縮放時，小島只顯示島名
 function stepNpcs(dt, t) {
   const show = camera.zoom >= NPC_MIN_ZOOM;
   npcs.forEach((n, i) => {
@@ -945,15 +988,21 @@ function mkLabel(html, pos3, onClick, cls = "", opt = {}) {
   el.type = "button"; el.className = "il " + cls; el.innerHTML = html;
   el.addEventListener("click", onClick);
   lblEl.appendChild(el);
-  const L = { el, pos3, pri: opt.pri || 0, minZoom: opt.minZoom || 0, selId: opt.selId, me: !!opt.me, w: 0, h: 0 }; labels.push(L); return L;
+  const L = { el, pos3, pri: opt.pri || 0, minZoom: opt.minZoom || 0, maxZoom: opt.maxZoom || 0, hideFor: opt.hideFor || [], selId: opt.selId, me: !!opt.me, w: 0, h: 0 }; labels.push(L); return L;
 }
 function isleBadge(d) { const n = isleDl(d)[0]; if (!n) return ""; const k = daysLeft(n.at); return k <= 14 ? `<span class="d ${k <= 3 ? "hot" : ""}">D-${k}</span>` : ""; }
 function buildLabels() {
   lblEl.innerHTML = ""; labels.length = 0;
   ISL.forEach((d) => {
     d.label = mkLabel(`<span class="no" style="--nc:${d.color}">${d.no}</span>${E(d.name)}${isleBadge(d)}${stamps["isle:" + d.key] ? '<span class="ok">✓</span>' : ""}`,
-      d.pos.clone().add(d.build.position).setY(d.build.userData.h + 0.5), () => openIsle(d.i), "", { pri: 100 + (isleBadge(d).includes("hot") ? 5 : 0), selId: "isle:" + d.key });
+      d.pos.clone().add(d.build.position).setY(d.build.userData.h + 0.5), () => openIsle(d.i), "", { pri: 100 + (isleBadge(d).includes("hot") ? 5 : 0), selId: "isle:" + d.key, minZoom: d.islet ? ISLET_LOD : 0 });
   });
+  // 小島：拉遠時只顯示一個島名，放大後才分成各館名牌
+  if (ISLET) {
+    const soon = OFF.filter((d) => isleBadge(d)).sort((a, b) => isleDl(a)[0].at - isleDl(b)[0].at)[0];
+    mkLabel(`<span class="no" style="--nc:${OFF[0].color}">${OFF.map((d) => d.no).join("・")}</span>${E(ISLET.name)}${soon ? isleBadge(soon) : ""}`, ISLET.pos.clone().setY(4),
+      () => focusOn(ISLET.pos, ISLET_LOD + 0.5), "", { pri: 100, maxZoom: ISLET_LOD, hideFor: OFF.map((d) => "isle:" + d.key) });
+  }
   CENTER_SPOTS.forEach((s) => {
     const o = centerObj[s.id], st = officeStatus();
     let extra = "";
@@ -985,6 +1034,7 @@ function placeLabels() {
     L.el.style.transform = `translate(${x}px, ${y - 10}px) translate(-50%, -100%)`;
     const isSel = L.selId && L.selId === sel;
     if (!isSel && z < L.minZoom && !(L.me && charOpen)) { L.el.classList.add("hide"); return; }
+    if (L.maxZoom && (z >= L.maxZoom || L.hideFor.includes(sel))) { L.el.classList.add("hide"); return; }
     if (!L.w) { L.w = L.el.offsetWidth; L.h = L.el.offsetHeight; }
     cand.push({ L, x, y, p: isSel || (L.me && charOpen) ? 1e4 : L.pri });
   });
