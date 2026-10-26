@@ -1,5 +1,5 @@
 /* 體能社團行政群島：Three.js
- * 大島中央 = 課外組（辦公室、路思義教堂、公告欄、小秘書啊牛的啊牛提醒、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
+ * 大島中央 = 課外組（辦公室、路思義教堂、公告欄、小秘書啊牛的啊牛提醒、出航機場），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
  * 玩家可以（選填）建立角色：身份、職位、外觀；角色會沿著島上的道路走到各館蓋章。
  * 內容全部來自 js/data.js；這個檔案只負責群島、角色與資訊卡。 */
 import * as THREE from "three";
@@ -94,7 +94,7 @@ const CENTER_SPOTS = [
   { id: "office", no: "00", name: "課外組峮老師", icon: "🏛" },
   { id: "news", no: "✎", name: "公告欄", icon: "📣" },
   { id: "todo", no: "◷", name: "啊牛提醒", icon: "🐮" },
-  { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
+  { id: "links", no: "↗", name: "出航機場", icon: "✈️" },
 ];
 const stampCount = () => STAMPS.filter((s) => stamps[s.id]).length;
 const STAMPS = [...CENTER_SPOTS.map((s) => ({ id: s.id, name: s.name, no: s.no })), ...ISL.map((d) => ({ id: "isle:" + d.key, name: d.name, no: d.no }))];
@@ -165,7 +165,7 @@ const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
       const side = i % 2 ? 1 : -1;
       d.junction = I.entry.clone().add(dir.clone().multiplyScalar(3.4 + i * 5.6));
       d.dir = perp.clone().multiplyScalar(side);
-      d.pos = d.junction.clone().add(d.dir.clone().multiplyScalar(4.6));
+      d.pos = d.junction.clone().add(d.dir.clone().multiplyScalar(6.2)); // 館往島的外圍靠
     } else {
       const side = I.halls.length === 1 ? 0 : (i / (I.halls.length - 1)) * 2 - 1; // 小島上左右排開
       d.dir = perp.clone().multiplyScalar(side || 1).add(dir.clone().multiplyScalar(0.35)).normalize();
@@ -400,13 +400,28 @@ function sailboat(col) {
   mesh(sg, mat(0xfffdf9, { side: THREE.DoubleSide }), 0, 0, 0, boat);
   return boat;
 }
+// 出航機場：從海岸往海面延伸的飛機跑道，旁邊有航廈與塔台，飛機會滑行起飛
 function bDock(g) {
-  for (let i = 0; i < 5; i++) box(g, 1.6, 0.18, 0.9, C.wood, 0, -0.35, i * 0.95);
-  [-0.75, 0.75].forEach((x) => [0.6, 2.4, 4].forEach((z) => cyl(g, 0.1, 0.1, 1.5, C.dark, x, -1.5, z, 5)));
-  const boat = sailboat(C.roof);
-  boat.position.set(1.8, -1.15, 3);
-  g.add(boat);
-  g.userData.boat = boat; g.userData.h = 3;
+  const L = 13, W = 2.6, z0 = -1;
+  box(g, W + 0.4, 0.2, L, 0x8d97a5, 0, -0.2, z0 + L / 2); // 跑道基座
+  box(g, W, 0.04, L - 0.2, 0x4a4f57, 0, 0, z0 + L / 2);
+  for (let z = z0 + 1.2; z < z0 + L - 1; z += 1.1) box(g, 0.12, 0.012, 0.6, 0xffffff, 0, 0.04, z).castShadow = false; // 中線
+  [-1, 1].forEach((k) => { box(g, 0.06, 0.012, L - 0.4, 0xffffff, k * (W / 2 - 0.12), 0.04, z0 + L / 2).castShadow = false; for (let j = 0; j < 4; j++) box(g, 0.14, 0.012, 0.7, 0xffffff, k * (0.35 + j * 0.25), 0.04, z0 + L - 0.8).castShadow = false; });
+  for (let z = z0 + 1; z <= z0 + L; z += 2.4) cyl(g, 0.16, 0.16, 1.4, 0x8d97a5, 0, -1.6, z, 6);
+  for (let z = z0 + 0.5; z < z0 + L; z += 1.4) [-1, 1].forEach((k) => mesh(new THREE.SphereGeometry(0.06, 6, 4), mat(0xffd24a, { emissive: 0xffc93c, emissiveIntensity: 0.8 }), k * (W / 2 + 0.12), 0.06, z, g));
+  // 航廈與塔台（在跑道旁的岸上）
+  box(g, 2.4, 1.1, 1.4, C.wall, 2.9, 0, -1.4); box(g, 2.6, 0.12, 1.6, 0x6e8fb5, 2.9, 1.1, -1.4);
+  mesh(new THREE.BoxGeometry(2.2, 0.5, 0.05), mat(0x8fb6cf, { roughness: 0.3 }), 2.9, 0.55, -0.68, g);
+  const sign = textPlane(1.8, 0.36, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 10); c.fillStyle = "#2A211C"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.55}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("✈ 出航機場", w / 2, h / 2 + 2); });
+  sign.position.set(2.9, 1.45, -0.66); g.add(sign);
+  cyl(g, 0.28, 0.34, 2.6, C.wall, -2.4, 0, -0.8, 10); cyl(g, 0.6, 0.45, 0.55, 0x8fb6cf, -2.4, 2.6, -0.8, 10); cyl(g, 0.65, 0.65, 0.1, 0x2a211c, -2.4, 3.15, -0.8, 10);
+  // 飛機
+  const plane = new THREE.Group(); g.add(plane); const wht = soft(0xfbfaf6), red = soft(0xc8623f);
+  const body = cyl(plane, 0.22, 0.2, 1.8, wht, 0, 0, 0, 12); body.rotation.x = Math.PI / 2; body.position.set(0, 0.35, 0);
+  const nose = cone(plane, 0.22, 0.4, wht, 0, 0, 0, 12); nose.rotation.x = Math.PI / 2; nose.position.set(0, 0.35, 1.1);
+  box(plane, 2.2, 0.05, 0.5, red, 0, 0.3, 0.05); box(plane, 0.8, 0.04, 0.3, red, 0, 0.42, -0.8); box(plane, 0.05, 0.45, 0.35, red, 0, 0.45, -0.8);
+  for (let k = -2; k <= 2; k++) mesh(new THREE.CircleGeometry(0.05, 8), soft(0x6e8fb5), 0.215, 0.42, k * 0.22, plane).rotation.y = Math.PI / 2;
+  g.userData.plane = { plane, z0, L }; g.userData.h = 3.6;
 }
 // 場地借用館：以銘賢堂的造型呈現（紅磚牆、整排木格窗、深灰大斜屋頂與深出簷）
 function bGym(g) {
@@ -749,16 +764,16 @@ const SPOT = {
   office: { a: front + Math.PI, r: 7.4, build: bOffice },
   chapel: { a: front + Math.PI * 1.25, r: 7.2, build: bClock }, // 造景，不能點
   news: { a: front + Math.PI * 0.83, r: 7, build: bBoard },
-  todo: { a: front - 0.2, r: 17, build: bTodo }, // 外圈道路外、碼頭路右側
+  todo: { a: front - 0.36, r: 17, build: bTodo }, // 外圈道路外、機場路右側
   links: { a: front, r: R_ISLE * 0.95, build: bDock },
 };
-radialRoad(front, RO + 0.7, R_ISLE * 0.93); // 通往碼頭的路
+radialRoad(front, RO + 0.7, R_ISLE * 0.93); // 通往機場的路
 const centerObj = {};
 Object.entries(SPOT).forEach(([id, s]) => {
   const g = new THREE.Group();
   s.build(g);
   g.position.set(Math.cos(s.a) * s.r, 0, Math.sin(s.a) * s.r);
-  g.rotation.y = id === "links" ? Math.atan2(Math.cos(s.a), Math.sin(s.a)) : FACE; // 碼頭沿 +z 伸向海面
+  g.rotation.y = id === "links" ? Math.atan2(Math.cos(s.a), Math.sin(s.a)) : FACE; // 跑道沿 +z 伸向海面
   if (id === "office") g.scale.setScalar(0.85);
   center.add(g);
   if (id !== "chapel") tag(g, { t: "spot", id });
@@ -766,7 +781,7 @@ Object.entries(SPOT).forEach(([id, s]) => {
   s.pos = g.position.clone();
 });
 for (let k = 0; k < 8; k++) { const a = front + (k + 0.5) * Math.PI / 4; lampPost(center, Math.cos(a) * 5, Math.sin(a) * 5); }
-// 碼頭路口的指路牌：箭頭依各館在畫面上的左右方向
+// 機場路口的指路牌：箭頭依各館在畫面上的左右方向
 const SIGN_POS = FACE_DIR.clone().multiplyScalar(RO + 2.4).add(new V3(FACE_DIR.z, 0, -FACE_DIR.x).multiplyScalar(-5));
 {
   const right = new V3(Math.cos(FACE), 0, -Math.sin(FACE)), dirTo = (p) => (p.clone().sub(SIGN_POS).dot(right) > 0 ? "r" : "l");
@@ -1530,7 +1545,7 @@ function renderNews() {
 }
 function renderLinks() {
   const row = (t, s, href, ext = true) => `<li class="item"><a class="row" style="text-decoration:none;color:inherit" href="${E(href)}" ${ext ? 'target="_blank" rel="noopener"' : ""}><span class="dot"></span><span class="nm">${t}<small>${s}</small></span><span class="meta">${ext ? "↗" : ""}</span><span class="chev">›</span></a></li>`;
-  const html = `${head("⛵", "HARBOR · 出航", "出航碼頭")}<p class="lead">從碼頭出航，前往課外組的其他平台。</p><div class="tags">${stampTag("links")}</div>
+  const html = `${head("✈️", "AIRPORT · 出航", "出航機場")}<p class="lead">從機場起飛，前往課外組的其他平台。</p><div class="tags">${stampTag("links")}</div>
     <div class="sec"><h4>常用連結</h4><ul class="items">${row("課外組網站", "activity.thu.edu.tw", D.links.office)}${row("體能性社團 Linktree", "表單、雲端資料夾與常用連結", D.links.linktree)}${row("東海空間網場地借用", "space.thu.edu.tw", "https://space.thu.edu.tw/")}${row("推廣部場地借用", "中正堂、銘賢堂需要再登記推廣部借用網", "https://thurent.thu.edu.tw/borrow.php")}</ul></div>`;
   showSheet("links", html);
 }
@@ -1786,7 +1801,9 @@ function loop(now) {
     newsMarker.rotation.y += dt * 1.5;
     acts.forEach((f) => f(t));
     hikers.forEach(({ h, q0, m }) => { const q = (t * 0.035 + q0) % 1, a = q * Math.PI * 5, y = q * m.H * 0.86, r = m.R * (1 - y / m.H) + 0.12; h.position.set(Math.cos(a) * r, y + Math.abs(Math.sin(t * 8 + q0 * 9)) * 0.04, Math.sin(a) * r); h.rotation.y = -a; });
-    const boat = centerObj.links.userData.boat; boat.position.y = -1.15 + Math.sin(t * 1.4) * 0.08; boat.rotation.z = Math.sin(t * 1.1) * 0.05;
+    { const { plane, z0, L } = centerObj.links.userData.plane, q = (t / 16) % 1; // 滑行 → 加速 → 起飛 → 重新出現
+      const z = q < 0.15 ? z0 + 0.6 : z0 + 0.6 + Math.pow((q - 0.15) / 0.85, 2) * (L + 10), up = Math.max(0, z - (z0 + L * 0.7));
+      plane.position.set(0, up * 0.35, z); plane.rotation.x = -Math.min(0.25, up * 0.05); plane.visible = z < z0 + L + 9; }
     teacher.position.y = Math.abs(Math.sin(t * 2)) * 0.03;
     const og = centerObj.office.userData; og.giant.rotation.y = Math.sin(t * 0.6) * 0.12; og.cats.forEach((c, k) => (c.userData.tail.rotation.z = -0.4 + Math.sin(t * 1.5 + k) * 0.25));
     const cow = centerObj.todo.userData.npc;
@@ -1831,7 +1848,7 @@ async function start() {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每一館是一類行政", `島上有 ${ISL.length} 座行政館，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `島的中央是課外組，旁邊有路思義教堂、公告欄、小秘書啊牛（啊牛提醒：各項截止日）和碼頭。社團行政任務放在社團行政館，完成可以打勾。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
+      ["中心是課外組", `島的中央是課外組，旁邊有路思義教堂、公告欄、小秘書啊牛（啊牛提醒：各項截止日）和出航機場。社團行政任務放在社團行政館，完成可以打勾。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
       ["提醒會浮在館上", "館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的館，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
