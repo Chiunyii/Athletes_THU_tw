@@ -626,7 +626,7 @@ footer a { color: var(--band-fg); }
     $("guideList").innerHTML = list.length ? list.map(function (g) {
       var hit = q && g.steps.join("").indexOf(q) >= 0;
       return '<article class="guide"><div class="topic">' + hl(g.topic, q) + "</div><h3>" + hl(g.title, q) + "</h3><p>" + hl(g.summary, q) + "</p>" +
-        "<details" + (hit || gTopic !== "全部" ? " open" : "") + "><summary>看步驟</summary><ol>" + g.steps.map(function (s) { return "<li>" + hl(s, q) + "</li>"; }).join("") + "</ol></details>" +
+        "<details" + (hit || gTopic !== "全部" ? " open" : "") + "><summary>看攻略</summary><ol>" + g.steps.map(function (s) { return "<li>" + hl(s, q) + "</li>"; }).join("") + "</ol></details>" +
         (g.links && g.links.length ? '<div class="row">' + g.links.map(function (l) { return '<a class="btn small plain" target="_blank" rel="noopener" href="' + esc(l[1]) + '">' + esc(l[0]) + "</a>"; }).join("") + "</div>" : "") +
         sectionsHtml(g.island) +
         "</article>";
