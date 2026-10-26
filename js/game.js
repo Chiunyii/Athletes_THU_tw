@@ -92,7 +92,7 @@ const CENTER_SPOTS = [
   { id: "office", no: "00", name: "課外組", icon: "🏛" },
   { id: "deadlines", no: "◷", name: "截止日鐘塔", icon: "⏰" },
   { id: "news", no: "✎", name: "公告欄", icon: "📌" },
-  { id: "todo", no: "✓", name: "社團小秘書", icon: "🐮" },
+  { id: "todo", no: "✓", name: "小秘書啊牛", icon: "🐮" },
   { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
 ];
 const STAMPS = [...CENTER_SPOTS.map((s) => ({ id: s.id, name: s.name, no: s.no })), ...ISL.map((d) => ({ id: "isle:" + d.key, name: d.name, no: d.no }))];
@@ -405,7 +405,7 @@ function bHall(g, col) {
   for (let k = 0; k < 6; k++) box(g, 0.3, 0.35, 0.3, C.wood, -1.1 + (k % 3) * 1.1, 0, 2.1 + Math.floor(k / 3) * 0.55);
   g.userData.h = 3.6;
 }
-// 社團小秘書：參考東海牛奶節的乳牛造型（白身深藍斑點、黃色口鼻與角、頭頂捲毛），以低多邊形重新建模
+// 小秘書啊牛：參考東海牛奶節的乳牛造型（白身深藍斑點、黃色口鼻與角、頭頂捲毛），以低多邊形重新建模
 let cowMsg = null; // 解鎖動畫時泡泡暫時改成這句話
 function cowModel() {
   const g = new THREE.Group();
@@ -456,7 +456,7 @@ function bTodo(g) {
     c.fillStyle = cowMsg ? "#FFE9A8" : "#FFFDF9"; c.fillRect(w / 2 - 18, bh - 14, 36, 14);
     c.textAlign = "center"; c.textBaseline = "middle";
     if (cowMsg) { c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.34}px ${FONT}`; c.fillText(cowMsg, w / 2, bh * 0.52); return; }
-    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.2}px ${FONT}`; c.fillText("社團小秘書", w / 2, bh * 0.33);
+    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.2}px ${FONT}`; c.fillText("小秘書啊牛", w / 2, bh * 0.33);
     c.fillStyle = "#2A211C"; c.font = `900 ${h * 0.19}px ${FONT}`; c.fillText(left ? `${sem}還有 ${left} 項任務` : `${sem}任務全部完成！`, w / 2, bh * 0.7);
   });
   bubble.position.set(0, 3.7, 0); g.add(bubble);
@@ -963,7 +963,7 @@ function unlockTasks() {
   closeSheet(true);
   setSel("todo");
   focusOn(SPOT.todo.pos, innerWidth < 600 ? 3 : 2.6);
-  walkTo("C", () => stamp("todo", "社團小秘書"));
+  walkTo("C", () => stamp("todo", "小秘書啊牛"));
   cowMsg = "解鎖任務！"; centerObj.todo.userData.sign.userData.redraw();
   const g = centerObj.todo, stars = [];
   if (!RM) for (let k = 0; k < 14; k++) {
@@ -1138,8 +1138,8 @@ let todoSem = null;
 function renderTodo(sem) {
   todoSem = sem || todoSem || curSem();
   const list = todoList(todoSem), n = list.filter((x) => todoDone[x.key]).length;
-  const html = `${head("🐮", "SECRETARY · 社團小秘書", "社團行政任務")}
-    <p class="lead">哞～我是社團小秘書！每學期要完成的行政任務都幫你記著，完成後打勾。</p>
+  const html = `${head("🐮", "SECRETARY · 小秘書啊牛", "社團行政任務")}
+    <p class="lead">哞～我是小秘書啊牛！每學期要完成的行政任務都幫你記著，完成後打勾。</p>
     <div class="tabs two" role="tablist">${["s1", "s2"].map((s) => `<button type="button" role="tab" data-sem="${s}" aria-selected="${todoSem === s}">${SEM_NAME[s]}${s === curSem() ? "・本學期" : ""}</button>`).join("")}</div>
     <div class="sec"><h4>完成進度・<span id="todoProg">${n}/${list.length}</span></h4><div class="prog"><i id="todoBar" style="width:${list.length ? (n / list.length) * 100 : 0}%"></i></div></div>
     <div class="tags">${stampTag("todo")}</div>
@@ -1356,7 +1356,7 @@ function teacherTalk() {
   const n = upcoming()[0], st = officeStatus(), L = [];
   if (n) { const d = isleOf(n.category); L.push(["最近的截止日", `「${n.title}」還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`]); }
   if (unread().length) L.push(["有新公告", `公告欄有 ${unread().length} 則你還沒看過的公告。`]);
-  if (todoLeft()) L.push(["行政任務", `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務，找社團小秘書（那頭乳牛）可以一項一項打勾。`]);
+  if (todoLeft()) L.push(["行政任務", `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務，找小秘書啊牛可以一項一項打勾。`]);
   L.push(["隨時來找我們", `課外組${st.text}。週一至週五 9:00–12:00、13:30–17:00（國定假日除外）都可以來。`, "好"]);
   talk("課外組老師", L);
 }
@@ -1443,7 +1443,7 @@ async function start() {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每一區是一類行政", `島上有 ${ISL.length} 個建築區，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `島的中央是課外組，旁邊有截止日鐘塔、公告欄、社團小秘書和碼頭。外圈道路連到 ${ISL.length} 個行政建築區，有問題就回來。`],
+      ["中心是課外組", `島的中央是課外組，旁邊有截止日鐘塔、公告欄、小秘書啊牛和碼頭。外圈道路連到 ${ISL.length} 個行政建築區，有問題就回來。`],
       ["提醒會浮在島上", "島的名牌上有 D-倒數；7 天內截止，島上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的島，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
