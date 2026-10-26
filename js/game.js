@@ -139,7 +139,7 @@ const front = Math.atan2(FACE_DIR.z, FACE_DIR.x);
 const R_ISLE = 21;           // 大島半徑
 const RW = 3.9, RO = 12.3;   // 角色走的路線：中央圓環、外圈環狀道路（車道中心）
 const R_LOT = 16.4;
-const HALL_S = 1.3;          // 各館建築的放大倍率（不超過課外組峮老師的高度）          // 各分類建築區的中心
+const HALL_S = 1.3;          // 各館建築的放大倍率（不超過課外組峮老師的高度）
 const MAIN = ISL.filter((d) => !d.islet), OFF = ISL.filter((d) => d.islet);
 const NM = MAIN.length;
 MAIN.forEach((d, i) => {
@@ -866,24 +866,57 @@ const acts = [], ACT_ZONES = [];
   });
   // 海邊：游泳與自由潛水
   const wave = (x, z, t) => -1.15 + Math.sin(x * 0.16 + t * 0.9) * 0.16 + Math.cos(z * 0.2 + t * 0.7) * 0.14;
-  // 套著游泳圈玩水的人：直立浮在水面、上下晃動、手揮水
-  [[16, 24.4, 0], [24, 25, 1], [34, 24.6, 2]].forEach(([deg, r, k]) => {
-    const g = new THREE.Group(); world.add(g); const p = person(P(k + 1)); p.scale.setScalar(0.55); g.add(p);
-    const ring = mesh(new THREE.TorusGeometry(0.32, 0.11, 8, 18), soft([0xe8913f, 0xc8443a, 0x6e8fb5][k]), 0, 0.42, 0, g); ring.rotation.x = Math.PI / 2;
-    for (let j = 0; j < 4; j++) { const st = mesh(new THREE.TorusGeometry(0.32, 0.115, 8, 3, Math.PI / 8), soft(0xffffff), 0, 0.42, 0, g); st.rotation.set(Math.PI / 2, 0, (j * Math.PI) / 2); }
-    const c = at(deg, r);
-    acts.push((t) => { const x = c.x + Math.sin(t * 0.2 + k) * 0.8, z = c.z + Math.cos(t * 0.17 + k) * 0.6; g.position.set(x, wave(x, z, t) - 0.38, z); g.rotation.set(Math.sin(t * 1.3 + k) * 0.08, t * 0.3 + k, Math.cos(t * 1.1 + k) * 0.08); });
-  });
-  // 自由潛水：穿著長蛙鞋、頭下腳上做下潛動作，蛙鞋在水面上擺動，接著潛下去再浮上來
-  { const c = at(-30, 25.3); const buoy = ball(world, 0.22, soft(0xe8913f), c.x + 1, 0, c.z, 1); const flag = box(world, 0.02, 0.5, 0.02, 0xffffff, 0, 0, 0); const fl = box(world, 0.25, 0.16, 0.01, 0xc8443a, 0, 0, 0);
-    const dv = new THREE.Group(); world.add(dv); const d = person({ shirt: "#2A211C", hair: "#2A211C", skin: "#F1CDB0" }); d.scale.setScalar(0.55); dv.add(d);
-    box(d, 0.62, 0.62, 0.2, 0x2a211c, 0, 0.18, 0.02); // 潛水服下半身
-    const fins = [-0.13, 0.13].map((x) => { const f = new THREE.Group(); f.position.set(x, 0.02, 0.05); d.add(f); box(f, 0.16, 0.04, 0.9, 0x2f6fd6, 0, -0.02, 0.35); return f; }); // 長蛙鞋
-    box(d, 0.5, 0.14, 0.06, 0x8fb6cf, 0, 1.45, 0.4); // 面鏡
-    acts.push((t) => { const y = wave(c.x, c.z, t); buoy.position.y = y + 0.1; flag.position.set(c.x + 1, y + 0.3, c.z); fl.position.set(c.x + 1.12, y + 0.48, c.z);
-      const q = (t / 12) % 1; // 0–0.3 水面趴著準備、0.3–0.45 彎身下潛、0.45–0.8 在水下、0.8–1 浮上來
-      let tilt, depth; if (q < 0.3) { tilt = Math.PI / 2; depth = 0.05; } else if (q < 0.45) { const u = (q - 0.3) / 0.15; tilt = Math.PI / 2 + u * (Math.PI / 2); depth = 0.05 - u * 0.75; } else if (q < 0.8) { tilt = Math.PI; depth = -0.7 - (q - 0.45) * 3; } else { const u = (q - 0.8) / 0.2; tilt = Math.PI - u * (Math.PI / 2); depth = -1.75 + u * 1.8; }
-      dv.position.set(c.x, y + depth, c.z); d.rotation.x = tilt; fins.forEach((f, j) => (f.rotation.x = Math.sin(t * 6 + j * Math.PI) * 0.35)); }); }
+  // 海邊的游泳與自由潛水（參考社團島）：只露出戴泳帽、泳鏡的頭，身體在水面下，手臂划水、腳踢出水花
+  const foamM = mat(0xffffff, { transparent: true, opacity: 0.8, flatShading: false, roughness: 0.3 });
+  const ripple = (g) => { const m = mesh(new THREE.RingGeometry(0.42, 0.52, 28), foamM, 0, 0.03, 0, g); m.rotation.x = -Math.PI / 2; m.castShadow = false; return m; };
+  const skinM = soft(0xf7d7be);
+  const swimmer = (cap, suit, ringed) => {
+    const g = new THREE.Group(); g.scale.setScalar(0.9); world.add(g);
+    mesh(new THREE.SphereGeometry(0.25, 16, 12), skinM, 0, 0.16, 0, g).scale.set(1, 0.92, 0.96);
+    mesh(new THREE.SphereGeometry(0.26, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.55), soft(cap), 0, 0.17, -0.01, g);
+    [-0.08, 0.08].forEach((x) => mesh(new THREE.SphereGeometry(0.06, 8, 6), soft(0x2b3a55), x, 0.17, 0.23, g).scale.set(1, 0.7, 0.45));
+    mesh(new THREE.SphereGeometry(0.3, 12, 8), soft(suit), 0, -0.08, -0.45, g).scale.set(0.9, 0.5, 1.4);
+    const arms = [-1, 1].map((k) => { const p = new THREE.Group(); p.position.set(k * 0.24, 0, -0.12); mesh(new THREE.CylinderGeometry(0.065, 0.06, 0.52, 8), skinM, 0, 0.26, 0, p); g.add(p); return p; });
+    const kick = [-1, 1].map((k) => { const m = mesh(new THREE.SphereGeometry(0.5, 8, 6), foamM, k * 0.12, 0.04, -1.0, g); m.castShadow = false; return m; });
+    if (ringed) { const r = mesh(new THREE.TorusGeometry(0.42, 0.11, 8, 24), soft(0xe8506a), 0, 0.02, -0.2, g); r.rotation.x = Math.PI / 2; for (let j = 0; j < 4; j++) { const st = mesh(new THREE.TorusGeometry(0.42, 0.115, 8, 3, Math.PI / 8), soft(0xffffff), 0, 0.02, -0.2, g); st.rotation.set(Math.PI / 2, 0, (j * Math.PI) / 2); } }
+    return { g, arms, kick, rip: ripple(g), ringed };
+  };
+  const sw = [swimmer(0xf4c95d, 0x2f6fb0, false), swimmer(0xe8506a, 0x1f8a70, false), swimmer(0x5fbfa8, 0xf28c72, true)];
+  const loops = [{ c: at(20, 25), R: 1.4, w: 0.34, ph: 0 }, { c: at(20, 25), R: 1.4, w: 0.34, ph: Math.PI }, { c: at(34, 24.6), R: 0.5, w: 0.15, ph: 1 }];
+  acts.push((t) => sw.forEach((s, i) => {
+    const L = loops[i], a = L.ph + t * L.w, x = L.c.x + Math.cos(a) * L.R, z = L.c.z + Math.sin(a) * L.R;
+    s.g.position.set(x, wave(x, z, t) + 0.02 + Math.sin(t * 3 + i) * 0.04, z); s.g.rotation.y = Math.atan2(-Math.sin(a), Math.cos(a));
+    const st = t * (s.ringed ? 2.5 : 5.5) + i; s.arms[0].rotation.x = st; s.arms[1].rotation.x = st + Math.PI;
+    s.kick.forEach((k, j) => k.scale.setScalar(s.ringed ? 0.12 : 0.18 + 0.12 * Math.abs(Math.sin(t * 9 + j * 1.7))));
+    const r = (t * 0.8 + i * 0.3) % 1; s.rip.scale.setScalar(0.8 + r * 1.4);
+  }));
+  // 自由潛水：戴面鏡與呼吸管的頭浮在水面；下潛時頭先入水、穿黃色蛙鞋的雙腿翹出水面，水下冒泡泡，再浮上來；旁邊是紅白潛水旗浮球
+  { const c = at(-28, 25.2), dv = new THREE.Group(); dv.scale.setScalar(0.9); world.add(dv);
+    const dh = new THREE.Group(); dv.add(dh);
+    mesh(new THREE.SphereGeometry(0.25, 16, 12), skinM, 0, 0.16, 0, dh);
+    mesh(new THREE.SphereGeometry(0.26, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), soft(0x2b2f33), 0, 0.18, -0.01, dh);
+    box(dh, 0.38, 0.16, 0.06, 0x2f6fb0, 0, 0.02, 0.22); box(dh, 0.3, 0.1, 0.07, 0x9fd8f0, 0, 0.05, 0.23);
+    cyl(dh, 0.035, 0.035, 0.42, 0xf2a65a, 0.24, 0.12, 0, 8); box(dh, 0.1, 0.05, 0.05, 0xf2a65a, 0.21, 0.5, 0);
+    const legs = new THREE.Group(); dv.add(legs);
+    [-0.1, 0.1].forEach((x) => { cyl(legs, 0.07, 0.07, 0.6, 0x2b2f33, x, 0, 0, 8); box(legs, 0.2, 0.42, 0.04, 0xf4c95d, x, 0.55, 0); });
+    const bub = [...Array(6)].map(() => { const m = mesh(new THREE.SphereGeometry(0.5, 8, 6), foamM, 0, 0, 0, dv); m.castShadow = false; return m; });
+    const drip = ripple(dv);
+    const buoy = new THREE.Group(); world.add(buoy);
+    mesh(new THREE.SphereGeometry(0.25, 12, 8), soft(0xf2a65a), 0, 0.05, 0, buoy).scale.set(1, 0.8, 1); cyl(buoy, 0.025, 0.025, 1.2, 0x3d4a48, 0, 0.2, 0, 5);
+    const flag = textPlane(0.6, 0.42, (g2, w, h) => { g2.fillStyle = "#E0322F"; g2.fillRect(0, 0, w, h); g2.strokeStyle = "#ffffff"; g2.lineWidth = h * 0.22; g2.beginPath(); g2.moveTo(0, 0); g2.lineTo(w, h); g2.stroke(); });
+    flag.material.side = THREE.DoubleSide; flag.position.set(0.32, 1.18, 0); buoy.add(flag);
+    const bpos = at(-24, 25.4);
+    acts.push((t) => {
+      const y0 = wave(c.x, c.z, t); dv.position.set(c.x, y0, c.z);
+      const k = (t + 2) % 10; let hy = 0, ly = -2, uw = false;
+      if (k < 4) { hy = Math.sin(t * 2.2) * 0.04; dh.rotation.x = 0; }
+      else if (k < 5) { const u = k - 4; hy = -u * 0.9; dh.rotation.x = u * 1.2; ly = -1.2 + Math.sin(Math.PI * u) * 1.6; }
+      else if (k < 9) { hy = -2; uw = true; }
+      else { const u = k - 9; hy = -0.9 + u * 0.9; dh.rotation.x = (1 - u) * 0.6; }
+      dh.position.y = hy; legs.position.y = ly; legs.rotation.x = 0.25; drip.visible = !uw;
+      bub.forEach((b, j) => { const q = (t * 0.9 + j / 6) % 1; b.visible = uw; b.position.set(Math.sin(j * 2.1 + t) * 0.18, -0.3 + q * 0.4, Math.cos(j * 1.3) * 0.18); b.scale.setScalar(0.08 + q * 0.08); });
+      flag.rotation.y = Math.sin(t * 1.3) * 0.25; buoy.position.set(bpos.x, wave(bpos.x, bpos.z, t) + Math.sin(t * 1.7) * 0.05, bpos.z);
+    }); }
 }
 
 /* ---- 各行政分類的建築區（沿外圈道路排列） ---- */
@@ -1584,7 +1617,7 @@ function listResults(q) {
 }
 function renderList() {
   const centerList = '<ul class="items">' + CENTER_SPOTS.map((s) => `<li class="item"><button type="button" data-spot="${s.id}"><span class="dot"></span><span class="nm">${noTag(s.no)}${E(s.name)}</span><span class="meta">${stamps[s.id] ? "✓" : ""}</span><span class="chev">›</span></button></li>`).join("") + "</ul>";
-  showSheet("list", `${head("≡", "INDEX · 清單", "群島清單")}<label class="foot" for="q">搜尋截止日、流程與公告</label><input id="q" class="search" type="search" autocomplete="off" placeholder="例如：保險、核銷、場地"><div id="results"></div><div id="places"><div class="sec"><h4>行政館</h4>${placeItems()}</div><div class="sec"><h4>中央・課外組</h4>${centerList}</div></div>`);
+  showSheet("list", `${head("≡", "INDEX · 清單", "群島清單")}<label class="foot" for="q">搜尋截止日、流程與公告</label><input id="q" class="search" type="search" autocomplete="off" placeholder="例如：保險、核銷、場地"><div id="results"></div><div id="places"><div class="sec"><h4>行政館</h4>${placeItems()}</div><div class="sec"><h4>本島・課外組</h4>${centerList}</div></div>`);
   $("q").addEventListener("input", (e) => { const q = e.target.value.trim(); $("results").innerHTML = q ? listResults(q) : ""; $("places").hidden = !!q; });
 }
 
@@ -1868,7 +1901,7 @@ async function start() {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每一館是一類行政", `島上有 ${ISL.length} 座行政館，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `島的中央是課外組，旁邊有路思義教堂、公告欄、小秘書啊牛（啊牛提醒：各項截止日）和出航機場。社團行政任務放在社團行政館，完成可以打勾。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
+      ["本島是課外組", `本島中間是課外組，旁邊有路思義教堂、公告欄、小秘書啊牛（啊牛提醒：各項截止日）和出航機場。社團行政任務放在社團行政館，完成可以打勾。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
       ["提醒會浮在館上", "館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的館，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
