@@ -1,5 +1,5 @@
 /* 體能社團行政群島：Three.js
- * 大島中央 = 課外組（辦公室、截止提醒、公告欄、小秘書啊牛的截止日提醒、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
+ * 大島中央 = 課外組（辦公室、路思義教堂、公告欄、小秘書啊牛的截止日提醒、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
  * 玩家可以（選填）建立角色：身份、職位、外觀；角色會沿著島上的道路走到各館蓋章。
  * 內容全部來自 js/data.js；這個檔案只負責群島、角色與資訊卡。 */
 import * as THREE from "three";
@@ -92,11 +92,11 @@ const isleNews = (d) => anns.filter((a) => a.tag === d.key);
 const lvl = (n) => (n <= 3 ? "hot" : n <= 7 ? "warn" : "ok");
 const CENTER_SPOTS = [
   { id: "office", no: "00", name: "課外組", icon: "🏛" },
-  { id: "deadlines", no: "◷", name: "截止提醒", icon: "⏰" },
   { id: "news", no: "✎", name: "公告欄", icon: "📌" },
   { id: "todo", no: "◷", name: "截止日提醒", icon: "🐮" },
   { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
 ];
+const stampCount = () => STAMPS.filter((s) => stamps[s.id]).length;
 const STAMPS = [...CENTER_SPOTS.map((s) => ({ id: s.id, name: s.name, no: s.no })), ...ISL.map((d) => ({ id: "isle:" + d.key, name: d.name, no: d.no }))];
 
 /* 社團行政任務：每學期共同項目 + 該學期項目；共同項目每學期各自打勾 */
@@ -150,7 +150,8 @@ const SPOKES = MAIN.filter((d, i) => i % 2 === 0).map((d) => d.a);
 // 獨立小島：data.js 裡 islet 名稱相同的館放在同一座小島，以橋接到本島外圈道路
 // 小島方位（相對鏡頭正前方）；沒列在這裡的小島依序往外放
 const ISLET_AT = { "場地器材島": -Math.PI / 3, "活動島": (Math.PI * 8) / 9 };
-const ISLET_MTN = new Set(["活動島"]); // 島中央後方放一座登山的小山
+const ISLET_MTN = new Set(["活動島"]);
+const ISLET_EN = { "場地器材島": "Venue & Equipment Isle", "活動島": "Activity Isle" }; // 島中央後方放一座登山的小山
 const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
   const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = 8;
   const pos = dir.clone().multiplyScalar(R_ISLE + r + 5.5);
@@ -319,8 +320,8 @@ function bOffice(g) {
   sign.position.set(0, 0.95, 2.4); g.add(sign);
   g.userData.sign = sign; g.userData.h = 6.5;
 }
-// 截止提醒（截止日）：以路思義教堂的造型呈現。前後兩對弧形屋面（後面那對較高、較寬），
-// 兩片屋面在頂端留一道天窗縫，前後之間也留一道縫；正面是有橫格的玻璃立面，頂上有十字架，門前立著倒數鐘面
+// 路思義教堂：島上的地標造景（沒有點擊功能）。前後兩對弧形屋面（後面那對較高、較寬），
+// 兩片屋面在頂端留一道天窗縫，前後之間也留一道縫，正面是有橫格的玻璃立面，頂上有十字架
 function tileTex() {
   const cv = document.createElement("canvas"); cv.width = cv.height = 128; const c = cv.getContext("2d");
   c.fillStyle = "#D9B45E"; c.fillRect(0, 0, 128, 128);
@@ -364,18 +365,7 @@ function bClock(g) {
   face(Wr, H2, (s) => zR + 0.18 * s, glassTex(false));
   // 十字架
   box(ch, 0.06, 1.1, 0.06, 0x2a211c, 0, H2, zJ - 0.1); box(ch, 0.45, 0.06, 0.06, 0x2a211c, 0, H2 + 0.78, zJ - 0.1);
-  // 倒數鐘面立在門前
-  cyl(g, 0.07, 0.07, 0.9, C.dark, 2.05, 0.25, 1.7, 6);
-  const sign = textPlane(1.2, 1.2, (c, w, h) => {
-    const n = upcoming()[0], d = n ? daysLeft(n.at) : null;
-    c.fillStyle = "#FFFDF9"; c.beginPath(); c.arc(w / 2, h / 2, w / 2 - 6, 0, Math.PI * 2); c.fill();
-    c.lineWidth = 9; c.strokeStyle = "#2A211C"; c.stroke();
-    c.fillStyle = d !== null && d <= 3 ? "#C8443A" : "#2A211C"; c.textAlign = "center"; c.textBaseline = "middle";
-    c.font = `700 ${h * 0.3}px ${MONO}`; c.fillText(d === null ? "--" : d === 0 ? "今天" : "D-" + d, w / 2, h * 0.47);
-    c.fillStyle = "#C8623F"; c.font = `700 ${h * 0.12}px ${FONT}`; c.fillText("下個截止", w / 2, h * 0.75);
-  });
-  sign.position.set(2.05, 1.7, 1.75); g.add(sign);
-  g.userData.sign = sign; g.userData.h = H2 + 1.4;
+  g.userData.h = H2 + 1.4;
 }
 function bBoard(g) {
   [-1.3, 1.3].forEach((x) => box(g, 0.2, 2.6, 0.2, C.dark, x, 0, 0));
@@ -649,6 +639,29 @@ function tree(p, x, z, s, k) {
   if (k > 0.5) mesh(new THREE.SphereGeometry(0.42 * s, 12, 8), col, x - 0.4 * s, 1.6 * s, z - 0.15 * s, p);
 }
 const lamps = [];
+// 東海大學風格的路牌：深咖啡色木牌、米白字、白色箭頭、下方英文；白色柱子頂端有燈罩
+function signBoard(zh, en, dir, w = 2.3) {
+  return textPlane(w, 0.52, (c, W, H) => {
+    rr(c, 3, 3, W - 6, H - 6, 6); c.fillStyle = "#4E3328"; c.fill(); c.lineWidth = 4; c.strokeStyle = "#7A5A48"; c.stroke();
+    const ax = dir === "r" ? W - 46 : 46, ay = H * 0.42;
+    c.fillStyle = "#FFFFFF"; c.beginPath();
+    if (dir === "u") { c.moveTo(ax, ay - 22); c.lineTo(ax - 18, ay); c.lineTo(ax - 7, ay); c.lineTo(ax - 7, ay + 22); c.lineTo(ax + 7, ay + 22); c.lineTo(ax + 7, ay); c.lineTo(ax + 18, ay); }
+    else { const k = dir === "r" ? 1 : -1; c.moveTo(ax + 22 * k, ay); c.lineTo(ax, ay - 17); c.lineTo(ax, ay - 7); c.lineTo(ax - 22 * k, ay - 7); c.lineTo(ax - 22 * k, ay + 7); c.lineTo(ax, ay + 7); c.lineTo(ax, ay + 17); }
+    c.closePath(); c.fill();
+    const tx = dir === "r" ? 24 : 92;
+    c.textAlign = "left"; c.textBaseline = "middle"; c.fillStyle = "#F3E6C8"; c.font = `900 ${H * 0.44}px ${FONT}`; c.fillText(zh, tx, H * 0.38);
+    c.fillStyle = "#E8D9A8"; c.font = `700 ${H * 0.17}px ${FONT}`; c.fillText(en || "", tx, H * 0.78);
+  });
+}
+function signPost(boards, h = 3.4) {
+  const g = new THREE.Group();
+  cyl(g, 0.11, 0.13, h, 0xeeeae2, 0, 0, 0, 8);
+  const hat = mesh(new THREE.ConeGeometry(0.75, 0.28, 16, 1, true), mat(0xf4f1ea, { side: THREE.DoubleSide }), 0, h + 0.05, 0, g); hat.castShadow = true;
+  cyl(g, 0.2, 0.12, 0.25, 0xd9d4ca, 0, h - 0.2, 0, 8);
+  const L = boards.filter((b) => b.dir !== "r"), R = boards.filter((b) => b.dir === "r");
+  [[L, -1], [R, 1]].forEach(([list, k]) => list.forEach((b, i) => { const p = signBoard(b.zh, b.en, b.dir); p.position.set(k * 1.25, h - 0.55 - i * 0.58, 0.14); g.add(p); }));
+  return g;
+}
 function lampPost(p, x, z) {
   cyl(p, 0.07, 0.07, 1.2, 0x3d3530, x, 0, z, 6);
   const m = mat(0xfff6d8, { emissive: 0xffc77a, emissiveIntensity: 0 });
@@ -689,7 +702,7 @@ SPOKES.forEach((a) => radialRoad(a, 4.6, RO - 0.7));
 const mid = (k) => front + (k * 2 * Math.PI) / NM;
 const SPOT = {
   office: { a: mid(NM / 2), r: 7.4, build: bOffice },
-  deadlines: { a: mid(NM / 2 + 1), r: 7.2, build: bClock },
+  chapel: { a: mid(NM / 2 + 1), r: 7.2, build: bClock }, // 造景，不能點
   news: { a: mid(NM / 2 - 1), r: 7, build: bBoard },
   todo: { a: mid(NM - 1) + Math.PI / NM * 1.2, r: 7, build: bTodo },
   links: { a: front, r: R_ISLE * 0.95, build: bDock },
@@ -703,11 +716,18 @@ Object.entries(SPOT).forEach(([id, s]) => {
   g.rotation.y = id === "links" ? Math.atan2(Math.cos(s.a), Math.sin(s.a)) : FACE; // 碼頭沿 +z 伸向海面
   if (id === "office") g.scale.setScalar(0.85);
   center.add(g);
-  tag(g, { t: "spot", id });
+  if (id !== "chapel") tag(g, { t: "spot", id });
   centerObj[id] = g;
   s.pos = g.position.clone();
 });
 for (let k = 0; k < 8; k++) { const a = front + (k + 0.5) * Math.PI / 4; lampPost(center, Math.cos(a) * 5, Math.sin(a) * 5); }
+// 碼頭路口的指路牌：箭頭依各館在畫面上的左右方向
+const SIGN_POS = FACE_DIR.clone().multiplyScalar(RO + 2.4).add(new V3(FACE_DIR.z, 0, -FACE_DIR.x).multiplyScalar(-5));
+{
+  const right = new V3(Math.cos(FACE), 0, -Math.sin(FACE)), dirTo = (p) => (p.clone().sub(SIGN_POS).dot(right) > 0 ? "r" : "l");
+  const boards = [{ zh: "課外組", en: "Extracurricular Activities", dir: dirTo(new V3()) }, ...MAIN.map((d) => ({ zh: d.name, en: d.en, dir: dirTo(d.pos) })), ...ISLETS.map((I) => ({ zh: I.name, en: ISLET_EN[I.name], dir: dirTo(I.pos) }))];
+  const sp = signPost(boards, 3.4 + Math.max(0, Math.ceil(boards.length / 2) - 4) * 0.58); sp.position.copy(SIGN_POS); sp.rotation.y = FACE; world.add(sp);
+}
 
 /* ---- 各行政分類的建築區（沿外圈道路排列） ---- */
 ISL.forEach((d) => {
@@ -754,10 +774,9 @@ ISLETS.forEach((ISLET) => {
   [-0.82, 0.82].forEach((z) => { for (let k = 0; k <= 4; k++) { const x = -len / 2 + (k * len) / 4, y = Math.sin((k / 4) * Math.PI) * 0.35; cyl(bg, 0.07, 0.07, 0.7, rail, x, y - 0.05, z, 5); } mesh(new THREE.BoxGeometry(len, 0.08, 0.08), rail, 0, 0.6, z, bg); });
   [-len / 2 + 0.6, len / 2 - 0.6].forEach((x) => cyl(bg, 0.12, 0.12, 1.4, rail, x, -1.5, 0, 6));
   ISLET.bridge = { p0, p1, len };
-  // 小島入口的島名招牌
-  const sign = textPlane(2.6, 0.7, (c, w, h) => { rr(c, 4, 4, w - 8, h - 8, 20); c.fillStyle = "#2A211C"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.5}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(ISLET.name, w / 2, h / 2 + 2); });
-  const sg = new THREE.Group(); sg.position.copy(ISLET.entry.clone().lerp(ISLET.pos, 0.35)).add(new V3(-ISLET.dir.z, 0, ISLET.dir.x).multiplyScalar(1.4)); sg.rotation.y = FACE;
-  cyl(sg, 0.07, 0.07, 1.4, C.dark, -1, 0, 0, 5); cyl(sg, 0.07, 0.07, 1.4, C.dark, 1, 0, 0, 5); sign.position.set(0, 1.5, 0.05); sg.add(sign); world.add(sg);
+  // 小島入口的島名路牌（東海大學路牌風格）
+  const sg = signPost([{ zh: ISLET.name, en: ISLET_EN[ISLET.name] || "", dir: "u" }], 2.2);
+  sg.position.copy(ISLET.entry.clone().lerp(ISLET.pos, 0.35)).add(new V3(-ISLET.dir.z, 0, ISLET.dir.x).multiplyScalar(1.4)); sg.rotation.y = FACE; world.add(sg);
   // 兩館之間的小山，角色沿著山路往上爬
   const mtn = ISLET_MTN.has(ISLET.name) ? { pos: ISLET.pos.clone().add(ISLET.dir.clone().multiplyScalar(4.6)), R: 2.1, H: 3.2 } : null;
   if (mtn) {
@@ -794,6 +813,7 @@ ISLETS.forEach((ISLET) => {
     if (nearRadial(x, z, r)) continue;
     if (ISL.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.6)) continue;
     if (Object.values(SPOT).some((s) => Math.hypot(s.pos.x - x, s.pos.z - z) < 3)) continue;
+    if (Math.hypot(SIGN_POS.x - x, SIGN_POS.z - z) < 2.6) continue;
     tree(world, x, z, 0.7 + hash("ts" + i) * 0.55, hash("tk" + i)); n++;
   }
 }
@@ -1135,7 +1155,7 @@ function stamp(id, name) {
   if (stamps[id]) return;
   stamps[id] = Date.now(); LS.set("stamps", stamps);
   updHud(); buildLabels();
-  const n = Object.keys(stamps).length;
+  const n = stampCount();
   toast(`蓋章！${name}（${n}/${STAMPS.length}）`);
   if (n === STAMPS.length) { confetti(); setTimeout(() => talk("CONGRATS", [["全部蓋滿了！", `${me.name || "你"}已經走遍整座群島，是合格的新任幹部。之後有新公告或快到的截止日，島上會浮出菱形提醒，記得常回來看看。`, "好"]]), 900); }
 }
@@ -1184,10 +1204,10 @@ function stepCowFx(now) {
   if (k > 1.4) { cowFx.stars.forEach((s) => centerObj.todo.remove(s)); cow.position.y = 0.18; cow.rotation.y = 0; cowFx = null; }
 }
 function openSpot(id) {
-  if (id === "todo") return cowRemind();
+  if (id === "todo" || id === "deadlines") return cowRemind(); // 截止日清單由啊牛提醒
   touring = false;
   setSel(id);
-  ({ office: renderOffice, deadlines: renderDeadlines, news: renderNews, todo: () => renderDeadlines("todo"), links: renderLinks })[id]();
+  ({ office: renderOffice, news: renderNews, todo: () => renderDeadlines("todo"), links: renderLinks })[id]();
   focusOn(SPOT[id].pos, innerWidth < 600 ? 2.1 : 1.8);
   walkTo("C", () => stamp(id, CENTER_SPOTS.find((s) => s.id === id).name));
 }
@@ -1207,13 +1227,13 @@ function tourNext() {
 
 /* ---------------- 資訊抽屜 ---------------- */
 let panelView = null;
-const RAIL = { char: "bChar", list: "bList", deadlines: "bDl", [TASK_ISLE ? "isle:" + TASK_ISLE.key : "tasks"]: "bTodo", news: "bNews" };
+const RAIL = { char: "bChar", list: "bList", todo: "bDl", [TASK_ISLE ? "isle:" + TASK_ISLE.key : "tasks"]: "bTodo", news: "bNews" };
 function showSheet(view, html) {
   panelView = view;
   $("sbody").innerHTML = html;
   $("sheet").hidden = false; document.body.classList.add("sheeted");
   $("sbody").scrollTop = 0; $("toTop").hidden = true;
-  Object.entries(RAIL).forEach(([v, id]) => $(id).setAttribute("aria-pressed", String(view === v || (v === "char" && view.startsWith("char")) || (v === "deadlines" && view === "todo"))));
+  Object.entries(RAIL).forEach(([v, id]) => $(id).setAttribute("aria-pressed", String(view === v || (v === "char" && view.startsWith("char")))));
   try { history.replaceState(null, "", "#" + view.replace("isle:", "isle-").replace(/^char.*/, "me")); } catch {}
 }
 function closeSheet(keepSel) {
@@ -1326,9 +1346,9 @@ function renderOffice() {
     <div class="sec" id="o-isles"><h4>${ISL.length} 座行政館</h4>${placeItems()}</div>`;
   showSheet("office", html);
 }
-function renderDeadlines(view = "deadlines") {
-  const html = `${view === "todo" ? head("🐮", "SECRETARY · 小秘書啊牛", "截止日提醒") : head("⏰", "CHAPEL · 截止日", "截止提醒")}
-    <p class="lead">${view === "todo" ? "哞～我是小秘書啊牛！快到期的截止日都幫你記著。" : "所有分類的截止日都在這裡。"}</p>
+function renderDeadlines(view = "todo") {
+  const html = `${head("🐮", "SECRETARY · 小秘書啊牛", "截止日提醒")}
+    <p class="lead">哞～我是小秘書啊牛！所有分類快到期的截止日都幫你記著。</p>
     <p class="quote">7 天內轉黃、3 天內轉紅，對應的館上方也會浮出菱形提醒。</p>
     <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag(view)}</div>
     <div class="acts"><a class="btn t" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" data-ics="all">全部加入行事曆</button><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
@@ -1410,7 +1430,7 @@ function renderChar() {
       <div class="acts"><button class="btn big t" type="button" id="meDone">${me.club ? "完成，開始逛群島" : "先選一個身份"}</button></div>
       <p class="foot">角色只存在你自己的手機或電腦，不會上傳。</p>`;
   } else if (charTab === "trip") {
-    const n = Object.keys(stamps).length, t = D.onboarding.filter((x) => tasks[x]).length, mine = ISL.filter(myDuty);
+    const n = stampCount(), t = D.onboarding.filter((x) => tasks[x]).length, mine = ISL.filter(myDuty);
     body = `<div class="sec"><h4>幹部護照・${n} / ${STAMPS.length}</h4><div class="prog"><i style="width:${(n / STAMPS.length) * 100}%"></i></div>
       <div class="stamps">${STAMPS.map((s) => `<button type="button" class="stc ${stamps[s.id] ? "on" : ""}" data-stamp="${E(s.id)}"><i>${stamps[s.id] ? "THU" : s.no}</i>${E(s.name)}</button>`).join("")}</div>
       <div class="acts"><button class="btn big t ring" type="button" id="tourBtn">帶我逛一圈</button></div></div>
@@ -1439,7 +1459,7 @@ function shoot() {
   c.fillStyle = "#C8623F"; c.font = "900 54px Archivo, sans-serif"; c.fillText("CLUB ON.", 40, H + 72);
   c.fillStyle = "#2A211C"; c.font = `900 34px ${FONT}`; c.fillText(`${me.name || "我"}・${me.club || "體能性社團"}・${me.role}`, 40, H + 124);
   c.textAlign = "right"; c.fillStyle = "#7A6B60"; c.font = `700 24px ${FONT}`;
-  const p = tw(); c.fillText(`東海體能社團行政群島・集章 ${Object.keys(stamps).length}/${STAMPS.length}・${p.y}/${p.m}/${p.d}`, W - 40, H + 124);
+  const p = tw(); c.fillText(`東海體能社團行政群島・集章 ${stampCount()}/${STAMPS.length}・${p.y}/${p.m}/${p.d}`, W - 40, H + 124);
   lastPhoto = cv.toDataURL("image/png");
   renderChar();
 }
@@ -1513,7 +1533,7 @@ function checkNotify() {
 $("bHome").addEventListener("click", goHome);
 $("bChar").addEventListener("click", () => (panelView && panelView.startsWith("char") ? closeSheet() : openChar()));
 $("bList").addEventListener("click", () => (panelView === "list" ? closeSheet() : renderList()));
-$("bDl").addEventListener("click", () => (panelView === "deadlines" ? closeSheet() : openSpot("deadlines")));
+$("bDl").addEventListener("click", () => (panelView === "todo" ? closeSheet() : openSpot("todo")));
 $("bNews").addEventListener("click", () => (panelView === "news" ? closeSheet() : openSpot("news")));
 $("bTodo").addEventListener("click", () => (TASK_ISLE && panelView === "isle:" + TASK_ISLE.key ? closeSheet() : openTasks()));
 $("pOffice").addEventListener("click", () => openSpot("office"));
@@ -1529,7 +1549,7 @@ function updHud() {
   $("dlN").hidden = !soon; $("dlN").textContent = soon;
   const u = unread().length; $("newsN").hidden = !u; $("newsN").textContent = u;
   const tl = todoLeft(); $("todoN").hidden = !tl; $("todoN").textContent = tl;
-  const s = Object.keys(stamps).length; $("stampN").hidden = !s; $("stampN").textContent = `${s}/${STAMPS.length}`;
+  const s = stampCount(); $("stampN").hidden = !s; $("stampN").textContent = `${s}/${STAMPS.length}`;
 }
 let tkI = 0, tkCur = null;
 function tickerMsgs() {
@@ -1593,7 +1613,6 @@ function refreshTimed() {
   centerObj.office.userData.win.emissiveIntensity = open ? 0.25 + night * 0.6 : night * 0.12;
   lamps.forEach((m) => (m.emissiveIntensity = night * 1.2));
   centerObj.office.userData.sign.userData.redraw();
-  centerObj.deadlines.userData.sign.userData.redraw();
   centerObj.todo.userData.sign.userData.redraw();
   updHud(); updMarkers(); buildLabels();
 }
@@ -1661,7 +1680,7 @@ async function start() {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每一館是一類行政", `島上有 ${ISL.length} 座行政館，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `島的中央是課外組，旁邊有截止提醒（路思義教堂）、公告欄、小秘書啊牛（截止日提醒）和碼頭。社團行政任務放在社團行政館，完成可以打勾。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
+      ["中心是課外組", `島的中央是課外組，旁邊有路思義教堂、公告欄、小秘書啊牛（截止日提醒）和碼頭。社團行政任務放在社團行政館，完成可以打勾。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
       ["提醒會浮在館上", "館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的館，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
