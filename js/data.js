@@ -118,7 +118,7 @@ var SITE_DATA = {
     },
     {
       key: "經費", name: "經費館", en: "Club Funding Hall", icon: "💰", color: "#D9B24E", building: "bank",
-      // jump：上方跳到各段落的按鈕 [文字, 段落]；段落 i-s0、i-s1… 是 sections，i-g 攻略、i-dl 截止日、i-news 相關公告、i-duty 這一館在照顧誰
+      // jump：上方跳到各段落的按鈕 [文字, 段落]；段落 i-s0、i-s1… 是 sections，i-g 攻略、i-dl 截止日、i-news 相關公告
       jump: [["活動", "i-s0"], ["器材", "i-s1"], ["指導老師", "i-s2"], ["核銷攻略", "i-g"], ["提醒事項", "i-dl"], ["相關公告", "i-news"]],
       tagline: "補助申請與核銷，收據一張都不能錯。",
       // sections：島內分區；rules 是「相對期限」的提醒（例如活動結束後 2 週內），沒有固定日期所以不倒數
