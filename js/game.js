@@ -150,6 +150,7 @@ const SPOKES = MAIN.filter((d, i) => i % 2 === 0).map((d) => d.a);
 // 獨立小島：data.js 裡 islet 名稱相同的館放在同一座小島，以橋接到本島外圈道路
 // 小島方位（相對鏡頭正前方）；沒列在這裡的小島依序往外放
 const ISLET_AT = { "場地器材島": -Math.PI / 3, "活動島": (Math.PI * 8) / 9 };
+const ISLET_MTN = new Set(["活動島"]); // 島中央後方放一座登山的小山
 const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
   const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = 8;
   const pos = dir.clone().multiplyScalar(R_ISLE + r + 5.5);
@@ -442,16 +443,34 @@ function bStore(g) {
   cyl(sd, 0.1, 0.12, 0.5, soft(0xe8b04b), 0, 0, 0, 8); cyl(sd, 0.03, 0.03, 0.6, steel, 0, 0.5, 0, 6);
   g.userData.h = 3.4;
 }
-function bAid(g) {
-  box(g, 3, 1.9, 2.4, C.wall, 0, 0, 0);
-  box(g, 3.2, 0.3, 2.6, C.roof, 0, 1.9, 0);
-  box(g, 1, 0.3, 0.06, 0xc8443a, 0, 0.95, 1.22); box(g, 0.3, 1, 0.06, 0xc8443a, 0, 0.6, 1.22);
-  box(g, 0.5, 0.6, 0.25, 0x5f8f5a, 1.9, 0.4, 0.6);
-  g.userData.h = 3.3;
-}
 // 館內的小角色（坐著或站著）
 const mini = (p, o, s, x, y, z, ry = 0) => { const m = person(o); m.scale.setScalar(s); m.position.set(x, y, z); m.rotation.y = ry; p.add(m); return m; };
 const MINI = [["#E8B04B", "#3B2E26"], ["#6E8FB5", "#55463A"], ["#5F8F5A", "#2A211C"], ["#C97A8F", "#7A4B2E"], ["#9C83B5", "#3B2E26"], ["#D98B4E", "#2A211C"]].map(([shirt, hair]) => ({ shirt, hair, skin: "#F1CDB0" }));
+// 活動安全館：活動現場的急救站（白色帳篷、紅十字旗、擔架、急救箱與救護人員）
+function bAid(g) {
+  box(g, 3.6, 0.12, 2.8, 0xe2d6c3, 0, 0, 0);
+  const red = soft(0xc8443a), white = soft(0xfbfaf6), pole = soft(0xd9d2c5);
+  [[-1.3, -0.9], [1.3, -0.9], [-1.3, 0.9], [1.3, 0.9]].forEach(([x, z]) => cyl(g, 0.05, 0.05, 1.7, pole, x, 0.12, z, 6));
+  const top = cone(g, 2.05, 0.75, white, 0, 1.82, 0, 4); top.rotation.y = Math.PI / 4; top.scale.set(1, 1, 0.72);
+  box(g, 2.7, 0.22, 0.03, red, 0, 1.6, 0.92); box(g, 2.7, 0.22, 0.03, red, 0, 1.6, -0.92);
+  const sign = textPlane(1.6, 0.38, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 12); c.fillStyle = "#FFFDF9"; c.fill(); c.fillStyle = "#C8443A"; c.font = `900 ${h * 0.6}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("✚ 急救站", w / 2, h / 2 + 2); });
+  sign.position.set(0, 1.71, 0.94); g.add(sign);
+  // 桌上的急救箱、旁邊的擔架、救護人員
+  box(g, 1.1, 0.06, 0.5, C.wood, -0.6, 0.62, -0.45); [[-1.05, -0.65], [-0.15, -0.65], [-1.05, -0.25], [-0.15, -0.25]].forEach(([x, z]) => box(g, 0.05, 0.5, 0.05, C.dark, x, 0.12, z));
+  box(g, 0.42, 0.28, 0.26, white, -0.75, 0.68, -0.45); box(g, 0.2, 0.06, 0.27, red, -0.75, 0.8, -0.45); box(g, 0.06, 0.2, 0.27, red, -0.75, 0.75, -0.45);
+  box(g, 0.24, 0.3, 0.24, soft(0x6e8fb5), -0.25, 0.68, -0.5);
+  const st = new THREE.Group(); st.position.set(0.55, 0.12, 0.35); st.rotation.y = 0.25; g.add(st);
+  [-0.22, 0.22].forEach((x) => { cyl(st, 0.03, 0.03, 1.6, pole, x, 0.25, 0, 6).rotation.x = Math.PI / 2; [-0.6, 0.6].forEach((z) => box(st, 0.04, 0.22, 0.04, pole, x, 0, z)); });
+  box(st, 0.42, 0.03, 1.3, soft(0xd9874e), 0, 0.24, 0);
+  const medic = mini(g, { shirt: "#FBFAF6", hair: "#3B2E26", skin: "#F3D2B8", prop: "kit" }, 0.6, 0.6, 0.12, -0.45);
+  box(medic, 0.3, 0.1, 0.02, 0xc8443a, 0, 0.82, 0.31); box(medic, 0.1, 0.3, 0.02, 0xc8443a, 0, 0.72, 0.31);
+  g.userData.bob = [medic];
+  // 紅十字旗
+  cyl(g, 0.04, 0.04, 2.6, pole, 1.65, 0.12, 0.95, 6);
+  const flag = textPlane(0.7, 0.48, (c, w, h) => { c.fillStyle = "#FFFDF9"; c.fillRect(0, 0, w, h); c.fillStyle = "#C8443A"; c.fillRect(w * 0.42, h * 0.15, w * 0.16, h * 0.7); c.fillRect(w * 0.27, h * 0.38, w * 0.46, h * 0.24); });
+  flag.position.set(2.0, 2.45, 0.95); g.add(flag);
+  g.userData.h = 3.2;
+}
 // 期初會議館：小學教室的課桌椅，大家面對面開會，老師在黑板前說明
 function bHall(g) {
   box(g, 3.9, 0.15, 3.1, 0xe2c79c, 0, 0, 0);
@@ -715,6 +734,7 @@ ISL.forEach((d) => {
 });
 
 /* ---- 獨立小島與橋 ---- */
+const hikers = [];
 ISLETS.forEach((ISLET) => {
   const g = new THREE.Group(); g.position.copy(ISLET.pos); world.add(g);
   const L = landmass(g, ISLET.r, 4.2);
@@ -738,9 +758,23 @@ ISLETS.forEach((ISLET) => {
   const sign = textPlane(2.6, 0.7, (c, w, h) => { rr(c, 4, 4, w - 8, h - 8, 20); c.fillStyle = "#2A211C"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.5}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText(ISLET.name, w / 2, h / 2 + 2); });
   const sg = new THREE.Group(); sg.position.copy(ISLET.entry.clone().lerp(ISLET.pos, 0.35)).add(new V3(-ISLET.dir.z, 0, ISLET.dir.x).multiplyScalar(1.4)); sg.rotation.y = FACE;
   cyl(sg, 0.07, 0.07, 1.4, C.dark, -1, 0, 0, 5); cyl(sg, 0.07, 0.07, 1.4, C.dark, 1, 0, 0, 5); sign.position.set(0, 1.5, 0.05); sg.add(sign); world.add(sg);
+  // 兩館之間的小山，角色沿著山路往上爬
+  const mtn = ISLET_MTN.has(ISLET.name) ? { pos: ISLET.pos.clone().add(ISLET.dir.clone().multiplyScalar(4.6)), R: 2.1, H: 3.2 } : null;
+  if (mtn) {
+    const mg = new THREE.Group(); mg.position.copy(mtn.pos); world.add(mg);
+    cone(mg, mtn.R, mtn.H, soft(0x7fb35a), 0, 0, 0, 9).rotation.y = 0.3;
+    cone(mg, mtn.R * 0.42, mtn.H * 0.42, soft(0x9a9184), 0, mtn.H * 0.58, 0, 7);
+    for (let k = 0; k < 18; k++) { const q = k / 18, a = q * Math.PI * 5, y = q * mtn.H * 0.86, rr2 = mtn.R * (1 - y / mtn.H) + 0.03; const st = box(mg, 0.34, 0.04, 0.22, 0xd9b98a, Math.cos(a) * rr2, y, Math.sin(a) * rr2); st.rotation.y = -a; }
+    cyl(mg, 0.03, 0.03, 0.7, 0xdddddd, 0, mtn.H - 0.05, 0, 4); box(mg, 0.4, 0.26, 0.02, 0xc8443a, 0.2, mtn.H + 0.38, 0);
+    [0.15, 0.55].forEach((q0, k) => { const h = person({ shirt: ["#5F8F5A", "#E8B04B"][k], hair: "#3B2E26", skin: "#F1CDB0", prop: "backpack" }); h.scale.setScalar(0.42); mg.add(h); hikers.push({ h, q0, m: mtn }); });
+    tag(mg, { t: "isle", i: ISLET.halls[0].i });
+  }
   for (let i = 0, k = 0; i < 120 && k < 10; i++) {
     const a = hash("it" + ISLET.name + i) * Math.PI * 2, r = 2 + hash("ir" + ISLET.name + i) * (ISLET.r * 0.82 - 2), x = ISLET.pos.x + Math.cos(a) * r, z = ISLET.pos.z + Math.sin(a) * r;
     if (ISLET.halls.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.4) || Math.hypot(ISLET.pos.x - x, ISLET.pos.z - z) < 1.8) continue;
+    // 不要種在館的正前方（鏡頭那一側），以免擋住建築
+    if (ISLET.halls.some((d) => { const v = new V3(x - d.pos.x, 0, z - d.pos.z), f = v.dot(FACE_DIR); return f > -0.5 && f < 7 && Math.abs(v.x * FACE_DIR.z - v.z * FACE_DIR.x) < 3; })) continue;
+    if (mtn && Math.hypot(mtn.pos.x - x, mtn.pos.z - z) < mtn.R + 0.9) continue;
     const toE = new V3(x, 0, z).sub(ISLET.pos), along = toE.dot(ISLET.dir.clone().negate()); if (along > 0 && Math.abs(toE.clone().cross(ISLET.dir).y) < 1.4) continue;
     tree(world, x, z, 0.65 + hash("is" + i) * 0.4, hash("ik" + i)); k++;
   }
@@ -1583,6 +1617,7 @@ function loop(now) {
       (u.bob || []).forEach((m, k) => (m.position.y = 0.15 + (u.jump ? Math.abs(Math.sin(t * 5 + k * 1.3)) * 0.28 : Math.abs(Math.sin(t * 2 + k)) * 0.03)));
       (u.papers || []).forEach((p) => { const q = (t * 0.45 + p.userData.k / 3) % 1; p.position.set(-0.45 + q * 1.4, 1.1 + Math.sin(q * Math.PI) * 0.9, 0.05); p.rotation.set(q * 6, q * 3, 0); }); d.marker.rotation.y += dt * 1.5; d.marker.position.y = d.build.userData.h + 1.6 + Math.sin(t * 2.4 + d.i) * 0.15; });
     newsMarker.rotation.y += dt * 1.5;
+    hikers.forEach(({ h, q0, m }) => { const q = (t * 0.035 + q0) % 1, a = q * Math.PI * 5, y = q * m.H * 0.86, r = m.R * (1 - y / m.H) + 0.12; h.position.set(Math.cos(a) * r, y + Math.abs(Math.sin(t * 8 + q0 * 9)) * 0.04, Math.sin(a) * r); h.rotation.y = -a; });
     const boat = centerObj.links.userData.boat; boat.position.y = -1.15 + Math.sin(t * 1.4) * 0.08; boat.rotation.z = Math.sin(t * 1.1) * 0.05;
     teacher.position.y = Math.abs(Math.sin(t * 2)) * 0.03;
     const og = centerObj.office.userData; og.giant.rotation.y = Math.sin(t * 0.6) * 0.12; og.cats.forEach((c, k) => (c.userData.tail.rotation.z = -0.4 + Math.sin(t * 1.5 + k) * 0.25));
