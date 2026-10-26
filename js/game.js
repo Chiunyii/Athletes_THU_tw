@@ -92,7 +92,7 @@ const isleNews = (d) => anns.filter((a) => a.tag === d.key);
 const lvl = (n) => (n <= 3 ? "hot" : n <= 7 ? "warn" : "ok");
 const CENTER_SPOTS = [
   { id: "office", no: "00", name: "課外組峮老師", icon: "🏛" },
-  { id: "news", no: "✎", name: "公告欄", icon: "📌" },
+  { id: "news", no: "✎", name: "公告欄", icon: "📣" },
   { id: "todo", no: "◷", name: "啊牛提醒", icon: "🐮" },
   { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
 ];
@@ -1441,7 +1441,7 @@ function taskBlock(sem) {
     <p class="foot">打勾紀錄與公告閱讀狀態會自動記在這台手機或電腦的瀏覽器裡，下次打開連結會接著顯示，不會重來（換裝置或清除瀏覽紀錄才會重新開始）。標示「連結待補」的按鈕，課外組補上連結後就能點。</p>`;
 }
 function renderNews() {
-  const html = `${head("📌", "BULLETIN · 公告", "公告欄")}<p class="lead">學期間的行政公告都貼在這裡。</p><div class="tags"><span class="tag">${anns.length} 則公告</span>${unread().length ? `<span class="tag c" style="--c:#C8443A">${unread().length} 則未讀</span>` : ""}${stampTag("news")}</div><div class="sec"><h4>最新公告</h4>${newsItems(anns)}</div>`;
+  const html = `${head("📣", "BULLETIN · 公告", "公告欄")}<p class="lead">學期間的行政公告都貼在這裡。</p><div class="tags"><span class="tag">${anns.length} 則公告</span>${unread().length ? `<span class="tag c" style="--c:#C8443A">${unread().length} 則未讀</span>` : ""}${stampTag("news")}</div><div class="sec"><h4>最新公告</h4>${newsItems(anns)}</div>`;
   showSheet("news", html);
   markRead(anns);
 }
