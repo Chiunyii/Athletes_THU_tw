@@ -97,7 +97,7 @@ a { color: var(--terra); }
 .hours { margin: 0; font-size: 15px; font-weight: 500; color: #5B4B40; }
 .jump { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .jump .btn { justify-content: center; padding: 11px 10px; font-size: 14px; border-radius: 14px; }
-#toTop { position: absolute; right: 16px; bottom: calc(16px + var(--sb)); z-index: 2; padding: 11px 16px; border-radius: 999px; box-shadow: 0 6px 18px rgba(42,33,28,.28); }
+#toTop { position: absolute; right: 16px; bottom: calc(16px + var(--sb)); z-index: 2; width: 48px; height: 48px; padding: 0; justify-content: center; border-radius: 50%; font-size: 20px; box-shadow: 0 6px 18px rgba(42,33,28,.28); }
 .sec { scroll-margin-top: 12px; }
 .tag.c { background: color-mix(in srgb, var(--c) 16%, white); }
 .tag.c::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
@@ -250,7 +250,7 @@ mark { background: #FBE2B5; color: inherit; border-radius: 3px; padding: 0 1px; 
   <div class="grab" aria-hidden="true"></div>
   <button class="x" id="sx" type="button" aria-label="關閉">✕</button>
   <div id="sbody"></div>
-  <button class="btn" id="toTop" type="button" hidden aria-label="回到最頂">⬆ 回到最頂</button>
+  <button class="btn" id="toTop" type="button" hidden aria-label="回到最頂" title="回到最頂">⬆</button>
 </section>
 
 <div id="modal" hidden>
