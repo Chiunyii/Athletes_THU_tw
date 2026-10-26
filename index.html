@@ -201,7 +201,9 @@ mark { background: #FBE2B5; color: inherit; border-radius: 3px; padding: 0 1px; 
 }
 @media (max-width: 899px) {
   body.sheeted #status, body.sheeted #ticker { visibility: hidden; }
-  body.sheeted #rail .rb:not([aria-pressed="true"]):not(#bHome) { visibility: hidden; }
+  /* 手機：打開資訊抽屜時整排懸浮按鈕都收起來，才不會擋住關閉鈕 */
+  #rail { z-index: 5; }
+  body.sheeted #rail { visibility: hidden; }
   #brand { padding: 11px 15px; gap: 2px 12px; }
   #brand .w { font-size: 26px; }
   #brand .t b { font-size: 15px; letter-spacing: .04em; }
