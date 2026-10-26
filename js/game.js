@@ -80,6 +80,8 @@ let tasks = LS.get("tasks", {});
 const unread = () => anns.filter((a) => !read.includes(a.id));
 const CLUBS = D.clubs || [];
 const ROLES = D.roles || ["社長", "幹部", "社員"];
+// 每種行政分類主要由哪些職位負責（用來提醒「這是你的事」）
+const DUTY = { 會議: ["社長", "副社長", "幹部", "輔導老師"], 行政: ["社長", "副社長"], 活動: ["社長", "活動長", "輔導老師"], 經費: ["社長", "財務", "輔導老師"], 場地: ["活動長", "器材長"], 安全: ["社長", "副社長", "活動長", "幹部", "輔導老師"], 器材: ["器材長", "幹部"], 評鑑: ["社長", "公關"] };
 
 const ISL = D.islands.map((d, i) => ({ ...d, i, no: pad2(i + 1), guides: D.guides.filter((g) => g.island === d.key) }));
 const isleOf = (key) => ISL.find((d) => d.key === key);
@@ -109,6 +111,7 @@ const SHIRTS = ["#C8623F", "#3E6E9E", "#5F8F5A", "#E8B04B", "#7E5A9B", "#2A211C"
 const HAIRS = ["#2B2118", "#5A3B28", "#8A5A3B", "#C9A36A", "#1F2A44"];
 const SKINS = ["#F6D7BE", "#E9BC98", "#C98E66", "#8E5B3C"];
 let me = Object.assign({ name: "", club: "", role: "社員", shirt: SHIRTS[1], hair: HAIRS[0], skin: SKINS[0] }, LS.get("me", {}));
+const myDuty = (d) => !!me.club && (DUTY[d.key] || []).includes(me.role);
 const myProp = () => (CLUBS.find((c) => c.name === me.club) || {}).prop;
 
 /* ---------------- Three.js 基本 ---------------- */
@@ -1071,7 +1074,8 @@ function sectionsHtml(d) {
 }
 const sectionText = (d) => (d.sections || []).flatMap((s) => [s.title, ...(s.rules || []).flatMap((r) => [r.when, r.title, r.note, r.prep, ...(r.files || [])])]).filter(Boolean);
 function renderIsle(d, keepScroll) {
-  const dl = isleDl(d), news = isleNews(d), steps = d.guides.reduce((n, g) => n + g.steps.length, 0);
+  const dl = isleDl(d), news = isleNews(d), steps = d.guides.reduce((n, g) => n + g.steps.length, 0), duty = DUTY[d.key] || [];
+  const mine = (r) => me.club && me.role === r;
   const st = $("sbody").scrollTop;
   const html = `${head(d.icon, `HALL ${d.no} · ${E(d.key)}`, d.name)}
     <p class="lead">${E(d.guides[0]?.title || d.tagline)}</p>
@@ -1083,6 +1087,7 @@ function renderIsle(d, keepScroll) {
     ${dl.length || !d.sections?.length ? `<div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>` : ""}
     ${isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政任務</h4>${todoItems(isleTodos(d))}</div>` : ""}
     <div class="sec"><h4>相關公告</h4>${newsItems(news)}</div>
+    <div class="sec"><h4>這一館在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
     <p class="foot">還有問題？請在辦公時間到中央的課外組詢問。</p>`;
   showSheet("isle:" + d.key, html);
   if (keepScroll) $("sbody").scrollTop = st;
@@ -1090,7 +1095,7 @@ function renderIsle(d, keepScroll) {
 }
 function placeItems(filter) {
   return '<ul class="items">' + ISL.filter((d) => !filter || filter(d)).map((d) => { const n = isleDl(d)[0], k = n ? daysLeft(n.at) : null;
-    return `<li class="item" style="--c:${d.color}"><button type="button" data-isle="${d.i}"><span class="dot"></span><span class="nm">${noTag(d.no)}${E(d.name)}<small>${E(d.tagline)}</small></span><span class="meta ${k !== null ? lvl(k) : ""}">${k !== null ? "D-" + k : ""}${stamps["isle:" + d.key] ? " ✓" : ""}</span><span class="chev">›</span></button></li>`; }).join("") + "</ul>";
+    return `<li class="item ${myDuty(d) ? "hl" : ""}" style="--c:${d.color}"><button type="button" data-isle="${d.i}"><span class="dot"></span><span class="nm">${noTag(d.no)}${E(d.name)}<small>${E(d.tagline)}${myDuty(d) ? "・你的職責" : ""}</small></span><span class="meta ${k !== null ? lvl(k) : ""}">${k !== null ? "D-" + k : ""}${stamps["isle:" + d.key] ? " ✓" : ""}</span><span class="chev">›</span></button></li>`; }).join("") + "</ul>";
 }
 function renderOffice() {
   const st = officeStatus(), p = tw(), slots = D.office.hours.slots.map((s) => s.join("–")).join("、");
@@ -1110,10 +1115,10 @@ function renderOffice() {
       <button class="btn g" type="button" data-jump="o-isles">🏛 各行政館</button>
     </div>
     <div class="tags">${stampTag("office")}</div>
-    <div class="sec" id="o-hours"><h4>本週辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
-    <div class="sec" id="o-map"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : ""}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div>${D.office.mapUrl ? "" : '<p class="foot">Google 地圖導航建置中。</p>'}</div>
-    <div class="sec" id="o-tips"><h4>洽公小提醒</h4><ul class="items">${D.office.tips.map((t) => `<li class="item"><div class="row"><span class="dot"></span><span class="nm">${E(t)}</span><span></span><span></span></div></li>`).join("")}</ul></div>
-    <div class="sec" id="o-isles"><h4>${ISL.length} 座行政館</h4>${placeItems()}</div>`;
+    <div class="sec" id="o-hours"><h4>本週辦公時間</h4><table class="week"><tbody>${rows}</tbody></table><button class="btn g totop" type="button" data-jump="top">⬆ 回到最頂</button></div>
+    <div class="sec" id="o-map"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : ""}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div>${D.office.mapUrl ? "" : '<p class="foot">Google 地圖導航建置中。</p>'}<button class="btn g totop" type="button" data-jump="top">⬆ 回到最頂</button></div>
+    <div class="sec" id="o-tips"><h4>洽公小提醒</h4><ul class="items">${D.office.tips.map((t) => `<li class="item"><div class="row"><span class="dot"></span><span class="nm">${E(t)}</span><span></span><span></span></div></li>`).join("")}</ul><button class="btn g totop" type="button" data-jump="top">⬆ 回到最頂</button></div>
+    <div class="sec" id="o-isles"><h4>${ISL.length} 座行政館</h4>${placeItems()}<button class="btn g totop" type="button" data-jump="top">⬆ 回到最頂</button></div>`;
   showSheet("office", html);
 }
 function renderDeadlines() {
@@ -1203,10 +1208,11 @@ function renderChar() {
       <div class="acts"><button class="btn big t" type="button" id="meDone">${me.club ? "完成，開始逛群島" : "先選一個身份"}</button></div>
       <p class="foot">角色只存在你自己的手機或電腦，不會上傳。</p>`;
   } else if (charTab === "trip") {
-    const n = Object.keys(stamps).length, t = D.onboarding.filter((x) => tasks[x]).length;
+    const n = Object.keys(stamps).length, t = D.onboarding.filter((x) => tasks[x]).length, mine = ISL.filter(myDuty);
     body = `<div class="sec"><h4>幹部護照・${n} / ${STAMPS.length}</h4><div class="prog"><i style="width:${(n / STAMPS.length) * 100}%"></i></div>
       <div class="stamps">${STAMPS.map((s) => `<button type="button" class="stc ${stamps[s.id] ? "on" : ""}" data-stamp="${E(s.id)}"><i>${stamps[s.id] ? "THU" : s.no}</i>${E(s.name)}</button>`).join("")}</div>
       <div class="acts"><button class="btn big t ring" type="button" id="tourBtn">帶我逛一圈</button></div></div>
+      ${mine.length ? `<div class="sec"><h4>${E(me.role)}要特別注意的館</h4>${placeItems(myDuty)}</div>` : ""}
       <div class="sec"><h4>新任幹部上任清單・<span id="taskN">${t}/${D.onboarding.length}</span></h4><ul class="tasks">${D.onboarding.map((x, i) => `<li><label for="task${i}"><input type="checkbox" id="task${i}" data-task="${i}" ${tasks[x] ? "checked" : ""}><span>${E(x)}</span></label></li>`).join("")}</ul></div>
       <div class="acts"><button class="btn g" type="button" id="resetSt">清除所有印章</button></div>`;
   } else {
@@ -1239,6 +1245,7 @@ $("sbody").addEventListener("input", (e) => { if (e.target.id === "meName") { me
 $("sbody").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.hasAttribute("aria-expanded") && b.parentElement.classList.contains("item")) { const open = b.getAttribute("aria-expanded") !== "true"; b.setAttribute("aria-expanded", open); const m = b.nextElementSibling; if (m) m.hidden = !open; return; }
+  if (b.dataset.jump === "top") { $("sbody").scrollTo({ top: 0, behavior: RM ? "auto" : "smooth" }); return; }
   if (b.dataset.jump) { const el = $(b.dataset.jump); if (el) el.scrollIntoView({ behavior: RM ? "auto" : "smooth", block: "start" }); return; }
   if (b.dataset.isle !== undefined) return openIsle(+b.dataset.isle);
   if (b.dataset.spot) return openSpot(b.dataset.spot);
@@ -1324,6 +1331,7 @@ function updHud() {
 let tkI = 0, tkCur = null;
 function tickerMsgs() {
   const m = [], st = officeStatus();
+  ISL.filter(myDuty).forEach((d) => { const n = isleDl(d)[0]; if (n) m.push({ t: `${me.role}注意：${d.name}「${n.title}」還有 ${daysLeft(n.at)} 天`, go: () => openIsle(d.i) }); });
   upcoming().slice(0, 3).forEach((x) => { const d = isleOf(x.category); m.push({ t: `${d ? d.name + "：" : ""}「${x.title}」還有 ${daysLeft(x.at)} 天`, go: () => (d ? openIsle(d.i) : openSpot("deadlines")) }); });
   if (unread().length) m.push({ t: `公告欄有 ${unread().length} 則新公告`, go: () => openSpot("news") });
   if (todoLeft()) m.push({ t: `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務`, go: unlockTasks });
@@ -1447,7 +1455,7 @@ async function start() {
       ["每一館是一類行政", `島上有 ${ISL.length} 座行政館，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
       ["中心是課外組", `島的中央是課外組，旁邊有截止日鐘塔、公告欄、小秘書啊牛和碼頭。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
       ["提醒會浮在館上", "館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
-      ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具在島上走動，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
+      ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的館，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
   }
 }
