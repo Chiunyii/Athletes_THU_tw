@@ -1016,7 +1016,7 @@ function showSheet(view, html) {
   panelView = view;
   $("sbody").innerHTML = html;
   $("sheet").hidden = false; document.body.classList.add("sheeted");
-  $("sbody").scrollTop = 0;
+  $("sbody").scrollTop = 0; $("toTop").hidden = true;
   Object.entries(RAIL).forEach(([v, id]) => $(id).setAttribute("aria-pressed", String(view === v || (v === "char" && view.startsWith("char")))));
   try { history.replaceState(null, "", "#" + view.replace("isle:", "isle-").replace(/^char.*/, "me")); } catch {}
 }
@@ -1027,6 +1027,9 @@ function closeSheet(keepSel) {
   try { history.replaceState(null, "", location.pathname + location.search); } catch {}
 }
 $("sx").addEventListener("click", () => closeSheet());
+// 懸浮「回到最頂」：資訊抽屜往下捲才出現
+$("sbody").addEventListener("scroll", () => { $("toTop").hidden = $("sbody").scrollTop < 200; }, { passive: true });
+$("toTop").addEventListener("click", () => $("sbody").scrollTo({ top: 0, behavior: RM ? "auto" : "smooth" }));
 addEventListener("keydown", (e) => { if (e.key === "Escape") { if (!$("modal").hidden) endTalk(true); else closeSheet(); } });
 const head = (tile, kick, title) => `<div class="sh"><div class="tile">${tile}</div><div><div class="kick">${kick}</div><h2>${E(title)}</h2></div></div>`;
 const stampTag = (id) => (stamps[id] ? '<span class="tag ok">✓ 已蓋章</span>' : '<span class="tag">走到這裡可蓋章</span>');
@@ -1115,10 +1118,10 @@ function renderOffice() {
       <button class="btn g" type="button" data-jump="o-isles">🏛 各行政館</button>
     </div>
     <div class="tags">${stampTag("office")}</div>
-    <div class="sec" id="o-hours"><h4>本週辦公時間</h4><table class="week"><tbody>${rows}</tbody></table><button class="btn g totop" type="button" data-jump="top">⬆ 回到最頂</button></div>
-    <div class="sec" id="o-map"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : ""}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div>${D.office.mapUrl ? "" : '<p class="foot">Google 地圖導航建置中。</p>'}<button class="btn g totop" type="button" data-jump="top">⬆ 回到最頂</button></div>
-    <div class="sec" id="o-tips"><h4>洽公小提醒</h4><ul class="items">${D.office.tips.map((t) => `<li class="item"><div class="row"><span class="dot"></span><span class="nm">${E(t)}</span><span></span><span></span></div></li>`).join("")}</ul><button class="btn g totop" type="button" data-jump="top">⬆ 回到最頂</button></div>
-    <div class="sec" id="o-isles"><h4>${ISL.length} 座行政館</h4>${placeItems()}<button class="btn g totop" type="button" data-jump="top">⬆ 回到最頂</button></div>`;
+    <div class="sec" id="o-hours"><h4>本週辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
+    <div class="sec" id="o-map"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : ""}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div>${D.office.mapUrl ? "" : '<p class="foot">Google 地圖導航建置中。</p>'}</div>
+    <div class="sec" id="o-tips"><h4>洽公小提醒</h4><ul class="items">${D.office.tips.map((t) => `<li class="item"><div class="row"><span class="dot"></span><span class="nm">${E(t)}</span><span></span><span></span></div></li>`).join("")}</ul></div>
+    <div class="sec" id="o-isles"><h4>${ISL.length} 座行政館</h4>${placeItems()}</div>`;
   showSheet("office", html);
 }
 function renderDeadlines() {
