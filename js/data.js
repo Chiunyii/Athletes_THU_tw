@@ -5,7 +5,7 @@
  * 日期格式一律寫成 "YYYY-MM-DD"，時間可加 "HH:MM"（24 小時制）
  * 例如： "2026-11-20"  或  "2026-11-20 17:00"
  *
- * 截止提醒＝deadlines ＋ 公告中有 due 的項目；已過期的會自動隱藏。
+ * 截止日提醒（啊牛）＝deadlines ＋ 公告中有 due 的項目；已過期的會自動隱藏。
  * ========================================================= */
 var SITE_DATA = {
   // 學期名稱，顯示在頁首
@@ -220,7 +220,7 @@ var SITE_DATA = {
   announcements: [
     // 格式：{ id, date（可省略，YYYY-MM-DD）, pinned, tag（對應島的 key，例如 "經費"）, title, body（可省略）, link（課外組公告網址）}
     // 列表依這裡的順序顯示（置頂的排最前面），最新的請加在最上面
-    // 公告有截止日時加上 due（同截止日格式），會自動出現在截止提醒；可另寫 dueTitle 作為截止提醒上的名稱
+    // 公告有截止日時加上 due（同截止日格式），會自動出現在截止日提醒；可另寫 dueTitle 作為截止日提醒上的名稱
     // 一則公告有好幾個期限時改用 dues: [{ due, title, link（可省略）}, ...]
     {
       id: "a-1151-1866", tag: "評鑑",
@@ -457,7 +457,7 @@ var SITE_DATA = {
   ],
 };
 
-// 截止提醒用：deadlines 加上公告中有 due 的項目（自動加入，不必重複填寫）
+// 截止日提醒用：deadlines 加上公告中有 due 的項目（自動加入，不必重複填寫）
 SITE_DATA.allDeadlines = function () {
   var fromNews = [];
   SITE_DATA.announcements.forEach(function (a) {
