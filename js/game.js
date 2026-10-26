@@ -1,5 +1,5 @@
 /* 體能社團行政群島：Three.js
- * 大島中央 = 課外組（辦公室、截止日鐘塔、公告欄、小秘書啊牛、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
+ * 大島中央 = 課外組（辦公室、任務提醒、公告欄、小秘書啊牛、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
  * 玩家可以（選填）建立角色：身份、職位、外觀；角色會沿著島上的道路走到各館蓋章。
  * 內容全部來自 js/data.js；這個檔案只負責群島、角色與資訊卡。 */
 import * as THREE from "three";
@@ -92,7 +92,7 @@ const isleNews = (d) => anns.filter((a) => a.tag === d.key);
 const lvl = (n) => (n <= 3 ? "hot" : n <= 7 ? "warn" : "ok");
 const CENTER_SPOTS = [
   { id: "office", no: "00", name: "課外組", icon: "🏛" },
-  { id: "deadlines", no: "◷", name: "截止日鐘塔", icon: "⏰" },
+  { id: "deadlines", no: "◷", name: "任務提醒", icon: "⏰" },
   { id: "news", no: "✎", name: "公告欄", icon: "📌" },
   { id: "todo", no: "✓", name: "小秘書啊牛", icon: "🐮" },
   { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
@@ -316,7 +316,7 @@ function bOffice(g) {
   sign.position.set(0, 0.95, 2.4); g.add(sign);
   g.userData.sign = sign; g.userData.h = 6.5;
 }
-// 截止日鐘塔：以路思義教堂的造型呈現。前後兩對弧形屋面（後面那對較高、較寬），
+// 任務提醒（截止日）：以路思義教堂的造型呈現。前後兩對弧形屋面（後面那對較高、較寬），
 // 兩片屋面在頂端留一道天窗縫，前後之間也留一道縫；正面是有橫格的玻璃立面，頂上有十字架，門前立著倒數鐘面
 function tileTex() {
   const cv = document.createElement("canvas"); cv.width = cv.height = 128; const c = cv.getContext("2d");
@@ -345,12 +345,12 @@ function surf(f, nu, ns, m, parent, flip) {
 function bClock(g) {
   cyl(g, 2.9, 3, 0.25, 0xe2d6c3, 0, 0, 0, 24);
   const tx = tileTex(), tiles = new THREE.MeshStandardMaterial({ map: tx, emissiveMap: tx, emissive: 0xffffff, emissiveIntensity: 0.22, roughness: 0.6, side: THREE.DoubleSide });
-  const ch = new THREE.Group(); ch.position.set(0, 0.25, 0); ch.rotation.y = -0.5; g.add(ch); // 斜放，看得到正面玻璃與側面屋面
+  const ch = new THREE.Group(); ch.position.set(0, 0.25, -0.2); g.add(ch); // 正面朝鏡頭，與正立面圖一致
   const GAP = 0.06, P = 1.8, H1 = 3.05, H2 = 3.5, Wf = 0.75, Wj = 2.25, Wr = 0.8;
-  const zF = 1.75, zJ = -0.45, zR = -1.65, SET = 0.4; // 正面、前後交接處、背面；正面頂端往後退
+  const zF = 1.75, zJ = -0.45, zR = -1.65; // 正面、前後交接處、背面
   const half = (w, s) => GAP + w * Math.pow(1 - s, P);
-  // 前面那對：前窄後寬，頂高 H1；正面邊緣由下往上往後彎
-  const frontZ = (s) => zF - SET * Math.pow(s, 1.3);
+  // 前面那對：前窄後寬，頂高 H1；正面是一個垂直平面，左右對稱
+  const frontZ = () => zF;
   [-1, 1].forEach((sd) => surf((u, s) => [sd * half(Wf + (Wj * 0.92 - Wf) * u, s), H1 * s, frontZ(s) + (zJ - frontZ(s)) * u], 8, 14, tiles, ch, sd < 0));
   // 後面那對：前寬後窄（弧形收窄），頂高 H2，背面頂端略往內收
   [-1, 1].forEach((sd) => surf((u, s) => [sd * half(Wr + (Wj - Wr) * Math.pow(1 - u, 2), s), H2 * s, zJ - 0.08 + (zR + 0.18 * s - zJ + 0.08) * u], 8, 14, tiles, ch, sd < 0));
@@ -362,7 +362,7 @@ function bClock(g) {
   // 十字架
   box(ch, 0.06, 1.1, 0.06, 0x2a211c, 0, H2, zJ - 0.1); box(ch, 0.45, 0.06, 0.06, 0x2a211c, 0, H2 + 0.78, zJ - 0.1);
   // 倒數鐘面立在門前
-  cyl(g, 0.07, 0.07, 0.9, C.dark, 1.9, 0.25, 1.9, 6);
+  cyl(g, 0.07, 0.07, 0.9, C.dark, 2.05, 0.25, 1.7, 6);
   const sign = textPlane(1.2, 1.2, (c, w, h) => {
     const n = upcoming()[0], d = n ? daysLeft(n.at) : null;
     c.fillStyle = "#FFFDF9"; c.beginPath(); c.arc(w / 2, h / 2, w / 2 - 6, 0, Math.PI * 2); c.fill();
@@ -371,7 +371,7 @@ function bClock(g) {
     c.font = `700 ${h * 0.3}px ${MONO}`; c.fillText(d === null ? "--" : d === 0 ? "今天" : "D-" + d, w / 2, h * 0.47);
     c.fillStyle = "#C8623F"; c.font = `700 ${h * 0.12}px ${FONT}`; c.fillText("下個截止", w / 2, h * 0.75);
   });
-  sign.position.set(1.9, 1.7, 1.95); g.add(sign);
+  sign.position.set(2.05, 1.7, 1.75); g.add(sign);
   g.userData.sign = sign; g.userData.h = H2 + 1.4;
 }
 function bBoard(g) {
@@ -1287,7 +1287,7 @@ function renderOffice() {
   showSheet("office", html);
 }
 function renderDeadlines() {
-  const html = `${head("⏰", "CLOCK TOWER · 截止日", "截止日鐘塔")}
+  const html = `${head("⏰", "CHAPEL · 截止日", "任務提醒")}
     <p class="lead">所有分類的截止日都在這裡。</p>
     <p class="quote">7 天內轉黃、3 天內轉紅，對應的館上方也會浮出菱形提醒。</p>
     <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag("deadlines")}</div>
@@ -1623,7 +1623,7 @@ async function start() {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每一館是一類行政", `島上有 ${ISL.length} 座行政館，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `島的中央是課外組，旁邊有截止日鐘塔、公告欄、小秘書啊牛和碼頭。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
+      ["中心是課外組", `島的中央是課外組，旁邊有任務提醒（路思義教堂）、公告欄、小秘書啊牛和碼頭。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
       ["提醒會浮在館上", "館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的館，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
