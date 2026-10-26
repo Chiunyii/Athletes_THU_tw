@@ -817,12 +817,12 @@ const acts = [], ACT_ZONES = [];
     [-1.2, -0.7].forEach((x, k) => guy(g, P(k + 5, k ? null : "volleyball"), x, k ? -0.5 : 0.4, Math.PI / 2)); [1.2, 0.7].forEach((x, k) => guy(g, P(k + 1), x, k ? 0.5 : -0.4, -Math.PI / 2));
     const ball = ballMesh(g);
     acts.push((t) => { const q = (Math.sin(t * 1.3) + 1) / 2; ball.position.set(-1.1 + 2.2 * q, 1.4 + Math.sin(q * Math.PI) * 1.1, 0); }); }
-  // 武術場：跆拳道、空手道、八極拳
-  { const g = zone(-24, 8.3, 2.4); box(g, 3.2, 0.06, 2.4, 0xc8443a, 0, 0, 0).castShadow = false; box(g, 2.9, 0.07, 2.1, 0x3f6fae, 0, 0, 0).castShadow = false;
-    const sign = textPlane(2.6, 0.42, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 10); c.fillStyle = "#2A211C"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.5}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("跆拳道・空手道・八極拳", w / 2, h / 2 + 2); });
-    [-1.2, 1.2].forEach((x) => cyl(g, 0.04, 0.04, 1.3, C.dark, x, 0, -1.25, 5)); sign.position.set(0, 1.15, -1.22); g.add(sign);
-    const m = [guy(g, { shirt: "#FBFAF6", hair: "#2A211C", skin: "#F1CDB0", prop: "belt" }, -0.95, 0.2), guy(g, { shirt: "#FBFAF6", hair: "#3B2E26", skin: "#E9BF9E", prop: "belt" }, 0, 0.35), guy(g, { shirt: "#2A211C", hair: "#2A211C", skin: "#F1CDB0" }, 0.95, 0.2)];
-    acts.push((t) => m.forEach((p, k) => { const s = Math.sin(t * 4 + k * 2); p.rotation.y = s * 0.6; p.position.y = 0.08 + Math.max(0, s) * 0.18; })); }
+  // 武術：跆拳道、空手道、八方傳統武術分散在草地上，各自一塊小地墊
+  [[-24, 8.3, 0x3f6fae, "#FBFAF6", "belt", 0], [-150, 8.2, 0xc8443a, "#FBFAF6", "belt", 1], [160, 16.8, 0xd9b24e, "#2A211C", null, 2]].forEach(([deg, r, mc, shirt, prop, k]) => {
+    const g = zone(deg, r, 1.6); box(g, 1.9, 0.06, 1.5, mc, 0, 0, 0).castShadow = false;
+    const pr = [guy(g, { shirt, hair: H[k % 3], skin: "#F1CDB0", prop }, -0.4, 0, Math.PI / 2), guy(g, { shirt, hair: H[(k + 1) % 3], skin: "#E9BF9E", prop }, 0.4, 0, -Math.PI / 2)];
+    acts.push((t) => pr.forEach((p, j) => { const v = Math.sin(t * 4 + j * 1.6 + k); p.rotation.z = v * 0.15; p.position.y = 0.08 + Math.max(0, v) * 0.18; p.position.x = (j ? 0.4 : -0.4) + v * 0.08 * (j ? -1 : 1); }));
+  });
   // 足球場（外圈道路外側）
   { const g = zone(30, 16.8, 3.6); box(g, 5.2, 0.04, 3.4, 0x6fc35a, 0, 0, 0).castShadow = false; for (let k = 0; k < 5; k += 2) box(g, 5.2 / 5, 0.045, 3.4, 0x62b54e, -2.08 + k * 1.04, 0, 0).castShadow = false;
     line(g, 5.2, 0.05, 0, 1.68); line(g, 5.2, 0.05, 0, -1.68); line(g, 0.05, 3.4, 2.57, 0); line(g, 0.05, 3.4, -2.57, 0); line(g, 0.05, 3.4, 0, 0);
@@ -846,6 +846,15 @@ const acts = [], ACT_ZONES = [];
     const legs = [[-0.12, 0.35], [0.12, 0.35], [-0.12, -0.35], [0.12, -0.35]].map(([x, z]) => box(horse, 0.08, 0.55, 0.08, hc, x, 0, z));
     const rider = person(P(4, "helmet")); rider.scale.setScalar(0.5); rider.position.set(0, 0.72, -0.05); horse.add(rider);
     acts.push((t) => { const a = t * 0.5; horse.position.set(Math.cos(a) * 1.3, Math.abs(Math.sin(t * 6)) * 0.05, Math.sin(a) * 1.3); horse.rotation.y = -a; legs.forEach((l, k) => (l.rotation.x = Math.sin(t * 6 + k * 1.6) * 0.35)); }); }
+  // 草地上散步的騎馬角色
+  { const horse = new THREE.Group(); world.add(horse); const hc = soft(0xf2e6d0), mane = soft(0x8a5a3b);
+    box(horse, 0.42, 0.42, 1.05, hc, 0, 0.62, 0); box(horse, 0.24, 0.46, 0.26, hc, 0, 0.92, 0.5).rotation.x = -0.4; box(horse, 0.22, 0.22, 0.4, hc, 0, 1.26, 0.68);
+    box(horse, 0.07, 0.34, 0.34, mane, 0, 1.05, 0.42); box(horse, 0.09, 0.4, 0.09, mane, 0, 0.55, -0.55).rotation.x = 0.4; box(horse, 0.46, 0.08, 0.4, soft(0xc8443a), 0, 1.04, -0.02);
+    const legs = [[-0.14, 0.38], [0.14, 0.38], [-0.14, -0.38], [0.14, -0.38]].map(([x, z]) => box(horse, 0.09, 0.62, 0.09, hc, x, 0, z));
+    const rider = person(P(5, "helmet")); rider.scale.setScalar(0.55); rider.position.set(0, 0.82, -0.05); horse.add(rider);
+    const c = at(-95, 17.2);
+    acts.push((t) => { const a = t * 0.18; horse.position.set(c.x + Math.cos(a) * 1.6, Math.abs(Math.sin(t * 5)) * 0.04, c.z + Math.sin(a) * 1.0); horse.rotation.y = Math.atan2(-Math.sin(a) * 1.6, Math.cos(a) * 1.0); legs.forEach((l, k) => (l.rotation.x = Math.sin(t * 5 + k * 1.6) * 0.3)); });
+    ACT_ZONES.push({ pos: c, r: 2.4 }); }
   // 單車：沿著外圈道路騎
   [0, 1].forEach((k) => {
     const bike = new THREE.Group(); world.add(bike); const fc = soft([0xc8443a, 0x6e8fb5][k]);
@@ -856,15 +865,24 @@ const acts = [], ACT_ZONES = [];
   });
   // 海邊：游泳與自由潛水
   const wave = (x, z, t) => -1.15 + Math.sin(x * 0.16 + t * 0.9) * 0.16 + Math.cos(z * 0.2 + t * 0.7) * 0.14;
-  [[18, 24.6, 0], [26, 25.2, 1]].forEach(([deg, r, k]) => {
-    const sw = new THREE.Group(); world.add(sw); const p = person(P(k + 1)); p.scale.setScalar(0.55); p.rotation.x = Math.PI / 2; sw.add(p); // 趴著游
-    const c = at(deg, r), tan = new V3(-c.z, 0, c.x).normalize();
-    acts.push((t) => { const o = Math.sin(t * 0.3 + k) * 1.6, x = c.x + tan.x * o, z = c.z + tan.z * o; sw.position.set(x, wave(x, z, t) - 0.05, z); sw.rotation.y = Math.atan2(tan.x, tan.z) + (Math.cos(t * 0.3 + k) > 0 ? 0 : Math.PI); p.rotation.z = Math.sin(t * 5 + k) * 0.15; });
+  // 套著游泳圈玩水的人：直立浮在水面、上下晃動、手揮水
+  [[16, 24.4, 0], [24, 25, 1], [34, 24.6, 2]].forEach(([deg, r, k]) => {
+    const g = new THREE.Group(); world.add(g); const p = person(P(k + 1)); p.scale.setScalar(0.55); g.add(p);
+    const ring = mesh(new THREE.TorusGeometry(0.32, 0.11, 8, 18), soft([0xe8913f, 0xc8443a, 0x6e8fb5][k]), 0, 0.42, 0, g); ring.rotation.x = Math.PI / 2;
+    for (let j = 0; j < 4; j++) { const st = mesh(new THREE.TorusGeometry(0.32, 0.115, 8, 3, Math.PI / 8), soft(0xffffff), 0, 0.42, 0, g); st.rotation.set(Math.PI / 2, 0, (j * Math.PI) / 2); }
+    const c = at(deg, r);
+    acts.push((t) => { const x = c.x + Math.sin(t * 0.2 + k) * 0.8, z = c.z + Math.cos(t * 0.17 + k) * 0.6; g.position.set(x, wave(x, z, t) - 0.38, z); g.rotation.set(Math.sin(t * 1.3 + k) * 0.08, t * 0.3 + k, Math.cos(t * 1.1 + k) * 0.08); });
   });
-  { const c = at(-30, 25.3); const buoy = ball(world, 0.22, soft(0xe8913f), c.x + 0.8, 0, c.z, 1); const flag = box(world, 0.02, 0.5, 0.02, 0xffffff, 0, 0, 0); const fl = box(world, 0.25, 0.16, 0.01, 0xc8443a, 0, 0, 0);
-    const d = person({ shirt: "#2A211C", hair: "#2A211C", skin: "#F1CDB0" }); d.scale.setScalar(0.55); world.add(d); [-0.13, 0.13].forEach((x) => box(d, 0.16, 0.04, 0.5, 0x6e8fb5, x, 0, 0.2));
-    acts.push((t) => { const y = wave(c.x, c.z, t); buoy.position.y = y + 0.1; flag.position.set(c.x + 0.8, y + 0.3, c.z); fl.position.set(c.x + 0.92, y + 0.48, c.z);
-      const q = (t * 0.25) % 1; d.position.set(c.x, y - 0.35 + Math.cos(q * Math.PI * 2) * 0.6, c.z); d.rotation.x = Math.PI; }); } // 頭朝下潛入，蛙鞋露出水面
+  // 自由潛水：穿著長蛙鞋、頭下腳上做下潛動作，蛙鞋在水面上擺動，接著潛下去再浮上來
+  { const c = at(-30, 25.3); const buoy = ball(world, 0.22, soft(0xe8913f), c.x + 1, 0, c.z, 1); const flag = box(world, 0.02, 0.5, 0.02, 0xffffff, 0, 0, 0); const fl = box(world, 0.25, 0.16, 0.01, 0xc8443a, 0, 0, 0);
+    const dv = new THREE.Group(); world.add(dv); const d = person({ shirt: "#2A211C", hair: "#2A211C", skin: "#F1CDB0" }); d.scale.setScalar(0.55); dv.add(d);
+    box(d, 0.62, 0.62, 0.2, 0x2a211c, 0, 0.18, 0.02); // 潛水服下半身
+    const fins = [-0.13, 0.13].map((x) => { const f = new THREE.Group(); f.position.set(x, 0.02, 0.05); d.add(f); box(f, 0.16, 0.04, 0.9, 0x2f6fd6, 0, -0.02, 0.35); return f; }); // 長蛙鞋
+    box(d, 0.5, 0.14, 0.06, 0x8fb6cf, 0, 1.45, 0.4); // 面鏡
+    acts.push((t) => { const y = wave(c.x, c.z, t); buoy.position.y = y + 0.1; flag.position.set(c.x + 1, y + 0.3, c.z); fl.position.set(c.x + 1.12, y + 0.48, c.z);
+      const q = (t / 12) % 1; // 0–0.3 水面趴著準備、0.3–0.45 彎身下潛、0.45–0.8 在水下、0.8–1 浮上來
+      let tilt, depth; if (q < 0.3) { tilt = Math.PI / 2; depth = 0.05; } else if (q < 0.45) { const u = (q - 0.3) / 0.15; tilt = Math.PI / 2 + u * (Math.PI / 2); depth = 0.05 - u * 0.75; } else if (q < 0.8) { tilt = Math.PI; depth = -0.7 - (q - 0.45) * 3; } else { const u = (q - 0.8) / 0.2; tilt = Math.PI - u * (Math.PI / 2); depth = -1.75 + u * 1.8; }
+      dv.position.set(c.x, y + depth, c.z); d.rotation.x = tilt; fins.forEach((f, j) => (f.rotation.x = Math.sin(t * 6 + j * Math.PI) * 0.35)); }); }
 }
 
 /* ---- 各行政分類的建築區（沿外圈道路排列） ---- */
