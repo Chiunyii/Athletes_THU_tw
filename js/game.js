@@ -441,11 +441,12 @@ function bGym(g) {
   win.position.set(0, 1.08, 0.91); g.add(win);
   [-1.75, -1.05, -0.35, 0.35, 1.05, 1.75].forEach((x) => box(g, 0.09, 1.15, 0.06, 0xd8d2c4, x, 0.25, 0.92));
   box(g, 0.5, 0.62, 0.05, 0x33403f, 0, 0.25, 0.93);
-  const sh = new THREE.Shape(); sh.moveTo(-0.9, 0); sh.lineTo(0.9, 0); sh.lineTo(0, 0.9); sh.closePath();
+  const sh = new THREE.Shape(); sh.moveTo(-0.9, 0); sh.lineTo(0.9, 0); sh.lineTo(0, 0.5); sh.closePath();
   const gable = mesh(new THREE.ExtrudeGeometry(sh, { depth: 3.5, bevelEnabled: false }), brick, -1.75, wallTop, 0, g); gable.rotation.y = Math.PI / 2;
-  const roof = soft(0x4f5357), ang = Math.atan2(0.9, 0.9);
-  [1, -1].forEach((k) => { const r = box(g, 4.2, 0.1, 1.7, roof, 0, 0, 0); r.position.set(0, wallTop + 0.36, k * 0.6); r.rotation.x = k * ang; });
-  box(g, 4.2, 0.1, 0.16, 0x3c3f42, 0, wallTop + 0.9, 0);
+  // 屋頂：斜度約 29 度，出簷 0.2，不再一大片
+  const roof = soft(0x4f5357), ang = Math.atan2(0.5, 0.9), sl = Math.hypot(0.9, 0.5) + 0.22;
+  [1, -1].forEach((k) => { const r = box(g, 3.8, 0.08, sl, roof, 0, 0, 0); r.position.set(0, wallTop + 0.25 - 0.02, k * 0.45); r.rotation.x = k * ang; });
+  box(g, 3.8, 0.08, 0.12, 0x3c3f42, 0, wallTop + 0.5, 0);
   g.userData.h = 3.1;
 }
 // 器材借用館：課外組共用的大舞台與音響，組裝人員正在架設
@@ -850,8 +851,8 @@ const acts = [], ACT_ZONES = [];
     const ball = ballMesh(g);
     acts.push((t) => { const q = (Math.sin(t * 1.3) + 1) / 2; ball.position.set(-1.1 + 2.2 * q, 1.4 + Math.sin(q * Math.PI) * 1.1, 0); }); }
   // 武術：跆拳道、空手道、八方傳統武術分散在草地上，各自一塊小地墊
-  [[-24, 8.3, 0x3f6fae, "#FBFAF6", "belt", 0], [-150, 8.2, 0xc8443a, "#FBFAF6", "belt", 1], [160, 16.8, 0xd9b24e, "#2A211C", null, 2]].forEach(([deg, r, mc, shirt, prop, k]) => {
-    const g = zone(deg, r, 1.6); box(g, 1.9, 0.06, 1.5, mc, 0, 0, 0).castShadow = false;
+  [[-24, 8.3, 0x3f6fae, "#FBFAF6", "belt", 0], [120, 8.6, 0xc8443a, "#FBFAF6", "belt", 1], [-165, 16.5, null, "#2A211C", null, 2]].forEach(([deg, r, mc, shirt, prop, k]) => {
+    const g = zone(deg, r, 1.6); if (mc) box(g, 1.9, 0.06, 1.5, mc, 0, 0, 0).castShadow = false; // 八極拳直接在草地上打拳
     const pr = [guy(g, { shirt, hair: H[k % 3], skin: "#F1CDB0", prop }, -0.4, 0, Math.PI / 2), guy(g, { shirt, hair: H[(k + 1) % 3], skin: "#E9BF9E", prop }, 0.4, 0, -Math.PI / 2)];
     acts.push((t) => pr.forEach((p, j) => { const v = Math.sin(t * 4 + j * 1.6 + k); p.rotation.z = v * 0.15; p.position.y = 0.08 + Math.max(0, v) * 0.18; p.position.x = (j ? 0.4 : -0.4) + v * 0.08 * (j ? -1 : 1); }));
   });
@@ -966,7 +967,8 @@ ISL.forEach((d) => {
   (BUILD[d.building] || bHouse)(b, col);
   b.position.copy(d.dir).multiplyScalar(0.9); // 建築在車道的另一側，正面朝鏡頭
   // 每館的造型都等比縮放到 HALL_H 高（量實際外框，不含名牌），不超過課外組峮老師
-  const bh = new THREE.Box3().setFromObject(b).max.y - (b.userData.base || 0), bs = HALL_H / bh;
+  const bb = new THREE.Box3().setFromObject(b), bh = bb.max.y - (b.userData.base || 0), bw = Math.max(bb.max.x - bb.min.x, bb.max.z - bb.min.z);
+  const bs = Math.min(HALL_H / bh, 5.6 / bw); // 高度拉到 4.4，但寬度不超出館的圓形地面
   b.rotation.y = FACE; b.scale.setScalar(bs); b.position.y = -(b.userData.base || 0) * bs + 0.06;
   b.userData.h = HALL_H + 0.3;
   g.add(b);
@@ -1058,7 +1060,8 @@ const UMB = [0xc8623f, 0xe8b04b, 0x6e8fb5, 0xfbf3e6];
   if (i % 2 === 0) for (let k = 0; k < 3; k++) { const x = (k - 1) * 1.3, z = (k % 2) * 0.6; cyl(g, 0.04, 0.04, 1.2, 0xffffff, x, -0.6, z, 4); cone(g, 0.6, 0.35, UMB[(i + k) % 4], x, 0.5, z, 8); }
   else { const t = new THREE.Group(); t.position.y = -0.6; g.add(t); tree(t, -0.6, 0, 0.7, 0.2); tree(t, 0.7, 0.4, 0.6, 0.7); }
 });
-const boats = [0, 1].map((i) => { const b = sailboat(i ? 0x6e8fb5 : 0xfbf3e6); b.scale.setScalar(0.8); scene.add(b); b.userData = { r: 30 + i * 6, a: front + 0.5 + i * 2.4, s: 0.02 + i * 0.008 }; return b; });
+// 帆船只在跑道兩側的開闊海面來回航行，不會穿過跑道或小島
+const boats = [[27.5, 0.21, 0.52], [29, -0.66, -0.21]].map(([r, a0, a1], i) => { const b = sailboat(i ? 0x6e8fb5 : 0xfbf3e6); b.scale.setScalar(0.8); scene.add(b); b.userData = { r, a0: front + a0, a1: front + a1, s: 0.05 + i * 0.015, ph: i * 2 }; return b; });
 const clouds = [];
 for (let i = 0; i < 9; i++) {
   const c = new THREE.Group();
@@ -1881,7 +1884,7 @@ function loop(now) {
     for (let i = 0; i < a.count; i++) { const x = seaBase[i * 3], z = seaBase[i * 3 + 2]; a.setY(i, Math.sin(x * 0.16 + t * 0.9) * 0.16 + Math.cos(z * 0.2 + t * 0.7) * 0.14); }
     a.needsUpdate = true; seaGeo.computeVertexNormals();
     clouds.forEach((c, i) => { const ang = c.userData.a0 + Math.sin(t * 0.03 * c.userData.s + i) * 0.25; c.position.x = Math.cos(ang) * c.userData.r; c.position.z = Math.sin(ang) * c.userData.r; });
-    boats.forEach((b) => { b.userData.a += b.userData.s * dt; b.position.set(Math.cos(b.userData.a) * b.userData.r, -1.1 + Math.sin(t * 1.3) * 0.08, Math.sin(b.userData.a) * b.userData.r); b.rotation.y = -b.userData.a; });
+    boats.forEach((b) => { const u = b.userData, k = Math.sin(t * u.s + u.ph), a = (u.a0 + u.a1) / 2 + ((u.a1 - u.a0) / 2) * k; b.position.set(Math.cos(a) * u.r, -1.1 + Math.sin(t * 1.3) * 0.08, Math.sin(a) * u.r); b.rotation.y = -a + (Math.cos(t * u.s + u.ph) < 0 ? Math.PI : 0); });
     flag.rotation.y = Math.sin(t * 2) * 0.15;
     ISL.forEach((d) => { const u = d.build.userData, s = u.spin; if (s) s.rotation.y += dt * 1.2;
       (u.bob || []).forEach((m, k) => (m.position.y = 0.15 + (u.jump ? Math.abs(Math.sin(t * 5 + k * 1.3)) * 0.28 : Math.abs(Math.sin(t * 2 + k)) * 0.03)));
