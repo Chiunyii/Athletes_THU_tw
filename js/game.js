@@ -274,24 +274,47 @@ const world = new THREE.Group();
 scene.add(world);
 
 /* ---- 建築 ---- */
+// 課外組：峮老師的巨型角色（齊劉海中長髮），旁邊站著橘白貓與灰白貓；腳邊招牌顯示辦公狀態
+function catModel(base, white) {
+  const g = new THREE.Group(), B = soft(base), W = soft(white), dark = soft(0x2a211c), pink = soft(0xf0a0a0);
+  const body = mesh(new THREE.SphereGeometry(0.42, 16, 12), B, 0, 0.45, -0.05, g); body.scale.set(0.9, 1.1, 1);
+  const chest = mesh(new THREE.SphereGeometry(0.28, 14, 10), W, 0, 0.5, 0.22, g); chest.scale.set(1, 1.2, 0.6);
+  [-0.15, 0.15].forEach((x) => mesh(new THREE.SphereGeometry(0.11, 10, 8), W, x, 0.08, 0.28, g));
+  const head = new THREE.Group(); head.position.set(0, 1.02, 0.05); g.add(head);
+  const hd = mesh(new THREE.SphereGeometry(0.34, 18, 14), B, 0, 0, 0, head); hd.scale.set(1.1, 0.95, 0.95);
+  const mz = mesh(new THREE.SphereGeometry(0.16, 12, 10), W, 0, -0.1, 0.24, head); mz.scale.set(1.3, 0.8, 0.7);
+  mesh(new THREE.SphereGeometry(0.035, 8, 6), pink, 0, -0.04, 0.35, head);
+  [-0.13, 0.13].forEach((x) => { mesh(new THREE.SphereGeometry(0.045, 8, 6), dark, x, 0.05, 0.3, head); const e = mesh(new THREE.ConeGeometry(0.12, 0.24, 4), B, x * 1.7, 0.3, -0.02, head); e.rotation.z = x > 0 ? -0.35 : 0.35; });
+  const tail = mesh(new THREE.TorusGeometry(0.32, 0.06, 6, 14, Math.PI * 1.1), B, 0.32, 0.38, -0.3, g); tail.rotation.set(0, Math.PI / 2, -0.4);
+  g.userData.tail = tail;
+  return g;
+}
 function bOffice(g) {
-  box(g, 5, 0.3, 3.8, 0xe2d6c3, 0, 0, 0);
-  box(g, 4.6, 2.5, 3.4, C.wall, 0, 0.3, 0);
-  box(g, 4.6, 1.3, 3.4, 0xf4eadb, 0, 2.8, 0);
-  const roof = cone(g, 3.6, 1.7, C.roof, 0, 4.1, 0, 4); roof.rotation.y = Math.PI / 4; roof.scale.set(1, 1, 0.82);
-  box(g, 1.1, 1.7, 0.1, C.dark, 0, 0.3, 1.71);
+  cyl(g, 2.4, 2.5, 0.3, 0xe2d6c3, 0, 0, 0, 24);
+  const T = person({ shirt: "#C8623F", hair: "#3B2E26", skin: "#F3D2B8" });
+  const hair = soft(0x3b2e26);
+  // 中長髮：後腦到肩膀的髮片，前額齊劉海
+  const back = mesh(new THREE.CylinderGeometry(0.45, 0.52, 0.72, 20, 1, true, Math.PI / 3, (Math.PI * 4) / 3), mat(0x3b2e26, { flatShading: false, roughness: 0.7, side: THREE.DoubleSide }), 0, 1.22, -0.02, T);
+  back.castShadow = true;
+  mesh(new THREE.CylinderGeometry(0.455, 0.45, 0.17, 20, 1, false, -Math.PI / 3.2, (Math.PI * 2) / 3.2), hair, 0, 1.68, 0.02, T);
+  const mouth = mesh(new THREE.TorusGeometry(0.07, 0.016, 6, 12, Math.PI), soft(0xb04a3a), 0, 1.33, 0.4, T); mouth.rotation.z = Math.PI;
+  T.scale.setScalar(3.1); T.position.y = 0.3; g.add(T);
+  g.userData.giant = T;
+  const orange = catModel(0xe8913f, 0xfbfaf6); orange.scale.setScalar(1.15); orange.position.set(-1.7, 0.3, 0.6); orange.rotation.y = 0.35; g.add(orange);
+  const gray = catModel(0x9aa0a6, 0xfbfaf6); gray.scale.setScalar(1.05); gray.position.set(1.75, 0.3, 0.5); gray.rotation.y = -0.4; g.add(gray);
+  g.userData.cats = [orange, gray];
+  // 腳邊的辦公狀態招牌（燈會依辦公時間亮起）
   const win = mat(0xf6efe2, { emissive: 0xffc77a, emissiveIntensity: 0 });
   g.userData.win = win;
-  [-1.5, 1.5].forEach((x) => { mesh(new THREE.BoxGeometry(0.9, 0.75, 0.08), win, x, 1.45, 1.72, g); mesh(new THREE.BoxGeometry(0.9, 0.6, 0.08), win, x, 3.4, 1.72, g); });
-  mesh(new THREE.BoxGeometry(0.9, 0.6, 0.08), win, 0, 3.4, 1.72, g);
+  [-1.55, 1.55].forEach((x) => { cyl(g, 0.06, 0.06, 0.95, C.dark, x, 0.3, 2.35, 5); mesh(new THREE.SphereGeometry(0.13, 10, 8), win, x, 1.35, 2.35, g); });
   const sign = textPlane(2.9, 0.75, (c, w, h) => {
     const st = officeStatus();
     rr(c, 4, 4, w - 8, h - 8, 22); c.fillStyle = "#2A211C"; c.fill();
     c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.5}px ${FONT}`; c.textBaseline = "middle"; c.fillText("課外組", 24, h / 2 + 2);
     c.fillStyle = st.open ? "#8FD6A0" : "#F19A84"; c.font = `700 ${h * 0.36}px ${FONT}`; c.textAlign = "right"; c.fillText(st.short, w - 24, h / 2 + 2);
   });
-  sign.position.set(0, 2.35, 1.76); g.add(sign);
-  g.userData.sign = sign; g.userData.h = 6.3;
+  sign.position.set(0, 0.95, 2.4); g.add(sign);
+  g.userData.sign = sign; g.userData.h = 6.5;
 }
 function bClock(g) {
   box(g, 2.4, 0.4, 2.4, 0xe2d6c3, 0, 0, 0);
@@ -340,32 +363,6 @@ function bDock(g) {
   g.add(boat);
   g.userData.boat = boat; g.userData.h = 3;
 }
-function bTrack(g, col) {
-  const t = mesh(new THREE.TorusGeometry(1.9, 0.45, 3, 24), 0xc9714f, 0, 0.12, 0, g);
-  t.rotation.x = Math.PI / 2; t.scale.set(1.25, 1, 1);
-  const inner = cyl(g, 1.45, 1.45, 0.1, 0x9fbc7a, 0, 0, 0, 20); inner.scale.set(1.3, 1, 1);
-  const baton = cyl(g, 0.12, 0.12, 0.9, 0xe8b04b, 1.2, 0.3, 1.4); baton.rotation.z = Math.PI / 2;
-  box(g, 2, 1.6, 1.4, C.wall, 0, 0, -2.6);
-  const r = cone(g, 1.6, 1, col, 0, 1.6, -2.6, 4); r.rotation.y = Math.PI / 4; r.scale.set(1, 1, 0.75);
-  g.userData.h = 3.4;
-}
-function bTent(g, col) {
-  const t = cone(g, 2, 2.6, col, 0, 0, 0, 4); t.rotation.y = Math.PI / 4;
-  box(g, 0.8, 1.1, 0.1, C.dark, 0, 0, 1.35);
-  cyl(g, 0.05, 0.05, 3.6, 0xdddddd, 1.6, 0, 1, 5);
-  box(g, 0.9, 0.55, 0.04, C.roof, 2.08, 2.9, 1);
-  cyl(g, 0.6, 0.6, 0.3, C.wood, -1.9, 0, 1.2, 6);
-  g.userData.h = 3.8;
-}
-function bBank(g) {
-  box(g, 3.4, 0.3, 2.6, 0xe2d6c3, 0, 0, 0);
-  box(g, 3, 1.8, 2.2, C.wall, 0, 0.3, 0);
-  [-1.1, -0.37, 0.37, 1.1].forEach((x) => cyl(g, 0.14, 0.14, 1.8, 0xffffff, x, 0.3, 1.2, 6));
-  const pd = cone(g, 2.2, 0.9, 0xd9b24e, 0, 2.1, 0, 4); pd.rotation.y = Math.PI / 4; pd.scale.set(1.1, 1, 0.8);
-  const coin = cyl(g, 0.8, 0.8, 0.22, mat(0xe8b04b, { metalness: 0.35, roughness: 0.45 }), 0, 3.5, 0, 16);
-  coin.rotation.x = Math.PI / 2;
-  g.userData.spin = coin; g.userData.h = 5;
-}
 function bGym(g, col) {
   cyl(g, 2.4, 2.5, 1.2, C.wall, 0, 0, 0, 12);
   mesh(new THREE.SphereGeometry(2.4, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2), col, 0, 1.2, 0, g);
@@ -388,24 +385,112 @@ function bStore(g, col) {
   ball(g, 0.32, 0xd98b4e, -1.6, 0.32, 1.7); ball(g, 0.3, 0xffffff, -1.0, 0.3, 1.9); ball(g, 0.28, 0xe8b04b, -1.3, 0.28, 2.4);
   g.userData.h = 3.5;
 }
-function bPodium(g) {
-  box(g, 1, 1.4, 1, 0xe8b04b, 0, 0, 0); box(g, 1, 0.9, 1, 0xd9d2c5, -1.05, 0, 0); box(g, 1, 0.6, 1, 0xc9875a, 1.05, 0, 0);
-  const gold = mat(0xe8b04b, { metalness: 0.45, roughness: 0.4 });
-  cyl(g, 0.18, 0.28, 0.2, gold, 0, 1.4, 0); cyl(g, 0.06, 0.06, 0.3, gold, 0, 1.6, 0);
-  g.userData.spin = cyl(g, 0.42, 0.18, 0.55, gold, 0, 1.9, 0);
+// 館內的小角色（坐著或站著）
+const mini = (p, o, s, x, y, z, ry = 0) => { const m = person(o); m.scale.setScalar(s); m.position.set(x, y, z); m.rotation.y = ry; p.add(m); return m; };
+const MINI = [["#E8B04B", "#3B2E26"], ["#6E8FB5", "#55463A"], ["#5F8F5A", "#2A211C"], ["#C97A8F", "#7A4B2E"], ["#9C83B5", "#3B2E26"], ["#D98B4E", "#2A211C"]].map(([shirt, hair]) => ({ shirt, hair, skin: "#F1CDB0" }));
+// 期初會議館：小學教室的課桌椅，大家面對面開會，老師在黑板前說明
+function bHall(g) {
+  box(g, 3.9, 0.15, 3.1, 0xe2c79c, 0, 0, 0);
+  box(g, 3, 1.5, 0.12, 0x8a5a3b, 0, 0.75, -1.3);
+  [-1.3, 1.3].forEach((x) => box(g, 0.1, 0.75, 0.1, 0x8a5a3b, x, 0.15, -1.3));
+  const board = textPlane(2.8, 1.3, (c, w, h) => {
+    c.fillStyle = "#3F6B4F"; c.fillRect(0, 0, w, h);
+    c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.24}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("期初會議", w / 2, h * 0.3);
+    c.font = `700 ${h * 0.11}px ${FONT}`; c.fillStyle = "#F3E6CE"; ["1 學生資訊系統登錄", "2 資料繳交　3 借用", "4 經費核銷　5 評鑑"].forEach((s, i) => c.fillText(s, w / 2, h * (0.56 + i * 0.14)));
+  });
+  board.position.set(0, 1.5, -1.23); g.add(board);
+  box(g, 0.6, 0.7, 0.4, C.wood, 1.15, 0.15, -0.75);
+  mini(g, { shirt: "#5F8F5A", hair: "#3B2E26", skin: "#F3D2B8" }, 0.55, 0.55, 0.15, -0.85);
+  const metal = soft(0x8d97a5), top = soft(0xe8c08a), seat = soft(0xd99a5b);
+  const deskSet = (x, z, ry, k) => {
+    const s = new THREE.Group(); s.position.set(x, 0.15, z); s.rotation.y = ry; g.add(s);
+    box(s, 0.62, 0.05, 0.42, top, 0, 0.5, 0); box(s, 0.56, 0.1, 0.36, soft(0x9a6a3c), 0, 0.4, 0);
+    [[-0.27, -0.17], [0.27, -0.17], [-0.27, 0.17], [0.27, 0.17]].forEach(([a, b]) => box(s, 0.04, 0.5, 0.04, metal, a, 0, b));
+    box(s, 0.4, 0.04, 0.36, seat, 0, 0.3, 0.42); box(s, 0.4, 0.3, 0.04, seat, 0, 0.36, 0.62);
+    [[-0.17, 0.27], [0.17, 0.27], [-0.17, 0.58], [0.17, 0.58]].forEach(([a, b]) => box(s, 0.035, 0.3, 0.035, metal, a, 0, b));
+    box(s, 0.2, 0.01, 0.26, soft(0xfffdf9), 0.05, 0.55, 0).rotation.y = 0.2;
+    mini(s, MINI[k], 0.46, 0, 0.12, 0.4, Math.PI);
+  };
+  [-0.15, 0.55, 1.25].forEach((z, i) => { deskSet(-0.75, z, -Math.PI / 2, i); deskSet(0.75, z, Math.PI / 2, i + 3); });
   g.userData.h = 3.4;
 }
-function bHall(g, col) {
-  box(g, 3.8, 0.3, 2.8, 0xe2d6c3, 0, 0, 0);
-  box(g, 3.4, 2, 2.4, C.wall, 0, 0.3, 0);
-  const r = cone(g, 2.9, 1.1, col, 0, 2.3, 0, 4); r.rotation.y = Math.PI / 4; r.scale.set(1, 1, 0.72);
-  [-1.35, -0.45, 0.45, 1.35].forEach((x) => cyl(g, 0.12, 0.12, 2, 0xffffff, x, 0.3, 1.3, 6));
-  box(g, 0.9, 1.3, 0.08, C.dark, 0, 0.3, 1.21);
-  const banner = textPlane(2.4, 0.5, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 14); c.fillStyle = "#C8623F"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.55}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("期初會議", w / 2, h / 2 + 2); });
-  banner.position.set(0, 1.95, 1.22); g.add(banner);
-  // 前方排好的椅子
-  for (let k = 0; k < 6; k++) box(g, 0.3, 0.35, 0.3, C.wood, -1.1 + (k % 3) * 1.1, 0, 2.1 + Math.floor(k / 3) * 0.55);
+// 社團行政館：活動服務台，服務員在櫃台後面
+function bTrack(g, col) {
+  box(g, 3.6, 0.15, 2.8, 0xe2d6c3, 0, 0, 0);
+  box(g, 3.2, 1.9, 0.15, C.wall, 0, 0.15, -1.15);
+  [-1.55, 1.55].forEach((x) => cyl(g, 0.07, 0.07, 2.4, 0xffffff, x, 0.15, 0.2, 6));
+  for (let k = 0; k < 6; k++) box(g, 3.3 / 6, 0.08, 1.6, k % 2 ? 0xfffdf9 : col, -1.65 + 3.3 / 12 + (k * 3.3) / 6, 2.5, -0.4).rotation.x = 0.18;
+  const sign = textPlane(2.4, 0.55, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 16); c.fillStyle = "#2A211C"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.55}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("服務台", w / 2, h / 2 + 2); });
+  sign.position.set(0, 1.65, -1.06); g.add(sign);
+  const staff = mini(g, { shirt: "#" + new THREE.Color(col).getHexString(), hair: "#3B2E26", skin: "#F3D2B8", prop: "clipboard" }, 0.7, 0, 0.15, -0.45);
+  g.userData.bob = [staff];
+  box(g, 2.6, 0.55, 0.55, col, 0, 0.15, 0.35); box(g, 2.75, 0.07, 0.65, 0xfffdf9, 0, 0.7, 0.35);
+  box(g, 2.2, 0.24, 0.02, 0xfffdf9, 0, 0.32, 0.63);
+  const gold = mat(0xe8b04b, { metalness: 0.45, roughness: 0.4 });
+  mesh(new THREE.SphereGeometry(0.1, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), gold, -0.9, 0.77, 0.4, g);
+  [0, 1, 2].forEach((k) => box(g, 0.34, 0.03, 0.26, k % 2 ? 0xf3e6ce : 0xfffdf9, 0.8, 0.77 + k * 0.03, 0.35).rotation.y = k * 0.15);
+  const visitor = mini(g, MINI[0], 0.55, 1.0, 0.15, 1.15, Math.PI * 0.85);
+  g.userData.bob.push(visitor);
+  g.userData.h = 3.4;
+}
+// 社團活動館：嘉年華旋轉木馬、氣球，還有在玩的人
+function bTent(g, col) {
+  box(g, 3.8, 0.12, 3, 0xf3e6ce, 0, 0, 0);
+  const cx = -0.55;
+  cyl(g, 1.15, 1.2, 0.22, col, cx, 0.12, 0, 20);
+  const spin = new THREE.Group(); spin.position.set(cx, 0.34, 0); g.add(spin);
+  cyl(spin, 0.09, 0.09, 2.1, 0xe8b04b, 0, 0, 0, 8);
+  const cols = [col, 0xfffdf9];
+  for (let k = 0; k < 10; k++) mesh(new THREE.ConeGeometry(1.3, 0.75, 2, 1, false, (k * Math.PI) / 5, Math.PI / 5), cols[k % 2], 0, 2.45, 0, spin); // 紅白相間的頂棚
+  ball(spin, 0.12, 0xe8b04b, 0, 2.9, 0);
+  const horses = [0xfffdf9, 0xf9d3c2, 0xdcebe6, 0xfff1b8];
+  horses.forEach((hc, k) => {
+    const a = (k * Math.PI) / 2, x = Math.cos(a) * 0.82, z = Math.sin(a) * 0.82;
+    cyl(spin, 0.03, 0.03, 1.75, 0xdddddd, x, 0.25, z, 5);
+    const h = new THREE.Group(); h.position.set(x, 0.75 + (k % 2) * 0.18, z); h.rotation.y = -a; spin.add(h);
+    box(h, 0.18, 0.2, 0.5, hc, 0, 0, 0); box(h, 0.14, 0.26, 0.14, hc, 0, 0.12, 0.25); box(h, 0.12, 0.1, 0.18, hc, 0, 0.3, 0.34);
+    [-0.06, 0.06].forEach((xx) => [-0.17, 0.17].forEach((zz) => box(h, 0.05, 0.22, 0.05, hc, xx, -0.2, zz)));
+    if (k % 2 === 0) mini(h, MINI[k + 1], 0.36, 0, 0.02, 0, Math.PI / 2);
+  });
+  g.userData.spin = spin;
+  // 氣球
+  [[1.25, -0.6, 0xc8443a, 2.3], [1.55, -0.35, 0xe8b04b, 2.0], [1.35, -0.25, 0x6e8fb5, 2.5]].forEach(([x, z, c, y]) => { cyl(g, 0.01, 0.01, y - 0.3, 0xffffff, x, 0.12, z, 3); const b = ball(g, 0.22, soft(c), x, y, z, 1); b.scale.set(1, 1.2, 1); });
+  // 開心跳著玩的人
+  g.userData.bob = [mini(g, MINI[3], 0.52, 1.0, 0.12, 0.7, -0.4), mini(g, MINI[5], 0.5, 1.6, 0.12, 0.95, -0.7), mini(g, MINI[2], 0.5, 0.35, 0.12, 1.25, 0.2)];
+  g.userData.jump = true;
   g.userData.h = 3.6;
+}
+// 經費館：大計算機與一疊疊硬幣
+function bBank(g) {
+  box(g, 3.6, 0.15, 2.6, 0xe2d6c3, 0, 0, 0);
+  const calc = new THREE.Group(); calc.position.set(-0.55, 0.15, -0.2); calc.rotation.x = -0.22; g.add(calc);
+  box(calc, 1.8, 2.5, 0.4, 0x3b4a5c, 0, 0, 0);
+  const lcd = textPlane(1.5, 0.55, (c, w, h) => { c.fillStyle = "#BFD8B0"; c.fillRect(0, 0, w, h); c.fillStyle = "#2A3A2A"; c.font = `700 ${h * 0.5}px ${MONO}`; c.textAlign = "right"; c.textBaseline = "middle"; c.fillText("3,600", w - 18, h / 2 + 3); c.font = `700 ${h * 0.24}px ${MONO}`; c.textAlign = "left"; c.fillText("NT$", 14, h * 0.3); });
+  lcd.position.set(0, 2.05, 0.21); calc.add(lcd);
+  for (let r = 0; r < 4; r++) for (let k = 0; k < 4; k++) box(calc, 0.3, 0.26, 0.08, k === 3 ? 0xc8623f : r === 0 ? 0xd9d2c5 : 0xfffdf9, -0.56 + k * 0.375, 0.2 + r * 0.38, 0.22);
+  const gold = mat(0xe8b04b, { metalness: 0.35, roughness: 0.45 });
+  [[0.75, 0.25, 6], [1.2, -0.25, 9], [1.35, 0.55, 4], [0.7, 0.85, 2]].forEach(([x, z, n]) => { for (let k = 0; k < n; k++) cyl(g, 0.24, 0.24, 0.08, gold, x + (hash("cn" + x + k) - 0.5) * 0.03, 0.15 + k * 0.085, z, 14); });
+  const coin = new THREE.Group(); coin.position.set(0.95, 2.5, 0.2); g.add(coin);
+  cyl(coin, 0.55, 0.55, 0.14, gold, 0, -0.07, 0, 20).rotation.x = Math.PI / 2;
+  [0.075, -0.075].forEach((z, i) => { const t = textPlane(0.7, 0.7, (c, w, h) => { c.fillStyle = "#B8862E"; c.font = `900 ${h * 0.7}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("$", w / 2, h / 2 + 4); }); t.position.set(0, 0, z); if (i) t.rotation.y = Math.PI; coin.add(t); });
+  g.userData.spin = coin; g.userData.h = 3.6;
+}
+// 評鑑館：埋首處理各種檔案的角色，旁邊有檔案櫃、資料夾，還有飛來飛去的文件
+function bPodium(g) {
+  box(g, 3.6, 0.15, 2.6, 0xe2d6c3, 0, 0, 0);
+  box(g, 0.9, 1.9, 0.7, 0x8d97a5, -1.25, 0.15, -0.7);
+  for (let k = 0; k < 4; k++) { box(g, 0.8, 0.4, 0.04, 0xb4bcc6, -1.25, 0.25 + k * 0.45, -0.33); box(g, 0.24, 0.05, 0.05, 0x5a6370, -1.25, 0.42 + k * 0.45, -0.3); }
+  const gold = mat(0xe8b04b, { metalness: 0.45, roughness: 0.4 });
+  cyl(g, 0.14, 0.2, 0.12, gold, -1.25, 2.05, -0.7); g.userData.spin = cyl(g, 0.28, 0.12, 0.38, gold, -1.25, 2.17, -0.7);
+  box(g, 1.9, 0.07, 0.95, C.wood, 0.25, 0.6, 0); [[-0.6, -0.35], [1.1, -0.35], [-0.6, 0.35], [1.1, 0.35]].forEach(([x, z]) => box(g, 0.07, 0.45, 0.07, C.dark, x, 0.15, z));
+  const worker = mini(g, { shirt: "#C97A8F", hair: "#3B2E26", skin: "#F3D2B8" }, 0.68, 0.25, 0.15, -0.75);
+  box(g, 0.34, 0.26, 0.04, 0xe8b04b, 0.25, 0.75, -0.3).rotation.x = -0.5;
+  const fc = [0xc8623f, 0x6e8fb5, 0x5f8f5a, 0xe8b04b, 0x9c83b5];
+  [[-0.45, 5], [0.95, 7]].forEach(([x, n]) => { for (let k = 0; k < n; k++) box(g, 0.42, 0.07, 0.32, fc[k % 5], x + (hash("fd" + x + k) - 0.5) * 0.06, 0.67 + k * 0.075, 0.05).rotation.y = (hash("fr" + x + k) - 0.5) * 0.3; });
+  [[0.9, 0.95], [1.4, 0.7]].forEach(([x, z], i) => { box(g, 0.5, 0.36, 0.38, 0xd9b98a, x, 0.15, z); box(g, 0.5, 0.04, 0.38, 0xc9a774, x, 0.51, z); box(g, 0.12, 0.42, 0.04, fc[i + 1], x - 0.1, 0.38, z); });
+  const papers = [0, 1, 2].map((k) => { const p = box(g, 0.28, 0.01, 0.36, 0xfffdf9, 0, 0, 0); p.userData.k = k; return p; });
+  g.userData.papers = papers; g.userData.bob = [worker];
+  g.userData.h = 3.2;
 }
 // 小秘書啊牛：參考東海牛奶節的乳牛造型（白身深藍斑點、黃色口鼻與角、頭頂捲毛），以低多邊形重新建模
 let cowMsg = null; // 解鎖動畫時泡泡暫時改成這句話
@@ -1420,10 +1505,13 @@ function loop(now) {
     clouds.forEach((c, i) => { const ang = c.userData.a0 + Math.sin(t * 0.03 * c.userData.s + i) * 0.25; c.position.x = Math.cos(ang) * c.userData.r; c.position.z = Math.sin(ang) * c.userData.r; });
     boats.forEach((b) => { b.userData.a += b.userData.s * dt; b.position.set(Math.cos(b.userData.a) * b.userData.r, -1.1 + Math.sin(t * 1.3) * 0.08, Math.sin(b.userData.a) * b.userData.r); b.rotation.y = -b.userData.a; });
     flag.rotation.y = Math.sin(t * 2) * 0.15;
-    ISL.forEach((d) => { const s = d.build.userData.spin; if (s) s.rotation.y += dt * 1.2; d.marker.rotation.y += dt * 1.5; d.marker.position.y = d.build.userData.h + 1.6 + Math.sin(t * 2.4 + d.i) * 0.15; });
+    ISL.forEach((d) => { const u = d.build.userData, s = u.spin; if (s) s.rotation.y += dt * 1.2;
+      (u.bob || []).forEach((m, k) => (m.position.y = 0.15 + (u.jump ? Math.abs(Math.sin(t * 5 + k * 1.3)) * 0.28 : Math.abs(Math.sin(t * 2 + k)) * 0.03)));
+      (u.papers || []).forEach((p) => { const q = (t * 0.45 + p.userData.k / 3) % 1; p.position.set(-0.45 + q * 1.4, 1.1 + Math.sin(q * Math.PI) * 0.9, 0.05); p.rotation.set(q * 6, q * 3, 0); }); d.marker.rotation.y += dt * 1.5; d.marker.position.y = d.build.userData.h + 1.6 + Math.sin(t * 2.4 + d.i) * 0.15; });
     newsMarker.rotation.y += dt * 1.5;
     const boat = centerObj.links.userData.boat; boat.position.y = -1.15 + Math.sin(t * 1.4) * 0.08; boat.rotation.z = Math.sin(t * 1.1) * 0.05;
     teacher.position.y = Math.abs(Math.sin(t * 2)) * 0.03;
+    const og = centerObj.office.userData; og.giant.rotation.y = Math.sin(t * 0.6) * 0.12; og.cats.forEach((c, k) => (c.userData.tail.rotation.z = -0.4 + Math.sin(t * 1.5 + k) * 0.25));
     const cow = centerObj.todo.userData.npc;
     cow.userData.armR.rotation.z = -2.3 + Math.sin(t * 5) * 0.35; // 揮手
     if (!cowFx) { cow.position.y = 0.18 + Math.abs(Math.sin(t * 2.2)) * 0.05; cow.rotation.y = Math.sin(t * 0.8) * 0.25; }

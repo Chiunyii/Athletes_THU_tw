@@ -95,8 +95,8 @@ var SITE_DATA = {
       // links：島上最醒目的按鈕；每學期換成新的會議資料與報名表單
       links: [["115-1 期初會議資料", "https://reurl.cc/8YYKp4"]],
     },
-    { key: "行政", name: "行政館", icon: "📋", color: "#6E8FB5", building: "track", tagline: "幹部交接、名冊繳交，新任幹部的第一站。" },
-    { key: "活動", name: "活動館", icon: "⛺", color: "#D98B4E", building: "tent", tagline: "辦活動前要送什麼、活動後要交什麼。" },
+    { key: "行政", name: "社團行政館", icon: "📋", color: "#6E8FB5", building: "track", tagline: "幹部交接、名冊繳交，新任幹部的第一站。" },
+    { key: "活動", name: "社團活動館", icon: "⛺", color: "#D98B4E", building: "tent", tagline: "辦活動前要送什麼、活動後要交什麼。" },
     {
       key: "經費", name: "經費館", icon: "💰", color: "#D9B24E", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。",
       // sections：島內分區；rules 是「相對期限」的提醒（例如活動結束後 2 週內），沒有固定日期所以不倒數
