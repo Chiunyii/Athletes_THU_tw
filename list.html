@@ -282,7 +282,6 @@ footer a { color: var(--band-fg); }
       <p>公告、截止日、辦活動要送什麼，一個地方查得到。把截止日加入行事曆，手機會自動提醒你。</p>
       <div class="quick">
         <a class="btn" href="#deadlines">看截止日</a>
-        <a class="btn light" id="lkSchedule" href="#" target="_blank" rel="noopener">作業期程總表</a>
         <a class="btn light" id="lkTree" href="#" target="_blank" rel="noopener">Linktree</a>
         <a class="btn light" id="lkOffice" href="#" target="_blank" rel="noopener">課外組網站</a>
       </div>
@@ -297,7 +296,7 @@ footer a { color: var(--band-fg); }
   </div>
 </header>
 
-<div class="sample" id="sampleBar" hidden><div class="wrap">目前顯示的公告與截止日為範例資料，正式日期請以<a id="lkSchedule2" href="#" target="_blank" rel="noopener">作業期程表</a>為準。</div></div>
+<div class="sample" id="sampleBar" hidden><div class="wrap">目前顯示的公告與截止日為範例資料，相關資訊請詳見<a id="lkOffice3" href="#" target="_blank" rel="noopener">課外組網站公告</a>。</div></div>
 
 <main>
   <div class="wrap">
@@ -311,6 +310,7 @@ footer a { color: var(--band-fg); }
         <div class="chips" id="dlChips" role="group" aria-label="依類別篩選"></div>
         <ul class="dl" id="dlList"></ul>
         <button class="btn small ghost past-toggle" id="pastToggle" type="button" hidden></button>
+        <p class="sub" style="margin-top:12px">相關資訊請詳見<a id="lkOffice4" href="#" target="_blank" rel="noopener">課外組網站公告</a>。</p>
       </section>
 
       <div style="display:grid; gap:24px; align-content:start; min-width:0">
@@ -423,7 +423,7 @@ footer a { color: var(--band-fg); }
   function toMin(hhmm) { var a = hhmm.split(":"); return +a[0] * 60 + +a[1]; }
 
   // ---------- 連結 ----------
-  [["lkSchedule", "schedule"], ["lkSchedule2", "schedule"], ["lkTree", "linktree"], ["lkTree2", "linktree"], ["lkOffice", "office"], ["lkOffice2", "office"]]
+  [["lkOffice3", "office"], ["lkOffice4", "office"], ["lkTree", "linktree"], ["lkTree2", "linktree"], ["lkOffice", "office"], ["lkOffice2", "office"]]
     .forEach(function (x) { $(x[0]).href = D.links[x[1]]; });
   $("termLabel").textContent = D.term;
   $("sampleBar").hidden = !D.isSample;
@@ -496,7 +496,7 @@ footer a { color: var(--band-fg); }
     var z = function (d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); };
     var start = new Date(x.at.getTime() - 30 * 6e4);
     return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent("【截止】" + x.title) +
-      "&dates=" + z(start) + "/" + z(x.at) + "&ctz=" + TZ + "&details=" + encodeURIComponent((x.detail || "") + "\n" + (x.link || D.links.schedule));
+      "&dates=" + z(start) + "/" + z(x.at) + "&ctz=" + TZ + "&details=" + encodeURIComponent((x.detail || "") + "\n" + (x.link || D.links.office));
   }
   function icsFor(list) {
     var z = function (d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); };
@@ -505,7 +505,7 @@ footer a { color: var(--band-fg); }
     list.forEach(function (x) {
       L.push("BEGIN:VEVENT", "UID:" + x.id + "@thuathletic", "DTSTAMP:" + z(new Date()),
         "DTSTART:" + z(new Date(x.at.getTime() - 30 * 6e4)), "DTEND:" + z(x.at),
-        "SUMMARY:" + e("【截止】" + x.title), "DESCRIPTION:" + e((x.detail || "") + "\n" + (x.link || D.links.schedule)),
+        "SUMMARY:" + e("【截止】" + x.title), "DESCRIPTION:" + e((x.detail || "") + "\n" + (x.link || D.links.office)),
         "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + e("3 天後截止：" + x.title), "TRIGGER:-P3D", "END:VALARM",
         "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + e("明天截止：" + x.title), "TRIGGER:-P1D", "END:VALARM",
         "END:VEVENT");

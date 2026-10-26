@@ -1485,13 +1485,13 @@ const stampTag = (id) => (stamps[id] ? '<span class="tag ok">✓ 已蓋章</span
 
 function gcal(x) {
   const z = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent("【截止】" + x.title) + "&dates=" + z(new Date(x.at - 18e5)) + "/" + z(x.at) + "&ctz=" + TZ + "&details=" + encodeURIComponent((x.detail || "") + "\n" + (x.link || D.links.schedule));
+  return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=" + encodeURIComponent("【截止】" + x.title) + "&dates=" + z(new Date(x.at - 18e5)) + "/" + z(x.at) + "&ctz=" + TZ + "&details=" + encodeURIComponent((x.detail || "") + "\n" + (x.link || D.links.office));
 }
 function icsFor(list) {
   const z = (d) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const e = (s) => String(s || "").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/[,;]/g, "\\$&");
   const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//THU Athletic Clubs//ZH-TW", "X-WR-CALNAME:東海體能性社團截止日"];
-  list.forEach((x) => L.push("BEGIN:VEVENT", `UID:${x.id}@thuathletic`, `DTSTAMP:${z(new Date())}`, `DTSTART:${z(new Date(x.at - 18e5))}`, `DTEND:${z(x.at)}`, `SUMMARY:${e("【截止】" + x.title)}`, `DESCRIPTION:${e((x.detail || "") + "\n" + (x.link || D.links.schedule))}`,
+  list.forEach((x) => L.push("BEGIN:VEVENT", `UID:${x.id}@thuathletic`, `DTSTAMP:${z(new Date())}`, `DTSTART:${z(new Date(x.at - 18e5))}`, `DTEND:${z(x.at)}`, `SUMMARY:${e("【截止】" + x.title)}`, `DESCRIPTION:${e((x.detail || "") + "\n" + (x.link || D.links.office))}`,
     "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${e("3 天後截止：" + x.title)}`, "TRIGGER:-P3D", "END:VALARM", "BEGIN:VALARM", "ACTION:DISPLAY", `DESCRIPTION:${e("明天截止：" + x.title)}`, "TRIGGER:-P1D", "END:VALARM", "END:VEVENT"));
   L.push("END:VCALENDAR");
   return L.join("\r\n");
@@ -1599,7 +1599,7 @@ function renderDeadlines(view = "todo") {
     <p class="foot">訂閱後，新的截止日會自動同步到手機，並在截止前 3 天、1 天提醒。</p>
     <div class="sec"><h4>依日期排序</h4>${dlItems(upcoming(), true, false)}</div>
     ${passed().length ? `<div class="sec"><button class="btn g" type="button" data-past="1">${showPast ? "隱藏已截止項目" : `顯示已截止項目（${passed().length}）`}</button>${showPast ? pastItems(passed()) : ""}</div>` : ""}
-    <p class="foot">正式期程以 <a target="_blank" rel="noopener" href="${E(D.links.schedule)}">體能性社團作業期程表 ↗</a> 為準。</p>`;
+    <p class="foot">相關資訊請詳見 <a target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站公告 ↗</a></p>`;
   showSheet(view, html);
   renderNotifyBtn();
 }

@@ -16,7 +16,6 @@ var SITE_DATA = {
 
   links: {
     office: "https://activity.thu.edu.tw/",
-    schedule: "https://ithu.tw/aHSbj",
     linktree: "https://linktr.ee/thuathletic",
   },
 
