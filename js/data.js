@@ -115,7 +115,12 @@ var SITE_DATA = {
       links: [
         ["活動公文操作說明", "https://t365-my.sharepoint.com/:b:/g/personal/yccchiang_tdrive_thu_edu_tw/IQARwEaENFzHRKtlo05rcNa5AeKQeHE1Oxh7W4pjIA7qHok?e=3BMwrG"],
         ["臨時機車通行證申請", "https://carpass.stusrv.thu.edu.tw/"],
-      ],
+        {
+      key: "競賽", name: "校外競賽館", en: "Competition Hall", islet: "校外競賽群島", icon: "🥇", color: "#E0A030", building: "podium2",
+      lead: "請有參加校外競賽的夥伴都務必填寫表單唷！", tagline: "如果有相關問題，請與峮老師聯繫～",
+      links: [["電子表單上傳", "https://form2.thu.edu.tw/4825104"]],
+    },
+  ],
     },
     {
       key: "經費", name: "經費館", en: "Club Funding Hall", icon: "💰", color: "#D9B24E", building: "bank",
@@ -305,7 +310,7 @@ var SITE_DATA = {
     common: [
       { id: "t-doc", island: "活動", title: "社課活動公文申請", note: "", links: [] },
       {
-        id: "t-contest", island: "評鑑", title: "填報校外競賽參與狀況",
+        id: "t-contest", island: "競賽", title: "填報校外競賽參與狀況",
         note: "需上傳獲獎狀況及照片至指定表單。",
         links: [["校外競賽填報表單", "https://form2.thu.edu.tw/4825104"]],
       },
@@ -486,6 +491,20 @@ var SITE_DATA = {
         "學校補助之器材報廢請向峮老師申請，請勿自行報廢。",
       ],
       links: [["財產盤點上傳表單", "https://form2.thu.edu.tw/5282503"]],
+    },
+    {
+      id: "g-contest",
+      island: "競賽",
+      topic: "校外競賽填報",
+      title: "填寫說明",
+      summary: "資料填寫區間為 115 年 8 月 1 日至 116 年 7 月 31 日。",
+      steps: [
+        "資料填寫區間為115年8月1日至116年7月31日。",
+        "填報之競賽僅需填寫有3間學校(含)以上參與的競賽活動，若非「臺灣地區」及「大陸、港、澳地區」，則需至少3個國家(含)以上參與。",
+        "在學情況若為應屆畢業生，請務必填寫「畢業年月」。【例如：11506】",
+        "文件下載後請點擊左上角「檔案 → 建立副本 → 下載複本」。",
+      ],
+      links: [["電子表單上傳", "https://form2.thu.edu.tw/4825104"], ["文件下載", "https://ithu.tw/iu5r6", "請點擊左上角檔案→建立副本→下載複本"]],
     },
     {
       id: "g-review",

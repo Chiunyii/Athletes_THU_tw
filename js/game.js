@@ -155,11 +155,16 @@ const SPOKES = MAIN.filter((d, i) => NM <= 3 || i % 2 === 0).map((d) => d.a);
 const ISLET_AT = { "場地器材島": -Math.PI / 3, "活動島": (Math.PI * 8) / 9, "行政島": Math.PI / 3 };
 const ISLET_MTN = new Set(["活動島"]); // 島中央後方放一座登山的小山
 const ISLET_EN = { "場地器材島": "Venue & Equipment Isle", "活動島": "Activity Isle", "行政島": "Administration Isle" };
-const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
-  const halls = OFF.filter((d) => d.islet === name), big = halls.length > 2;
-  const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = big ? 14.5 : 9;
-  const pos = dir.clone().multiplyScalar(R_ISLE + r + 5.5);
-  const I = { a, dir, r, pos, name, halls, coast: dir.clone().multiplyScalar(R_ISLE * 0.92), entry: pos.clone().sub(dir.clone().multiplyScalar(r * 0.88)) };
+// ISLET_FROM：從另一座小島再往外延伸的小島（橋接在那座島的主路盡頭）
+const ISLET_FROM = { "校外競賽群島": "行政島" };
+ISLET_EN["校外競賽群島"] = "Competition Isles";
+const ISLETS = [];
+[...new Set(OFF.map((d) => d.islet))].forEach((name, k) => {
+  const halls = OFF.filter((d) => d.islet === name), big = halls.length > 2, par = ISLETS.find((P) => P.name === ISLET_FROM[name]);
+  const a = par ? par.a : front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = big ? 14.5 : par ? 7.5 : 9;
+  const pos = par ? par.pos.clone().add(dir.clone().multiplyScalar(par.r + r + 4)) : dir.clone().multiplyScalar(R_ISLE + r + 5.5);
+  const I = { a, dir, r, pos, name, halls, parent: par, root: par ? par.root : null, coast: par ? par.pos.clone().add(dir.clone().multiplyScalar(par.r * 0.92)) : dir.clone().multiplyScalar(R_ISLE * 0.92), entry: pos.clone().sub(dir.clone().multiplyScalar(r * 0.88)) };
+  I.root = I.root || I;
   const perp = new V3(-dir.z, 0, dir.x);
   I.halls.forEach((d, i) => {
     d.isl = I;
@@ -176,12 +181,12 @@ const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
     d.a = Math.atan2(d.dir.z, d.dir.x);
   });
   if (big) I.roadEnd = I.entry.clone().add(dir.clone().multiplyScalar(3.4 + (I.halls.length - 1) * 5.6 + 2.4));
-  return I;
+  ISLETS.push(I);
 });
-const WORLD_R = ISLETS.length ? R_ISLE + 2 * Math.max(...ISLETS.map((I) => I.r)) + 6 : R_ISLE + 1;
+const WORLD_R = ISLETS.length ? Math.max(R_ISLE, ...ISLETS.map((I) => I.pos.length() + I.r * 0.6)) + 4 : R_ISLE + 1;
 // 鏡頭取景：以本島為主，往小島的方向偏一點，讓所有島都放得進畫面
-const CAM_R = ISLETS.length ? R_ISLE + 10 + (ISLETS.length - 1) * 3.5 + Math.max(0, Math.max(...ISLETS.map((I) => I.r)) - 8) * 0.8 : R_ISLE + 1;
-const HOME_C = ISLETS.reduce((v, I) => v.add(I.dir.clone().multiplyScalar(8.5 / ISLETS.length)), new V3(0, 0, 0));
+const CAM_R = ISLETS.length ? R_ISLE + 10 + (ISLETS.filter((I) => !I.parent).length - 1) * 3.5 + (ISLETS.some((I) => I.parent) ? 6 : 0) + Math.max(0, Math.max(...ISLETS.map((I) => I.r)) - 8) * 0.8 : R_ISLE + 1;
+const HOME_C = ISLETS.filter((I) => !I.parent).reduce((v, I) => v.add(I.dir.clone().multiplyScalar(8.5 / ISLETS.length)), new V3(0, 0, 0));
 
 const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, -300, 500);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -691,7 +696,30 @@ function bHouse(g, col) {
   box(g, 0.7, 1, 0.08, C.dark, 0, 0, 1.02);
   g.userData.h = 3.4;
 }
-const BUILD = { hall: bHall, track: bTrack, tent: bTent, bank: bBank, gym: bGym, aid: bAid, store: bStore, podium: bPodium, house: bHouse, handover: bHandover, inventory: bInventory };
+// 校外競賽館：頒獎台上的選手、大獎盃與各校旗幟
+function bContest(g) {
+  g.userData.base = 0.12; // 沒有方形底座
+  const gold = mat(0xe8b04b, { metalness: 0.45, roughness: 0.4 }), silver = mat(0xc9ced6, { metalness: 0.45, roughness: 0.4 }), bronze = mat(0xc98a5a, { metalness: 0.4, roughness: 0.45 });
+  [[0, 1.1, 0xe8b04b, "1"], [-1.05, 0.75, 0xd9d2c5, "2"], [1.05, 0.5, 0xc9875a, "3"]].forEach(([x, h, c, n]) => {
+    box(g, 1, h, 0.9, c, x, 0.12, 0);
+    const t = textPlane(0.45, 0.45, (cx, w, hh) => { cx.fillStyle = "#FFFDF9"; cx.font = `900 ${hh * 0.8}px ${FONT}`; cx.textAlign = "center"; cx.textBaseline = "middle"; cx.fillText(n, w / 2, hh / 2 + 4); });
+    t.position.set(x, 0.12 + h / 2, 0.46); g.add(t);
+  });
+  const ath = [[0, 1.22, "#C8623F", gold], [-1.05, 0.87, "#6E8FB5", silver], [1.05, 0.62, "#5F8F5A", bronze]].map(([x, y, shirt, m]) => {
+    const p = mini(g, { shirt, hair: "#3B2E26", skin: "#F1CDB0" }, 0.6, x, y, 0);
+    mesh(new THREE.TorusGeometry(0.2, 0.02, 4, 16), soft(0xc8443a), 0, 1.05, 0.05, p).rotation.x = Math.PI / 2.4; cyl(p, 0.1, 0.1, 0.04, m, 0, 0.72, 0.3, 14).rotation.x = Math.PI / 2;
+    return p;
+  });
+  // 冠軍高舉的大獎盃
+  const cup = new THREE.Group(); cup.position.set(0.32, 2.35, 0.1); g.add(cup);
+  cyl(cup, 0.1, 0.16, 0.12, gold, 0, 0, 0); cyl(cup, 0.04, 0.04, 0.2, gold, 0, 0.12, 0); cyl(cup, 0.24, 0.1, 0.32, gold, 0, 0.32, 0, 14);
+  [-1, 1].forEach((k) => mesh(new THREE.TorusGeometry(0.09, 0.025, 6, 12, Math.PI), gold, k * 0.24, 0.5, 0, cup).rotation.z = k * Math.PI / 2);
+  // 參賽各校的旗幟
+  [[-1.7, 0xc8443a], [-1.7, 0x6e8fb5], [1.7, 0xe8b04b], [1.7, 0x5f8f5a]].forEach(([x, c], k) => { const z = -0.8 + (k % 2) * 0.5; cyl(g, 0.03, 0.03, 2.2, 0xdddddd, x, 0.12, z, 5); box(g, 0.02, 0.36, 0.55, c, x, 1.85, z + 0.28); });
+  g.userData.bob = [ath[0]]; g.userData.floaty = [cup]; cup.userData.y0 = 2.35;
+  g.userData.h = 3.2;
+}
+const BUILD = { hall: bHall, track: bTrack, tent: bTent, bank: bBank, gym: bGym, aid: bAid, store: bStore, podium: bPodium, house: bHouse, handover: bHandover, inventory: bInventory, podium2: bContest };
 
 // 圓滾滾的樹：兩三顆球疊在一起
 function tree(p, x, z, s, k) {
@@ -961,7 +989,7 @@ ISLETS.forEach((ISLET) => {
   const seg = (p, q, w = 1.4) => { const len = p.distanceTo(q), m = p.clone().add(q).multiplyScalar(0.5), a = Math.atan2(q.z - p.z, q.x - p.x);
     const road = box(world, len, 0.05, w, C.road, m.x, 0, m.z); road.rotation.y = -a; road.castShadow = false;
     for (let s = 0.6; s < len - 0.3; s += 1.1) { const pt = p.clone().lerp(q, s / len); dashAt(world, pt.x, pt.z, -a + Math.PI / 2); } };
-  seg(ISLET.dir.clone().multiplyScalar(RO + 0.7), ISLET.coast);
+  seg(ISLET.parent ? ISLET.parent.roadEnd || ISLET.parent.pos : ISLET.dir.clone().multiplyScalar(RO + 0.7), ISLET.coast);
   seg(ISLET.entry, ISLET.roadEnd || ISLET.pos);
   ISLET.halls.forEach((d) => seg(d.junction || ISLET.pos, d.pos.clone().sub(d.dir.clone().multiplyScalar(1.6 * HALL_S)), 1.3));
   // 木橋
@@ -1001,7 +1029,7 @@ ISLETS.forEach((ISLET) => {
 
 /* ---- 樹：避開道路、建築區與中央地點 ---- */
 {
-  const roadAngles = [...SPOKES, front, ...ISLETS.map((I) => I.a)];
+  const roadAngles = [...SPOKES, front, ...ISLETS.filter((I) => !I.parent).map((I) => I.a)];
   const nearRadial = (x, z, r) => roadAngles.some((a) => { const along = x * Math.cos(a) + z * Math.sin(a), side = Math.abs(-x * Math.sin(a) + z * Math.cos(a)); return along > 4 && side < 1.6; }) ||
     MAIN.some((d) => { const along = x * Math.cos(d.a) + z * Math.sin(d.a), side = Math.abs(-x * Math.sin(d.a) + z * Math.cos(d.a)); return along > RO && along < R_LOT && side < 1.5; });
   let n = 0;
@@ -1177,7 +1205,7 @@ const hallOut = (d) => [d.pos.clone().add(d.side), d.pos.clone().add(d.door), ..
 function isletPath(ISLET, outbound) {
   const b = ISLET.bridge, m = Math.ceil(b.len / 0.4), br = [];
   for (let k = 0; k <= m; k++) { const t = k / m, p = b.p0.clone().lerp(b.p1, t); p.y = Math.sin(t * Math.PI) * 0.35; br.push(p); }
-  const pts = [ringPt(ISLET.a, RO), ...br, ISLET.pos.clone()];
+  const P = ISLET.parent, pts = [...(P ? [...isletPath(P, true), (P.roadEnd || P.pos).clone()] : [ringPt(ISLET.a, RO)]), ...br, ISLET.pos.clone()];
   return outbound ? pts : pts.reverse();
 }
 function route(to) {
@@ -1185,14 +1213,14 @@ function route(to) {
   let posA, onOuter;
   const from = avAt !== "C" ? ISL[avAt] : null;
   if (from) pts.push(...hallOut(from));
-  if (from && from.isl) { const I = from.isl; pts.push(I.pos.clone()); if (ISL[to] && ISL[to].isl === I) { pts.push(...hallIn(ISL[to])); return pts; } pts.push(...isletPath(I, false)); posA = I.a; onOuter = true; }
+  if (from && from.isl) { const I = from.isl; pts.push(I.pos.clone()); if (ISL[to] && ISL[to].isl === I) { pts.push(...hallIn(ISL[to])); return pts; } pts.push(...isletPath(I, false)); posA = I.root.a; onOuter = true; }
   else if (from) { posA = from.a; pts.push(ringPt(posA, RO)); onOuter = true; }
   else { posA = curA; pts.push(ringPt(curA, RW)); onOuter = false; }
   if (to === "C") {
     if (onOuter) { const s = nearestSpoke(posA); pts.push(...arc(posA, s, RO), ringPt(s, RW)); posA = s; }
     pts.push(...arc(posA, front, RW), AV_HOME.clone());
   } else {
-    const d = ISL[to], ta = d.isl ? d.isl.a : d.a;
+    const d = ISL[to], ta = d.isl ? d.isl.root.a : d.a;
     if (!onOuter) { const s = nearestSpoke(ta); pts.push(...arc(posA, s, RW), ringPt(s, RO)); posA = s; }
     pts.push(...arc(posA, ta, RO));
     if (d.isl) pts.push(...isletPath(d.isl, true));
@@ -1492,7 +1520,7 @@ function pastItems(list) {
 function newsItems(list) {
   if (!list.length) return '<p class="empty">目前沒有公告。</p>';
   return '<ul class="items">' + list.map((a) => { const d = isleOf(a.tag), nw = !read.includes(a.id);
-    return `<li class="item ${nw ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="${nw}"><span class="dot"></span><span class="nm">${E(a.title)}<small>${[a.date, d && d.name].filter(Boolean).map(E).join("・")}</small></span><span class="meta ${nw ? "hot" : ""}">${a.pinned ? "置頂" : nw ? "NEW" : ""}</span><span class="chev">›</span></button><div class="more" ${nw ? "" : "hidden"}>${a.body ? `<p>${E(a.body)}</p>` : ""}${a.link ? `<div class="acts"><a class="btn t" target="_blank" rel="noopener" href="${E(a.link)}">查看公告 ↗</a></div>` : ""}</div></li>`; }).join("") + "</ul>";
+    return `<li class="item ${nw ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="false"><span class="dot"></span><span class="nm">${E(a.title)}<small>${[a.date, d && d.name].filter(Boolean).map(E).join("・")}</small></span><span class="meta ${nw ? "hot" : ""}">${a.pinned ? "置頂" : nw ? "NEW" : ""}</span><span class="chev">›</span></button><div class="more" hidden>${a.body ? `<p>${E(a.body)}</p>` : ""}${a.link ? `<div class="acts"><a class="btn t" target="_blank" rel="noopener" href="${E(a.link)}">查看公告 ↗</a></div>` : ""}</div></li>`; }).join("") + "</ul>";
 }
 function markRead(list) { let ch = false; list.forEach((a) => { if (!read.includes(a.id)) { read.push(a.id); ch = true; } }); if (ch) { LS.set("read", read); updHud(); updMarkers(); buildLabels(); } }
 
@@ -1524,7 +1552,7 @@ function renderIsle(d, keepScroll) {
     <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span>${d.sections?.length ? `<span class="tag">${d.sections.length} 個分區</span>` : `<span class="tag">${dl.length} 項截止</span>`}<span class="tag">${steps} 則攻略</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
     ${sectionsHtml(d)}
     ${d.guides.map((g, k) => `<div class="sec" ${k ? "" : 'id="i-g"'}><h4>${E(g.topic)}・攻略</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 則</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g ${l[2] ? "two" : ""}" target="_blank" rel="noopener" href="${E(l[1])}"><span>${E(l[0])} ↗</span>${l[2] ? `<small>${E(l[2])}</small>` : ""}</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
-    <div class="sec" id="i-dl"><h4>截止日</h4>${dlItems(dl, false, true)}</div>
+    <div class="sec" id="i-dl"><h4>截止日</h4>${dlItems(dl, false, false)}</div>
     <div class="sec" id="i-news"><h4>相關公告</h4>${newsItems(news)}</div>
     <div class="sec" id="i-duty"><h4>這一館在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
     ${foot}`;
@@ -1569,7 +1597,7 @@ function renderDeadlines(view = "todo") {
     <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag(view)}</div>
     <div class="acts"><a class="btn t" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" data-ics="all">全部加入行事曆</button><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
     <p class="foot">訂閱後，新的截止日會自動同步到手機，並在截止前 3 天、1 天提醒。</p>
-    <div class="sec"><h4>依日期排序</h4>${dlItems(upcoming(), true, true)}</div>
+    <div class="sec"><h4>依日期排序</h4>${dlItems(upcoming(), true, false)}</div>
     ${passed().length ? `<div class="sec"><button class="btn g" type="button" data-past="1">${showPast ? "隱藏已截止項目" : `顯示已截止項目（${passed().length}）`}</button>${showPast ? pastItems(passed()) : ""}</div>` : ""}
     <p class="foot">正式期程以 <a target="_blank" rel="noopener" href="${E(D.links.schedule)}">體能性社團作業期程表 ↗</a> 為準。</p>`;
   showSheet(view, html);
