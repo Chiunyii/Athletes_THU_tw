@@ -316,7 +316,8 @@ function bOffice(g) {
   sign.position.set(0, 0.95, 2.4); g.add(sign);
   g.userData.sign = sign; g.userData.h = 6.5;
 }
-// 截止日鐘塔：以路思義教堂的造型呈現（兩片弧形屋面在頂端留一道天窗縫，黃色菱格琉璃瓦），門前立著倒數鐘面
+// 截止日鐘塔：以路思義教堂的造型呈現。前後兩對弧形屋面（後面那對較高、較寬），
+// 兩片屋面在頂端留一道天窗縫，前後之間也留一道縫；正面是有橫格的玻璃立面，頂上有十字架，門前立著倒數鐘面
 function tileTex() {
   const cv = document.createElement("canvas"); cv.width = cv.height = 128; const c = cv.getContext("2d");
   c.fillStyle = "#D9B45E"; c.fillRect(0, 0, 128, 128);
@@ -324,26 +325,45 @@ function tileTex() {
   for (let k = -128; k <= 256; k += 32) { c.beginPath(); c.moveTo(k, 0); c.lineTo(k + 128, 128); c.stroke(); c.beginPath(); c.moveTo(k, 128); c.lineTo(k + 128, 0); c.stroke(); }
   const t = new THREE.CanvasTexture(cv); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(3, 4); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
+function glassTex(door) {
+  const cv = document.createElement("canvas"); cv.width = 128; cv.height = 256; const c = cv.getContext("2d");
+  c.fillStyle = "#8FA9AE"; c.fillRect(0, 0, 128, 256);
+  c.strokeStyle = "#3E4A4C"; c.lineWidth = 3;
+  for (let y = 18; y < 256; y += 18) { c.beginPath(); c.moveTo(0, y); c.lineTo(128, y); c.stroke(); }
+  c.beginPath(); c.moveTo(64, 0); c.lineTo(64, 256); c.stroke();
+  if (door) { c.fillStyle = "#F3E6CE"; c.beginPath(); c.moveTo(48, 256); c.lineTo(48, 222); c.lineTo(64, 212); c.lineTo(80, 222); c.lineTo(80, 256); c.fill(); c.stroke(); c.fillStyle = "#2A211C"; c.fillRect(0, 240, 46, 8); c.fillRect(82, 240, 46, 8); }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+// 由網格點建一片曲面：f(u, s) 回傳 [x, y, z]
+function surf(f, nu, ns, m, parent, flip) {
+  const pos = [], uv = [], idx = [];
+  for (let i = 0; i <= ns; i++) for (let j = 0; j <= nu; j++) { pos.push(...f(j / nu, i / ns)); uv.push(j / nu, i / ns); }
+  for (let i = 0; i < ns; i++) for (let j = 0; j < nu; j++) { const a = i * (nu + 1) + j, b = a + nu + 1; flip ? idx.push(a, a + 1, b, b, a + 1, b + 1) : idx.push(a, b, a + 1, b, b + 1, a + 1); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+  const o = new THREE.Mesh(geo, m); o.castShadow = o.receiveShadow = true; parent.add(o); return o;
+}
 function bClock(g) {
-  box(g, 4, 0.25, 3.4, 0xe2d6c3, 0, 0, 0);
-  const W = 1.7, H = 5.4, D = 1.45, GAP = 0.07, nu = 14, nv = 6;
-  const curve = (s) => GAP + W * Math.pow(1 - s, 1.8); // 由下往上收窄的弧線
+  cyl(g, 2.9, 3, 0.25, 0xe2d6c3, 0, 0, 0, 24);
   const tx = tileTex(), tiles = new THREE.MeshStandardMaterial({ map: tx, emissiveMap: tx, emissive: 0xffffff, emissiveIntensity: 0.22, roughness: 0.6, side: THREE.DoubleSide });
-  const ch = new THREE.Group(); ch.rotation.y = -0.65; g.add(ch); // 斜放，讓弧形屋面朝向鏡頭
-  [-1, 1].forEach((side) => {
-    const pos = [], uv = [], idx = [];
-    for (let i = 0; i <= nu; i++) for (let j = 0; j <= nv; j++) { const s = i / nu, t = j / nv * 2 - 1; pos.push(side * curve(s), 0.25 + H * s, t * D * (1 - 0.18 * s)); uv.push(j / nv, s); }
-    for (let i = 0; i < nu; i++) for (let j = 0; j < nv; j++) { const a = i * (nv + 1) + j, b = a + nv + 1; side > 0 ? idx.push(a, b, a + 1, b, b + 1, a + 1) : idx.push(a, a + 1, b, b, a + 1, b + 1); }
-    const geo = new THREE.BufferGeometry(); geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
-    const m = new THREE.Mesh(geo, tiles); m.castShadow = m.receiveShadow = true; ch.add(m);
-  });
-  // 前後的玻璃立面
-  const sh = new THREE.Shape(); sh.moveTo(-curve(0) * 0.96, 0); for (let i = 1; i <= nu; i++) { const s = i / nu; sh.lineTo(-curve(s) * 0.96, H * s); } for (let i = nu; i >= 0; i--) { const s = i / nu; sh.lineTo(curve(s) * 0.96, H * s); }
-  [1, -1].forEach((k) => { const f = mesh(new THREE.ShapeGeometry(sh), mat(0x8fa3a0, { side: THREE.DoubleSide }), 0, 0.25, k * D * 0.9, ch); f.rotation.x = -k * 0.12; });
-  box(ch, 0.7, 1.1, 0.06, 0x8a5a33, 0, 0.25, D * 0.93);
+  const ch = new THREE.Group(); ch.position.set(0, 0.25, 0); ch.rotation.y = -0.5; g.add(ch); // 斜放，看得到正面玻璃與側面屋面
+  const GAP = 0.06, P = 1.8, H1 = 3.05, H2 = 3.5, Wf = 0.75, Wj = 2.25, Wr = 0.8;
+  const zF = 1.75, zJ = -0.45, zR = -1.65, SET = 0.4; // 正面、前後交接處、背面；正面頂端往後退
+  const half = (w, s) => GAP + w * Math.pow(1 - s, P);
+  // 前面那對：前窄後寬，頂高 H1；正面邊緣由下往上往後彎
+  const frontZ = (s) => zF - SET * Math.pow(s, 1.3);
+  [-1, 1].forEach((sd) => surf((u, s) => [sd * half(Wf + (Wj * 0.92 - Wf) * u, s), H1 * s, frontZ(s) + (zJ - frontZ(s)) * u], 8, 14, tiles, ch, sd < 0));
+  // 後面那對：前寬後窄（弧形收窄），頂高 H2，背面頂端略往內收
+  [-1, 1].forEach((sd) => surf((u, s) => [sd * half(Wr + (Wj - Wr) * Math.pow(1 - u, 2), s), H2 * s, zJ - 0.08 + (zR + 0.18 * s - zJ + 0.08) * u], 8, 14, tiles, ch, sd < 0));
+  // 玻璃立面：正面（含門）、前後交接處露出的部分、背面
+  const face = (w, H, zf, tex) => surf((u, s) => { const x = half(w, s) * 0.97; return [-x + 2 * x * u, H * s, zf(s)]; }, 1, 14, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, side: THREE.DoubleSide }), ch);
+  face(Wf, H1, frontZ, glassTex(true));
+  face(Wj, H2, () => zJ - 0.1, glassTex(false));
+  face(Wr, H2, (s) => zR + 0.18 * s, glassTex(false));
+  // 十字架
+  box(ch, 0.06, 1.1, 0.06, 0x2a211c, 0, H2, zJ - 0.1); box(ch, 0.45, 0.06, 0.06, 0x2a211c, 0, H2 + 0.78, zJ - 0.1);
   // 倒數鐘面立在門前
-  cyl(g, 0.07, 0.07, 0.9, C.dark, 0, 0.25, D + 0.75, 6);
-  const face = textPlane(1.3, 1.3, (c, w, h) => {
+  cyl(g, 0.07, 0.07, 0.9, C.dark, 1.9, 0.25, 1.9, 6);
+  const sign = textPlane(1.2, 1.2, (c, w, h) => {
     const n = upcoming()[0], d = n ? daysLeft(n.at) : null;
     c.fillStyle = "#FFFDF9"; c.beginPath(); c.arc(w / 2, h / 2, w / 2 - 6, 0, Math.PI * 2); c.fill();
     c.lineWidth = 9; c.strokeStyle = "#2A211C"; c.stroke();
@@ -351,8 +371,8 @@ function bClock(g) {
     c.font = `700 ${h * 0.3}px ${MONO}`; c.fillText(d === null ? "--" : d === 0 ? "今天" : "D-" + d, w / 2, h * 0.47);
     c.fillStyle = "#C8623F"; c.font = `700 ${h * 0.12}px ${FONT}`; c.fillText("下個截止", w / 2, h * 0.75);
   });
-  face.position.set(0, 1.75, D + 0.8); g.add(face);
-  g.userData.sign = face; g.userData.h = H + 0.6;
+  sign.position.set(1.9, 1.7, 1.95); g.add(sign);
+  g.userData.sign = sign; g.userData.h = H2 + 1.4;
 }
 function bBoard(g) {
   [-1.3, 1.3].forEach((x) => box(g, 0.2, 2.6, 0.2, C.dark, x, 0, 0));
