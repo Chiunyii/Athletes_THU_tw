@@ -71,7 +71,7 @@ function officeStatus() {
 }
 
 /* ---------------- 資料 ---------------- */
-const deadlines = D.deadlines.map((x) => ({ ...x, at: parse(x.due) })).filter((x) => x.at).sort((a, b) => a.at - b.at);
+const deadlines = D.allDeadlines().map((x) => ({ ...x, at: parse(x.due) })).filter((x) => x.at).sort((a, b) => a.at - b.at);
 const upcoming = () => deadlines.filter((x) => x.at >= new Date());
 const anns = D.announcements.slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)); // 其餘依 data.js 的順序（最新在上）
 let read = LS.get("read", []);

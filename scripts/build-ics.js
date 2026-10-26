@@ -16,9 +16,12 @@ const lines = [
   "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//THU Athletic Clubs//ZH-TW", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
   "X-WR-CALNAME:東海體能性社團截止日", "X-WR-TIMEZONE:Asia/Taipei", "REFRESH-INTERVAL;VALUE=DURATION:PT12H",
 ];
-for (const x of D.deadlines) {
+let n = 0;
+for (const x of D.allDeadlines()) {
   const at = parse(x.due);
   if (!at) { console.warn(`略過日期格式錯誤的項目：${x.title}（${x.due}）`); continue; }
+  if (at < new Date()) continue; // 已過期的不放入
+  n++;
   lines.push(
     "BEGIN:VEVENT", `UID:${x.id}@thuathletic`, `DTSTAMP:${z(new Date())}`,
     `DTSTART:${z(new Date(at.getTime() - 30 * 6e4))}`, `DTEND:${z(at)}`,
@@ -31,4 +34,4 @@ for (const x of D.deadlines) {
 lines.push("END:VCALENDAR");
 const out = path.join(__dirname, "..", "calendar.ics");
 fs.writeFileSync(out, lines.join("\r\n") + "\r\n");
-console.log(`已產生 ${out}（${D.deadlines.length} 筆截止日）`);
+console.log(`已產生 ${out}（${n} 筆截止日）`);

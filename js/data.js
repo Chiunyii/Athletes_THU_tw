@@ -5,14 +5,14 @@
  * 日期格式一律寫成 "YYYY-MM-DD"，時間可加 "HH:MM"（24 小時制）
  * 例如： "2026-11-20"  或  "2026-11-20 17:00"
  *
- * ⚠ 目前的公告與截止日是「範例資料」，請依實際作業期程替換。
+ * 截止日鐘塔＝deadlines ＋ 公告中有 due 的項目；已過期的會自動隱藏。
  * ========================================================= */
 var SITE_DATA = {
   // 學期名稱，顯示在頁首
   term: "115 學年度第 1 學期",
 
   // 設為 true 時，頁面會顯示「範例資料」提示條；換成正式資料後請改為 false
-  isSample: true,
+  isSample: false,
 
   links: {
     office: "https://activity.thu.edu.tw/",
@@ -177,44 +177,38 @@ var SITE_DATA = {
    * category 建議使用：行政、經費、活動、場地、評鑑、安全
    * --------------------------------------------------------- */
   deadlines: [
+    // 格式：{ id, title, due（"YYYY-MM-DD" 或 "YYYY-MM-DD HH:MM"）, category（對應館的 key）, detail, link }
+    // 已過期的項目網站會自動隱藏，不必手動刪除
     {
-      id: "d-roster",
-      title: "新任幹部名冊與交接清單繳交",
-      due: "2026-10-31 17:00",
-      category: "行政",
-      detail: "新任社長、副社長、財務、活動長聯絡資料，與上一屆交接清單一併繳交。",
-      link: "https://ithu.tw/aHSbj",
+      id: "d-1151-passbook",
+      title: "社團郵局存摺更換辦理完成",
+      due: "2026-10-30",
+      category: "經費",
+      detail: "新舊任社長攜帶雙證件、印章、社章、存摺與 50 元至郵局辦理，完成後拍存摺封面照片給老師核對（申請學輔經費及器材補助之社團務必配合）。",
+      link: "https://form2.thu.edu.tw/4821779",
     },
     {
-      id: "d-insurance",
-      title: "11 月校外活動保險名冊",
-      due: "2026-11-06 17:00",
-      category: "安全",
-      detail: "校外練習、移地訓練、比賽皆需於出發前完成保險名冊送件。",
-      link: "",
-    },
-    {
-      id: "d-venue",
-      title: "12 月場地借用申請",
-      due: "2026-11-13 17:00",
-      category: "場地",
-      detail: "體育館、球場、韻律教室等場地請提早登記，避免與系隊或課程衝突。",
-      link: "",
-    },
-    {
-      id: "d-winter",
-      title: "寒假集訓／營隊活動申請",
-      due: "2026-12-11 17:00",
-      category: "活動",
-      detail: "寒假期間的集訓、營隊需事先送活動申請表與安全計畫。",
-      link: "",
-    },
-    {
-      id: "d-report",
-      title: "期末社團成果與評鑑資料上傳",
-      due: "2027-01-08 17:00",
+      id: "d-1151-eval",
+      title: "115 年度校內社團評鑑（全天）",
+      due: "2026-11-21",
       category: "評鑑",
-      detail: "活動照片、成果報告、出席紀錄整理後上傳，作為社團評鑑依據。",
+      detail: "報名資訊另行提供；請確認上一屆社團雲端資料帳號、密碼已交接。",
+      link: "",
+    },
+    {
+      id: "d-1151-activity",
+      title: "學輔經費補助活動辦理完畢",
+      due: "2026-12-11",
+      category: "經費",
+      detail: "本學期申請學輔經費的活動，請於此日前辦理完畢。",
+      link: "",
+    },
+    {
+      id: "d-1151-reimburse",
+      title: "學輔經費核銷完成",
+      due: "2026-12-16",
+      category: "經費",
+      detail: "核銷文件：審查核定項目之單據及相關附件、成效報告及收支結算表。請先傳訊與老師確認核銷時間。",
       link: "",
     },
   ],
@@ -225,6 +219,7 @@ var SITE_DATA = {
   announcements: [
     // 格式：{ id, date（可省略，YYYY-MM-DD）, pinned, tag（對應島的 key，例如 "經費"）, title, body（可省略）, link（課外組公告網址）}
     // 列表依這裡的順序顯示（置頂的排最前面），最新的請加在最上面
+    // 公告有截止日時加上 due（同截止日格式），會自動出現在截止日鐘塔；可另寫 dueTitle 作為鐘塔上的名稱
     {
       id: "a-1151-1854", tag: "經費",
       title: "115學年度第1學期「大專校院帶動中小學社團發展」計畫補助審查結果公告",
@@ -442,6 +437,14 @@ var SITE_DATA = {
     "確認本學期練習場地借用",
     "確認社員保險與校外活動流程",
   ],
+};
+
+// 截止日鐘塔用：deadlines 加上公告中有 due 的項目（自動加入，不必重複填寫）
+SITE_DATA.allDeadlines = function () {
+  var fromNews = SITE_DATA.announcements.filter(function (a) { return a.due; }).map(function (a) {
+    return { id: "d-" + a.id, title: a.dueTitle || a.title, due: a.due, category: a.tag || "", detail: a.body || "公告欄：" + a.title, link: a.link || "", fromNews: true };
+  });
+  return SITE_DATA.deadlines.concat(fromNews);
 };
 
 if (typeof module !== "undefined") module.exports = SITE_DATA;
