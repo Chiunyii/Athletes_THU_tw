@@ -115,12 +115,7 @@ var SITE_DATA = {
       links: [
         ["活動公文操作說明", "https://t365-my.sharepoint.com/:b:/g/personal/yccchiang_tdrive_thu_edu_tw/IQARwEaENFzHRKtlo05rcNa5AeKQeHE1Oxh7W4pjIA7qHok?e=3BMwrG"],
         ["臨時機車通行證申請", "https://carpass.stusrv.thu.edu.tw/"],
-        {
-      key: "競賽", name: "校外競賽館", en: "Competition Hall", islet: "校外競賽群島", icon: "🥇", color: "#E0A030", building: "podium2",
-      lead: "請有參加校外競賽的夥伴都務必填寫表單唷！", tagline: "如果有相關問題，請與峮老師聯繫～",
-      links: [["電子表單上傳", "https://form2.thu.edu.tw/4825104"]],
-    },
-  ],
+      ],
     },
     {
       key: "經費", name: "經費館", en: "Club Funding Hall", icon: "💰", color: "#D9B24E", building: "bank",
@@ -177,6 +172,11 @@ var SITE_DATA = {
     },
     { key: "交接", name: "交接館", en: "Handover Hall", islet: "行政島", icon: "🤝", color: "#7FA6A0", building: "handover", lead: "新舊幹部怎麼交接？", tagline: "帳冊、器材、帳號密碼、未完成事項，一次交接清楚。" },
     { key: "財產", name: "財產盤點館", en: "Property Inventory Hall", islet: "行政島", icon: "📦", color: "#B58A5E", building: "inventory", lead: "社團器材借用與保管", tagline: "財產盤點於每年 5 月上傳至指定表單。", links: [["財產盤點上傳表單", "https://form2.thu.edu.tw/5282503"]] },
+    {
+      key: "競賽", name: "校外競賽館", en: "Competition Hall", islet: "校外競賽群島", icon: "🥇", color: "#E0A030", building: "podium2",
+      lead: "請有參加校外競賽的夥伴都務必填寫表單唷！", tagline: "如果有相關問題，請與峮老師聯繫～",
+      links: [["電子表單上傳", "https://form2.thu.edu.tw/4825104"]],
+    },
   ],
 
   /* ---------------------------------------------------------
