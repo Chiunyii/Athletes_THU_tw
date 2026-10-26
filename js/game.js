@@ -83,7 +83,6 @@ const unread = () => anns.filter((a) => !read.includes(a.id));
 const CLUBS = D.clubs || [];
 const ROLES = D.roles || ["社長", "幹部", "社員"];
 // 每種行政分類主要由哪些職位負責（用來提醒「這是你的事」）
-const DUTY = { 會議: ["社長", "副社長", "幹部", "輔導老師"], 行政: ["社長", "副社長", "文書"], 活動: ["社長", "活動", "輔導老師"], 經費: ["社長", "財務", "輔導老師"], 場地: ["社長", "副社長", "活動", "幹部"], 安全: ["社長", "副社長", "活動", "幹部", "輔導老師"], 器材: ["器材", "幹部"], 評鑑: ["社長", "副社長", "文書"], 交接: ["社長", "副社長", "文書", "財務", "器材"], 財產: ["器材", "財務"] };
 
 const ISL = D.islands.map((d, i) => ({ ...d, i, no: pad2(i + 1), guides: D.guides.filter((g) => g.island === d.key) }));
 const isleOf = (key) => ISL.find((d) => d.key === key);
@@ -114,7 +113,6 @@ const HAIRS = ["#2B2118", "#5A3B28", "#8A5A3B", "#C9A36A", "#1F2A44"];
 const SKINS = ["#F6D7BE", "#E9BC98", "#C98E66", "#8E5B3C"];
 let me = Object.assign({ name: "", club: "", role: "社員", shirt: SHIRTS[1], hair: HAIRS[0], skin: SKINS[0] }, LS.get("me", {}));
 me.role = ({ 活動長: "活動", 器材長: "器材", 公關: "幹部" })[me.role] || me.role; // 舊版職位名稱
-const myDuty = (d) => !!me.club && (DUTY[d.key] || []).includes(me.role);
 const myProp = () => (CLUBS.find((c) => c.name === me.club) || {}).prop;
 
 /* ---------------- Three.js 基本 ---------------- */
@@ -679,18 +677,18 @@ function bTodo(g) {
   cyl(bottle, 0.16, 0.18, 0.42, mat(0xfbfaf6, { flatShading: false }), 0, 0, 0, 14); cyl(bottle, 0.1, 0.16, 0.14, mat(0xfbfaf6, { flatShading: false }), 0, 0.42, 0, 14); cyl(bottle, 0.11, 0.11, 0.07, soft(0xe8c04a), 0, 0.56, 0, 14);
   cyl(bottle, 0.165, 0.185, 0.16, soft(0xe8c04a), 0, 0.08, 0, 14);
   g.userData.npc = cow;
-  const bubble = textPlane(3.8, 1.5, (c, w, h) => {
+  const bubble = textPlane(5.4, 2.1, (c, w, h) => {
         const bh = h * 0.78;
     rr(c, 6, 6, w - 12, bh - 6, 34); c.fillStyle = cowMsg ? "#FFE9A8" : "#FFFDF9"; c.fill(); c.lineWidth = 8; c.strokeStyle = "#2A211C"; c.stroke();
     c.beginPath(); c.moveTo(w / 2 - 22, bh - 4); c.lineTo(w / 2, h - 6); c.lineTo(w / 2 + 22, bh - 4); c.closePath(); c.fill(); c.stroke();
     c.fillStyle = cowMsg ? "#FFE9A8" : "#FFFDF9"; c.fillRect(w / 2 - 18, bh - 14, 36, 14);
     c.textAlign = "center"; c.textBaseline = "middle";
     if (cowMsg) { c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.34}px ${FONT}`; c.fillText(cowMsg, w / 2, bh * 0.52); return; }
-    const n = upcoming()[0], k = n ? daysLeft(n.at) : null, t = n ? (n.title.length > 9 ? n.title.slice(0, 9) + "…" : n.title) : "";
-    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.2}px ${FONT}`; c.fillText(n ? `啊牛提醒・${k === 0 ? "今天截止" : "D-" + k}` : "啊牛提醒", w / 2, bh * 0.33);
-    c.fillStyle = "#2A211C"; c.font = `900 ${h * 0.19}px ${FONT}`; c.fillText(n ? t : "目前沒有截止日", w / 2, bh * 0.7);
+    const n = upcoming()[0], k = n ? daysLeft(n.at) : null, t = n ? (n.title.length > 10 ? n.title.slice(0, 10) + "…" : n.title) : "";
+    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.23}px ${FONT}`; c.fillText(n ? `啊牛提醒・${k === 0 ? "今天截止" : "D-" + k}` : "啊牛提醒", w / 2, bh * 0.33);
+    c.fillStyle = "#2A211C"; c.font = `900 ${h * 0.21}px ${FONT}`; c.fillText(n ? t : "目前沒有截止日", w / 2, bh * 0.7);
   });
-  bubble.position.set(0, 3.7, 0); g.add(bubble);
+  bubble.position.set(0, 4.3, 0); g.add(bubble);
   g.userData.sign = bubble; g.userData.h = 4.7;
 }
 function bHouse(g, col) {
@@ -819,7 +817,7 @@ const SIGN_POS = FACE_DIR.clone().multiplyScalar(RO + 2.4).add(new V3(FACE_DIR.z
 {
   const right = new V3(Math.cos(FACE), 0, -Math.sin(FACE)), dirTo = (p) => (p.clone().sub(SIGN_POS).dot(right) > 0 ? "r" : "l");
   const boards = [{ zh: "課外組峮老師", en: "Extracurricular Activities", dir: dirTo(new V3()) }, ...MAIN.map((d) => ({ zh: d.name, en: d.en, dir: dirTo(d.pos) })), ...ISLETS.map((I) => ({ zh: I.name, en: ISLET_EN[I.name], dir: dirTo(I.pos) }))];
-  const sp = signPost(boards, 3.4 + Math.max(0, Math.ceil(boards.length / 2) - 4) * 0.58); sp.position.copy(SIGN_POS); sp.rotation.y = FACE; world.add(sp);
+  const sp = signPost(boards, 3.4 + Math.max(0, Math.ceil(boards.length / 2) - 4) * 0.58); sp.scale.setScalar(1.7); sp.position.copy(SIGN_POS); sp.rotation.y = FACE; world.add(sp); // 放大，遠看也讀得到
 }
 
 /* ---- 本島上的社團活動：各種運動的角色，讓島上熱鬧起來（純造景） ---- */
@@ -1005,7 +1003,7 @@ ISLETS.forEach((ISLET) => {
   [-len / 2 + 0.6, len / 2 - 0.6].forEach((x) => cyl(bg, 0.12, 0.12, 1.4, rail, x, -1.5, 0, 6));
   ISLET.bridge = { p0, p1, len };
   // 小島入口的島名路牌（東海大學路牌風格）
-  const sg = signPost([{ zh: ISLET.name, en: ISLET_EN[ISLET.name] || "", dir: "u" }], 2.2);
+  const sg = signPost([{ zh: ISLET.name, en: ISLET_EN[ISLET.name] || "", dir: "u" }], 2.2); sg.scale.setScalar(1.6);
   sg.position.copy(ISLET.entry.clone().lerp(ISLET.pos, 0.35)).add(new V3(-ISLET.dir.z, 0, ISLET.dir.x).multiplyScalar(1.4)); sg.rotation.y = FACE; world.add(sg);
   // 兩館之間的小山，角色沿著山路往上爬
   const mtn = ISLET_MTN.has(ISLET.name) ? { pos: ISLET.pos.clone().add(ISLET.dir.clone().multiplyScalar(4.6)), R: 2.1, H: 3.2 } : null;
@@ -1050,6 +1048,48 @@ ISLETS.forEach((ISLET) => {
     if (ISL.some((d) => { const v = new V3(x - d.pos.x, 0, z - d.pos.z), f = v.dot(FACE_DIR); return f > -0.5 && f < 8 && Math.abs(v.x * FACE_DIR.z - v.z * FACE_DIR.x) < 3.2; })) continue; // 不擋住館的正面
     tree(world, x, z, 0.7 + hash("ts" + i) * 0.55, hash("tk" + i)); n++;
   }
+}
+
+/* ---- 草地上的小花：本島與各小島，避開道路、建築與運動場地 ---- */
+const FLOWER_C = [0xff8fa3, 0xfff1a8, 0xffffff, 0xf6b26b, 0xc9a0dc, 0xff6b6b];
+function flowerField(spots) {
+  const petal = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.11, 0), new THREE.MeshStandardMaterial({ roughness: 0.8, flatShading: true }), spots.length * 5);
+  const core = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.07, 0), mat(0xf4c542), spots.length);
+  const M = new THREE.Matrix4(), col = new THREE.Color();
+  spots.forEach(([x, z, k], i) => {
+    const c = FLOWER_C[Math.floor(k * FLOWER_C.length)];
+    for (let j = 0; j < 5; j++) { const a = (j / 5) * Math.PI * 2 + k; M.makeTranslation(x + Math.cos(a) * 0.1, 0.12, z + Math.sin(a) * 0.1); petal.setMatrixAt(i * 5 + j, M); petal.setColorAt(i * 5 + j, col.setHex(c)); }
+    M.makeTranslation(x, 0.15, z); core.setMatrixAt(i, M);
+  });
+  petal.castShadow = core.castShadow = false; world.add(petal, core);
+}
+{
+  const roadAngles = [...SPOKES, front, ...ISLETS.filter((I) => !I.parent).map((I) => I.a)], spots = [];
+  const nearRoad = (x, z) => roadAngles.some((a) => { const along = x * Math.cos(a) + z * Math.sin(a), side = Math.abs(-x * Math.sin(a) + z * Math.cos(a)); return along > 4 && side < 1.2; }) ||
+    MAIN.some((d) => { const along = x * Math.cos(d.a) + z * Math.sin(d.a), side = Math.abs(-x * Math.sin(d.a) + z * Math.cos(d.a)); return along > RO && along < R_LOT && side < 1.1; });
+  for (let i = 0; i < 4000 && spots.length < 260; i++) {
+    const a = hash("fa" + i) * Math.PI * 2, r = 4.8 + hash("fr" + i) * (R_ISLE - 4.8);
+    if (r > R_ISLE * LAND.wob(a) * 0.88 || Math.abs(r - RO) < 1.1 || Math.abs(r - RW) < 1) continue;
+    const x = Math.cos(a) * r, z = Math.sin(a) * r;
+    if (nearRoad(x, z)) continue;
+    if (ISL.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 2.9 * HALL_S)) continue;
+    if (Object.values(SPOT).some((s2) => Math.hypot(s2.pos.x - x, s2.pos.z - z) < 2.6)) continue;
+    if (Math.hypot(SIGN_POS.x - x, SIGN_POS.z - z) < 2) continue;
+    if (ACT_ZONES.some((z2) => Math.hypot(z2.pos.x - x, z2.pos.z - z) < z2.r + 0.4)) continue;
+    spots.push([x, z, hash("fk" + i)]);
+  }
+  ISLETS.forEach((I) => { // 小島：避開主路、支路與館
+    for (let i = 0, n = 0; i < 900 && n < (I.halls.length > 2 ? 70 : 35); i++) {
+      const a = hash("ia" + I.name + i) * Math.PI * 2, r = hash("ib" + I.name + i) * I.r * 0.8, x = I.pos.x + Math.cos(a) * r, z = I.pos.z + Math.sin(a) * r;
+      if (I.halls.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 2.9 * HALL_S)) continue;
+      const v = new V3(x, 0, z).sub(I.entry), al = v.dot(I.dir), far = I.roadEnd ? I.roadEnd.distanceTo(I.entry) : I.r * 0.88;
+      if (al > -1.5 && al < far + 1 && Math.abs(v.clone().cross(I.dir).y) < 1.2) continue;
+      if (I.halls.some((d) => { const p0 = d.junction || I.pos, w = new V3(x, 0, z).sub(p0), dd = d.pos.clone().sub(p0), L = dd.length(), t2 = w.dot(dd) / L; return t2 > 0 && t2 < L && Math.abs(w.clone().cross(dd.clone().normalize()).y) < 1; })) continue;
+      if (ISLET_MTN.has(I.name) && Math.hypot(I.pos.x + I.dir.x * 4.6 - x, I.pos.z + I.dir.z * 4.6 - z) < 3) continue;
+      spots.push([x, z, hash("ic" + I.name + i)]); n++;
+    }
+  });
+  flowerField(spots);
 }
 
 /* ---- 海上小島、帆船、雲 ---- */
@@ -1539,8 +1579,7 @@ function sectionsHtml(d) {
 }
 const sectionText = (d) => (d.sections || []).flatMap((s) => [s.title, ...(s.rules || []).flatMap((r) => [r.when, r.title, r.note, r.prep, ...(r.files || [])])]).filter(Boolean);
 function renderIsle(d, keepScroll) {
-  const dl = isleDl(d), news = isleNews(d), steps = d.guides.reduce((n, g) => n + g.steps.length, 0), duty = DUTY[d.key] || [];
-  const mine = (r) => me.club && me.role === r;
+  const dl = isleDl(d), news = isleNews(d), steps = d.guides.reduce((n, g) => n + g.steps.length, 0);
   const st = $("sbody").scrollTop;
   const top = `${head(d.icon, `HALL ${d.no} · ${E(d.key)}`, d.name)}
     <p class="lead">${E(d.lead || d.guides[0]?.title || d.tagline)}</p>
@@ -1569,7 +1608,7 @@ function renderIsle(d, keepScroll) {
 }
 function placeItems(filter) {
   return '<ul class="items">' + ISL.filter((d) => !filter || filter(d)).map((d) => { const n = isleDl(d)[0], k = n ? daysLeft(n.at) : null;
-    return `<li class="item ${myDuty(d) ? "hl" : ""}" style="--c:${d.color}"><button type="button" data-isle="${d.i}"><span class="dot"></span><span class="nm">${noTag(d.no)}${E(d.name)}<small>${E(d.tagline)}${myDuty(d) ? "・你的職責" : ""}</small></span><span class="meta ${k !== null ? lvl(k) : ""}">${k !== null ? "D-" + k : ""}${stamps["isle:" + d.key] ? " ✓" : ""}</span><span class="chev">›</span></button></li>`; }).join("") + "</ul>";
+    return `<li class="item" style="--c:${d.color}"><button type="button" data-isle="${d.i}"><span class="dot"></span><span class="nm">${noTag(d.no)}${E(d.name)}<small>${E(d.tagline)}</small></span><span class="meta ${k !== null ? lvl(k) : ""}">${k !== null ? "D-" + k : ""}${stamps["isle:" + d.key] ? " ✓" : ""}</span><span class="chev">›</span></button></li>`; }).join("") + "</ul>";
 }
 function renderOffice() {
   const st = officeStatus(), p = tw(), slots = D.office.hours.slots.map((s) => s.join("–")).join("、");
@@ -1681,11 +1720,10 @@ function renderChar() {
       <div class="acts"><button class="btn big t" type="button" id="meDone">${me.club ? "完成，開始逛群島" : "先選一個身份"}</button></div>
       <p class="foot">角色只存在你自己的手機或電腦，不會上傳。</p>`;
   } else if (charTab === "trip") {
-    const n = stampCount(), t = D.onboarding.filter((x) => tasks[x]).length, mine = ISL.filter(myDuty);
+    const n = stampCount(), t = D.onboarding.filter((x) => tasks[x]).length;
     body = `<div class="sec"><h4>幹部護照・${n} / ${STAMPS.length}</h4><div class="prog"><i style="width:${(n / STAMPS.length) * 100}%"></i></div>
       <div class="stamps">${STAMPS.map((s) => `<button type="button" class="stc ${stamps[s.id] ? "on" : ""}" data-stamp="${E(s.id)}"><i>${stamps[s.id] ? "THU" : s.no}</i>${E(s.name)}</button>`).join("")}</div>
       <div class="acts"><button class="btn big t ring" type="button" id="tourBtn">帶我逛一圈</button></div></div>
-      ${mine.length ? `<div class="sec"><h4>${E(me.role)}要特別注意的館</h4>${placeItems(myDuty)}</div>` : ""}
       <div class="sec"><h4>新任幹部上任清單・<span id="taskN">${t}/${D.onboarding.length}</span></h4><ul class="tasks">${D.onboarding.map((x, i) => `<li><label for="task${i}"><input type="checkbox" id="task${i}" data-task="${i}" ${tasks[x] ? "checked" : ""}><span>${E(x)}</span></label></li>`).join("")}</ul></div>
       <div class="acts"><button class="btn g" type="button" id="resetSt">清除所有印章</button></div>`;
   } else {
@@ -1809,7 +1847,6 @@ function updHud() {
 let tkI = 0, tkCur = null;
 function tickerMsgs() {
   const m = [], st = officeStatus();
-  ISL.filter(myDuty).forEach((d) => { const n = isleDl(d)[0]; if (n) m.push({ t: `${me.role}注意：${d.name}「${n.title}」還有 ${daysLeft(n.at)} 天`, go: () => openIsle(d.i) }); });
   upcoming().slice(0, 3).forEach((x) => { const d = isleOf(x.category); m.push({ t: `${d ? d.name + "：" : ""}「${x.title}」還有 ${daysLeft(x.at)} 天`, go: () => (d ? openIsle(d.i) : openSpot("deadlines")) }); });
   if (unread().length) m.push({ t: `公告欄有 ${unread().length} 則新公告`, go: () => openSpot("news") });
   if (todoLeft()) m.push({ t: `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務`, go: openTasks });
@@ -1941,7 +1978,7 @@ async function start() {
       ["歡迎來到體能行政群島", "島上的行政館，會陪著夥伴們完成社團行政任務。\n點選建築，或用右側清單探索這一座小島吧。"],
       ["我是課外組峮老師", "本島中間巨型人物94我，旁邊有公告欄、小秘書啊牛和出航機場。\n社團行政任務放在社團行政館，完成可以打勾。外圈道路連到各座行政館，有相關問題，可以到各館探索找到解答唷。"],
       ["行政群島是你的小夥伴", "各館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。\n歡迎訂閱社團行事曆，手機也會提醒你。"],
-      ["啟程探索行政群島", "不建立角色也能直接逛。\n想讓角色帶著社團道具、看到自己職位要注意的場館，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
+      ["啟程探索行政群島", "不建立角色也能直接逛。\n想讓角色帶著社團道具，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
   }
 }
