@@ -1438,7 +1438,7 @@ function renderIsle(d, keepScroll) {
   const top = `${head(d.icon, `HALL ${d.no} · ${E(d.key)}`, d.name)}
     <p class="lead">${E(d.lead || d.guides[0]?.title || d.tagline)}</p>
     <p class="quote">「${E(d.tagline)}」</p>
-    ${d.links?.length ? `<div class="acts">${d.links.map((l) => `<a class="btn big t ring" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}`;
+    ${d.links?.length ? `<div class="acts">${d.links.map((l) => `<a class="btn ${d.linkSize === "small" ? "" : "big ring "}t" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}`;
   const foot = '<p class="foot">如有相關問題，請與課外組峮老師聯繫。</p>';
   // 社團行政館：只放社團行政任務
   if (d.tasks) {
@@ -1447,12 +1447,12 @@ function renderIsle(d, keepScroll) {
     return;
   }
   // 頂部跳轉按鈕（data.js 設 jump: true 的館）
-  const parts = [...(d.sections || []).map((x, k) => [`i-s${k}`, x.title]), ...(d.guides.length ? [["i-g", "攻略"]] : []), ["i-dl", "截止日"], ["i-news", "相關公告"], ["i-duty", "這一館在照顧誰"]];
+  const parts = Array.isArray(d.jump) ? d.jump.map(([t, id]) => [id, t]) : [...(d.sections || []).map((x, k) => [`i-s${k}`, x.title]), ...(d.guides.length ? [["i-g", "攻略"]] : []), ["i-dl", "截止日"], ["i-news", "相關公告"], ["i-duty", "這一館在照顧誰"]];
   const html = `${top}
-    ${d.jump ? `<div class="jump" role="navigation" aria-label="跳到這一頁的段落">${parts.map(([id, t]) => `<button class="btn g" type="button" data-jump="${id}">${E(t)}</button>`).join("")}</div>` : ""}
+    ${d.jump ? `<div class="jump ${parts.length % 3 === 0 ? "three" : ""}" role="navigation" aria-label="跳到這一頁的段落">${parts.map(([id, t]) => `<button class="btn g" type="button" data-jump="${id}">${E(t)}</button>`).join("")}</div>` : ""}
     <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span>${d.sections?.length ? `<span class="tag">${d.sections.length} 個分區</span>` : `<span class="tag">${dl.length} 項截止</span>`}<span class="tag">${steps} 則攻略</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
     ${sectionsHtml(d)}
-    ${d.guides.map((g, k) => `<div class="sec" ${k ? "" : 'id="i-g"'}><h4>${E(g.topic)}・攻略</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 則</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
+    ${d.guides.map((g, k) => `<div class="sec" ${k ? "" : 'id="i-g"'}><h4>${E(g.topic)}・攻略</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 則</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g ${l[2] ? "two" : ""}" target="_blank" rel="noopener" href="${E(l[1])}"><span>${E(l[0])} ↗</span>${l[2] ? `<small>${E(l[2])}</small>` : ""}</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
     <div class="sec" id="i-dl"><h4>截止日</h4>${dlItems(dl, false, true)}</div>
     <div class="sec" id="i-news"><h4>相關公告</h4>${newsItems(news)}</div>
     <div class="sec" id="i-duty"><h4>這一館在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>

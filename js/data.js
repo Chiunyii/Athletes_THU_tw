@@ -118,7 +118,10 @@ var SITE_DATA = {
       ],
     },
     {
-      key: "經費", name: "經費館", en: "Club Funding Hall", icon: "💰", color: "#D9B24E", building: "bank", jump: true, tagline: "補助申請與核銷，收據一張都不能錯。",
+      key: "經費", name: "經費館", en: "Club Funding Hall", icon: "💰", color: "#D9B24E", building: "bank",
+      // jump：上方跳到各段落的按鈕 [文字, 段落]；段落 i-s0、i-s1… 是 sections，i-g 攻略、i-dl 截止日、i-news 相關公告、i-duty 這一館在照顧誰
+      jump: [["活動", "i-s0"], ["器材", "i-s1"], ["指導老師", "i-s2"], ["核銷攻略", "i-g"], ["提醒事項", "i-dl"], ["相關公告", "i-news"]],
+      tagline: "補助申請與核銷，收據一張都不能錯。",
       // sections：島內分區；rules 是「相對期限」的提醒（例如活動結束後 2 週內），沒有固定日期所以不倒數
       // prep + files：要先準備給承辦老師的電子檔
       sections: [
@@ -149,13 +152,11 @@ var SITE_DATA = {
       ],
     },
     {
-      key: "場地", name: "場地借用館", en: "Venue Booking Hall", islet: "場地器材島", icon: "🏟", color: "#6FA38C", building: "gym", tagline: "練習場地借用與使用規範。",
+      key: "場地", name: "場地借用館", en: "Venue Booking Hall", islet: "場地器材島", icon: "🏟", color: "#6FA38C", building: "gym", tagline: "社課/活動場地借用與使用規範。",
       links: [
         ["場地借用說明", "https://activity.thu.edu.tw/web/page/page.php?lang=zh_tw&scid=7&sid=6"],
-        ["北側會議室借用系統", "http://student-space.thu.edu.tw/?fbclid=IwAR21sDWMpYoUxx5JJe1_3YS5UR_PiqMbXC71a8xrgMvupzeLSTQBpW0yHyA"],
-        ["東海空間網場地借用", "https://space.thu.edu.tw/"],
-        ["推廣部場地借用（中正堂、銘賢堂）", "https://thurent.thu.edu.tw/borrow.php"],
       ],
+      linkSize: "small", // 上方按鈕改成一般大小
     },
     { key: "安全", name: "活動安全館", en: "Activity Safety Hall", islet: "活動島", icon: "⛑", color: "#C8623F", building: "aid", tagline: "保險、急救、校外活動安全，體能性社團最重要的事。" },
     {
@@ -427,7 +428,7 @@ var SITE_DATA = {
       id: "g-venue",
       island: "場地",
       topic: "場地借用",
-      title: "練習場地怎麼借？",
+      title: "社課/活動場地怎麼借？",
       summary: "固定練習與臨時活動都要登記，提早申請。",
       steps: [
         "確認場地管理單位與開放時段。",
@@ -435,10 +436,9 @@ var SITE_DATA = {
         "請遵守場地使用規範，使用完畢後落實場復作業並關閉燈光、冷氣。",
       ],
       links: [
-        ["場地借用說明", "https://activity.thu.edu.tw/web/page/page.php?lang=zh_tw&scid=7&sid=6"],
         ["北側會議室借用系統", "http://student-space.thu.edu.tw/?fbclid=IwAR21sDWMpYoUxx5JJe1_3YS5UR_PiqMbXC71a8xrgMvupzeLSTQBpW0yHyA"],
         ["東海空間網場地借用", "https://space.thu.edu.tw/"],
-        ["推廣部場地借用（中正堂、銘賢堂需要再登記推廣部借用網）", "https://thurent.thu.edu.tw/borrow.php"],
+        ["推廣部場地借用", "https://thurent.thu.edu.tw/borrow.php", "中正堂、銘賢堂需另至推廣部借用網登記"], // 第三項：按鈕下方的小字補充
       ],
     },
     {
@@ -450,7 +450,7 @@ var SITE_DATA = {
       steps: [
         "校外活動出發前完成保險名冊。",
         "每次練習安排熱身與收操，並由幹部確認出席人數。",
-        "練習場地附近的 AED 位置與緊急聯絡方式，所有幹部都要知道。",
+        "社課/活動場地附近的 AED 位置與緊急聯絡方式，所有幹部都要知道。",
         "發生受傷事件，先處理傷者，事後回報課外組並留下紀錄。",
       ],
       links: [],
