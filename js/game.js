@@ -1,5 +1,5 @@
 /* 體能社團行政群島：Three.js
- * 大島中央 = 課外組（辦公室、任務提醒、公告欄、小秘書啊牛、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
+ * 大島中央 = 課外組（辦公室、截止提醒、公告欄、小秘書啊牛、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
  * 玩家可以（選填）建立角色：身份、職位、外觀；角色會沿著島上的道路走到各館蓋章。
  * 內容全部來自 js/data.js；這個檔案只負責群島、角色與資訊卡。 */
 import * as THREE from "three";
@@ -92,7 +92,7 @@ const isleNews = (d) => anns.filter((a) => a.tag === d.key);
 const lvl = (n) => (n <= 3 ? "hot" : n <= 7 ? "warn" : "ok");
 const CENTER_SPOTS = [
   { id: "office", no: "00", name: "課外組", icon: "🏛" },
-  { id: "deadlines", no: "◷", name: "任務提醒", icon: "⏰" },
+  { id: "deadlines", no: "◷", name: "截止提醒", icon: "⏰" },
   { id: "news", no: "✎", name: "公告欄", icon: "📌" },
   { id: "todo", no: "✓", name: "小秘書啊牛", icon: "🐮" },
   { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
@@ -316,7 +316,7 @@ function bOffice(g) {
   sign.position.set(0, 0.95, 2.4); g.add(sign);
   g.userData.sign = sign; g.userData.h = 6.5;
 }
-// 任務提醒（截止日）：以路思義教堂的造型呈現。前後兩對弧形屋面（後面那對較高、較寬），
+// 截止提醒（截止日）：以路思義教堂的造型呈現。前後兩對弧形屋面（後面那對較高、較寬），
 // 兩片屋面在頂端留一道天窗縫，前後之間也留一道縫；正面是有橫格的玻璃立面，頂上有十字架，門前立著倒數鐘面
 function tileTex() {
   const cv = document.createElement("canvas"); cv.width = cv.height = 128; const c = cv.getContext("2d");
@@ -1008,7 +1008,7 @@ function mkLabel(html, pos3, onClick, cls = "", opt = {}) {
   el.type = "button"; el.className = "il " + cls; el.innerHTML = html;
   el.addEventListener("click", onClick);
   lblEl.appendChild(el);
-  const L = { el, pos3, pri: opt.pri || 0, minZoom: opt.minZoom || 0, maxZoom: opt.maxZoom || 0, hideFor: opt.hideFor || [], selId: opt.selId, me: !!opt.me, w: 0, h: 0 }; labels.push(L); return L;
+  const L = { el, pos3, below: !!opt.below, pri: opt.pri || 0, minZoom: opt.minZoom || 0, maxZoom: opt.maxZoom || 0, hideFor: opt.hideFor || [], selId: opt.selId, me: !!opt.me, w: 0, h: 0 }; labels.push(L); return L;
 }
 function isleBadge(d) { const n = isleDl(d)[0]; if (!n) return ""; const k = daysLeft(n.at); return k <= 14 ? `<span class="d ${k <= 3 ? "hot" : ""}">D-${k}</span>` : ""; }
 function buildLabels() {
@@ -1028,8 +1028,10 @@ function buildLabels() {
     let extra = "";
     if (s.id === "office") extra = `<span class="d" style="background:${st.open ? "#5F8F5A" : "#7A6B60"}">${E(st.short)}</span>`;
     if (s.id === "news" && unread().length) extra = `<span class="d hot">${unread().length}</span>`;
-    s.label = mkLabel(`<span class="no">${s.no}</span>${E(s.name)}${extra}`, o.position.clone().setY((o.userData.h || 3) * o.scale.y + 0.4), () => openSpot(s.id), "",
-      s.id === "office" ? { pri: 95, selId: s.id } : { pri: 50, minZoom: 1.5, selId: s.id });
+    // 啊牛站在教堂前面，名牌改放在牠腳下，才不會擋住教堂正面
+    const below = s.id === "todo";
+    s.label = mkLabel(`<span class="no">${s.no}</span>${E(s.name)}${extra}`, below ? o.position.clone() : o.position.clone().setY((o.userData.h || 3) * o.scale.y + 0.4), () => openSpot(s.id), "",
+      s.id === "office" ? { pri: 95, selId: s.id } : { pri: 50, minZoom: 1.5, selId: s.id, below });
   });
   mkLabel(`<b>${E(me.name || "我")}</b>${me.club ? `<span>${E(me.club)}</span>` : ""}`, () => av.position.clone().setY(av.position.y + 2.25), () => openChar("look"), "me", { pri: 70, minZoom: 1.8, me: true });
   refreshLabelState();
@@ -1051,7 +1053,7 @@ function placeLabels() {
     const off = pv.z > 1 || x < -80 || x > W + 80 || y < -40 || y > H + 40;
     L.el.classList.toggle("off", off);
     if (off) return;
-    L.el.style.transform = `translate(${x}px, ${y - 10}px) translate(-50%, -100%)`;
+    L.el.style.transform = L.below ? `translate(${x}px, ${y + 8}px) translate(-50%, 0)` : `translate(${x}px, ${y - 10}px) translate(-50%, -100%)`;
     const isSel = L.selId && L.selId === sel;
     if (!isSel && z < L.minZoom && !(L.me && charOpen)) { L.el.classList.add("hide"); return; }
     if (L.maxZoom && (z >= L.maxZoom || L.hideFor.includes(sel))) { L.el.classList.add("hide"); return; }
@@ -1061,7 +1063,7 @@ function placeLabels() {
   cand.sort((a, b) => b.p - a.p);
   const placed = [];
   cand.forEach(({ L, x, y }) => {
-    const r = { l: x - L.w / 2 - 3, r: x + L.w / 2 + 3, t: y - 10 - L.h - 3, b: y - 7 };
+    const r = L.below ? { l: x - L.w / 2 - 3, r: x + L.w / 2 + 3, t: y + 5, b: y + 8 + L.h + 3 } : { l: x - L.w / 2 - 3, r: x + L.w / 2 + 3, t: y - 10 - L.h - 3, b: y - 7 };
     const hit = placed.some((q) => r.l < q.r && r.r > q.l && r.t < q.b && r.b > q.t);
     L.el.classList.toggle("hide", hit);
     if (!hit) placed.push(r);
@@ -1287,7 +1289,7 @@ function renderOffice() {
   showSheet("office", html);
 }
 function renderDeadlines() {
-  const html = `${head("⏰", "CHAPEL · 截止日", "任務提醒")}
+  const html = `${head("⏰", "CHAPEL · 截止日", "截止提醒")}
     <p class="lead">所有分類的截止日都在這裡。</p>
     <p class="quote">7 天內轉黃、3 天內轉紅，對應的館上方也會浮出菱形提醒。</p>
     <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag("deadlines")}</div>
@@ -1623,7 +1625,7 @@ async function start() {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每一館是一類行政", `島上有 ${ISL.length} 座行政館，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `島的中央是課外組，旁邊有任務提醒（路思義教堂）、公告欄、小秘書啊牛和碼頭。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
+      ["中心是課外組", `島的中央是課外組，旁邊有截止提醒（路思義教堂）、公告欄、小秘書啊牛和碼頭。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
       ["提醒會浮在館上", "館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的館，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
