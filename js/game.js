@@ -155,16 +155,17 @@ const ISLET_MTN = new Set(["活動島"]); // 島中央後方放一座登山的�
 const ISLET_EN = { "場地器材島": "Venue & Equipment Isle", "活動島": "Activity Isle", "行政島": "Administration Isle" };
 const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
   const halls = OFF.filter((d) => d.islet === name), big = halls.length > 2;
-  const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = big ? 10.5 : 8;
+  const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = big ? 12 : 8;
   const pos = dir.clone().multiplyScalar(R_ISLE + r + 5.5);
   const I = { a, dir, r, pos, name, halls, coast: dir.clone().multiplyScalar(R_ISLE * 0.92), entry: pos.clone().sub(dir.clone().multiplyScalar(r * 0.88)) };
   const perp = new V3(-dir.z, 0, dir.x);
   I.halls.forEach((d, i) => {
     d.isl = I;
-    if (big) { // 四館以上：前後兩排、左右排開
-      const row = i % 2, col = Math.floor(i / 2), cols = Math.ceil(I.halls.length / 2), side = cols === 1 ? 0 : (col / (cols - 1)) * 2 - 1;
-      d.pos = pos.clone().add(perp.clone().multiplyScalar(side * 3.9)).add(dir.clone().multiplyScalar(row ? 4.3 : -1.2));
-      d.dir = d.pos.clone().sub(pos).setY(0).normalize();
+    if (big) { // 三館以上：一條路從入口一路往裡走，館左右交錯排在路邊
+      const side = i % 2 ? 1 : -1;
+      d.junction = I.entry.clone().add(dir.clone().multiplyScalar(3.2 + i * 4.4));
+      d.dir = perp.clone().multiplyScalar(side);
+      d.pos = d.junction.clone().add(d.dir.clone().multiplyScalar(4));
     } else {
       const side = I.halls.length === 1 ? 0 : (i / (I.halls.length - 1)) * 2 - 1; // 小島上左右排開
       d.dir = perp.clone().multiplyScalar(side || 1).add(dir.clone().multiplyScalar(0.35)).normalize();
@@ -172,11 +173,12 @@ const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
     }
     d.a = Math.atan2(d.dir.z, d.dir.x);
   });
+  if (big) I.roadEnd = I.entry.clone().add(dir.clone().multiplyScalar(3.2 + (I.halls.length - 1) * 4.4 + 2.4));
   return I;
 });
 const WORLD_R = ISLETS.length ? R_ISLE + 2 * Math.max(...ISLETS.map((I) => I.r)) + 6 : R_ISLE + 1;
 // 鏡頭取景：以本島為主，往小島的方向偏一點，讓所有島都放得進畫面
-const CAM_R = ISLETS.length ? R_ISLE + 10 + (ISLETS.length - 1) * 3.5 : R_ISLE + 1;
+const CAM_R = ISLETS.length ? R_ISLE + 10 + (ISLETS.length - 1) * 3.5 + Math.max(0, Math.max(...ISLETS.map((I) => I.r)) - 8) * 0.8 : R_ISLE + 1;
 const HOME_C = ISLETS.reduce((v, I) => v.add(I.dir.clone().multiplyScalar(8.5 / ISLETS.length)), new V3(0, 0, 0));
 
 const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, -300, 500);
@@ -811,8 +813,8 @@ ISLETS.forEach((ISLET) => {
     const road = box(world, len, 0.05, w, C.road, m.x, 0, m.z); road.rotation.y = -a; road.castShadow = false;
     for (let s = 0.6; s < len - 0.3; s += 1.1) { const pt = p.clone().lerp(q, s / len); dashAt(world, pt.x, pt.z, -a + Math.PI / 2); } };
   seg(ISLET.dir.clone().multiplyScalar(RO + 0.7), ISLET.coast);
-  seg(ISLET.entry, ISLET.pos);
-  ISLET.halls.forEach((d) => seg(ISLET.pos, d.pos.clone().sub(d.dir.clone().multiplyScalar(1.6)), 1.3));
+  seg(ISLET.entry, ISLET.roadEnd || ISLET.pos);
+  ISLET.halls.forEach((d) => seg(d.junction || ISLET.pos, d.pos.clone().sub(d.dir.clone().multiplyScalar(1.6)), 1.3));
   // 木橋
   const p0 = ISLET.coast, p1 = ISLET.entry, len = p0.distanceTo(p1), m = p0.clone().add(p1).multiplyScalar(0.5);
   const bg = new THREE.Group(); bg.position.copy(m); bg.rotation.y = -ISLET.a; world.add(bg);
@@ -842,6 +844,8 @@ ISLETS.forEach((ISLET) => {
     if (ISLET.halls.some((d) => { const v = new V3(x - d.pos.x, 0, z - d.pos.z), f = v.dot(FACE_DIR); return f > -0.5 && f < 7 && Math.abs(v.x * FACE_DIR.z - v.z * FACE_DIR.x) < 3; })) continue;
     if (mtn && Math.hypot(mtn.pos.x - x, mtn.pos.z - z) < mtn.R + 0.9) continue;
     const toE = new V3(x, 0, z).sub(ISLET.pos), along = toE.dot(ISLET.dir.clone().negate()); if (along > 0 && Math.abs(toE.clone().cross(ISLET.dir).y) < 1.4) continue;
+    if (ISLET.roadEnd) { const v = new V3(x, 0, z).sub(ISLET.entry), al = v.dot(ISLET.dir); if (al > -1 && al < ISLET.roadEnd.distanceTo(ISLET.entry) + 1 && Math.abs(v.clone().cross(ISLET.dir).y) < 1.6) continue; } // 不種在島上的主路
+    if (ISLET.halls.some((d) => d.junction && Math.hypot(x - (d.junction.x + d.pos.x) / 2, z - (d.junction.z + d.pos.z) / 2) < 1.6)) continue;
     tree(world, x, z, 0.65 + hash("is" + i) * 0.4, hash("ik" + i)); k++;
   }
 });
@@ -1016,8 +1020,8 @@ function arc(a0, a1, r = RW) {
 }
 const nearestSpoke = (a) => SPOKES.reduce((b, s) => (angOff(a, s) < angOff(a, b) ? s : b), SPOKES[0]);
 const isleSpot = (d) => d.pos.clone().add(d.spot);
-const hallIn = (d) => [d.pos.clone().add(d.door), d.pos.clone().add(d.side), isleSpot(d)]; // 車道口 → 建築側邊 → 站位
-const hallOut = (d) => [d.pos.clone().add(d.side), d.pos.clone().add(d.door)];
+const hallIn = (d) => [...(d.junction ? [d.junction.clone()] : []), d.pos.clone().add(d.door), d.pos.clone().add(d.side), isleSpot(d)]; // 車道口 → 建築側邊 → 站位
+const hallOut = (d) => [d.pos.clone().add(d.side), d.pos.clone().add(d.door), ...(d.junction ? [d.junction.clone()] : [])];
 // 路線：建築區 ⇄ 外圈道路 ⇄（連絡道路）⇄ 中央圓環
 // 外圈道路 ⇄ 海岸 ⇄ 橋 ⇄ 小島中央
 function isletPath(ISLET, outbound) {
