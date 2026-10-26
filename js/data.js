@@ -220,6 +220,7 @@ var SITE_DATA = {
     // 格式：{ id, date（可省略，YYYY-MM-DD）, pinned, tag（對應島的 key，例如 "經費"）, title, body（可省略）, link（課外組公告網址）}
     // 列表依這裡的順序顯示（置頂的排最前面），最新的請加在最上面
     // 公告有截止日時加上 due（同截止日格式），會自動出現在截止日鐘塔；可另寫 dueTitle 作為鐘塔上的名稱
+    // 一則公告有好幾個期限時改用 dues: [{ due, title, link（可省略）}, ...]
     {
       id: "a-1151-1854", tag: "經費",
       title: "115學年度第1學期「大專校院帶動中小學社團發展」計畫補助審查結果公告",
@@ -233,7 +234,12 @@ var SITE_DATA = {
     {
       id: "a-1151-1852", tag: "經費",
       title: "115學年度第1學期第2階段社團器材申請及第1階段核定社團簡報公告",
+      body: "第2階段僅開放資本門器材申請（10/20 17:00 截止收件）。第1階段決議為「二階簡報」的社團：每案報告 5 分鐘，簡報請於 10/27（一）12:00 前傳至雲端資料夾，當天另存隨身碟帶到會場，並於報告時間前 20 分鐘到場；會議結束前未到場者取消申請資格。",
       link: "https://activity.thu.edu.tw/web/news/detail.php?cid=1&id=1852",
+      dues: [
+        { due: "2026-10-27 12:00", title: "二階簡報檔上傳雲端（第1階段決議二階簡報的社團）", link: "https://reurl.cc/jVeQ8M" },
+        { due: "2026-10-28 12:20", title: "第2階段經費審查會議（二階簡報社團報告前 20 分鐘到場）" },
+      ],
     },
     {
       id: "a-1151-1851", tag: "經費",
@@ -441,8 +447,14 @@ var SITE_DATA = {
 
 // 截止日鐘塔用：deadlines 加上公告中有 due 的項目（自動加入，不必重複填寫）
 SITE_DATA.allDeadlines = function () {
-  var fromNews = SITE_DATA.announcements.filter(function (a) { return a.due; }).map(function (a) {
-    return { id: "d-" + a.id, title: a.dueTitle || a.title, due: a.due, category: a.tag || "", detail: a.body || "公告欄：" + a.title, link: a.link || "", fromNews: true };
+  var fromNews = [];
+  SITE_DATA.announcements.forEach(function (a) {
+    var list = (a.dues || []).slice();
+    if (a.due) list.unshift({ due: a.due, title: a.dueTitle });
+    list.forEach(function (x, i) {
+      fromNews.push({ id: "d-" + a.id + (i ? "-" + i : ""), title: x.title || a.title, due: x.due, category: a.tag || "",
+        detail: a.body || "公告欄：" + a.title, link: x.link || a.link || "", fromNews: true });
+    });
   });
   return SITE_DATA.deadlines.concat(fromNews);
 };
