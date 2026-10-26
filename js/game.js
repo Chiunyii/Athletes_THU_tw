@@ -69,12 +69,12 @@ const CENTER_SPOTS = [
   { id: "office", no: "00", name: "課外組", icon: "🏛" },
   { id: "deadlines", no: "◷", name: "截止日鐘塔", icon: "⏰" },
   { id: "news", no: "✎", name: "公告欄", icon: "📌" },
-  { id: "todo", no: "✓", name: "社團小秘書", icon: "🧑‍💼" },
+  { id: "todo", no: "✓", name: "社團小秘書", icon: "🐮" },
   { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
 ];
 const STAMPS = [...CENTER_SPOTS.map((s) => ({ id: s.id, name: s.name, no: s.no })), ...ISL.map((d) => ({ id: "isle:" + d.key, name: d.name, no: d.no }))];
 
-/* 社團行政待辦：每學期共同項目 + 該學期項目；共同項目每學期各自打勾 */
+/* 社團行政任務：每學期共同項目 + 該學期項目；共同項目每學期各自打勾 */
 const TODO = Object.assign({ common: [], s1: [], s2: [] }, D.todos);
 const SEM_NAME = { s1: "第一學期", s2: "第二學期" };
 const curSem = () => { const m = tw().m; return m >= 2 && m <= 7 ? "s2" : "s1"; };
@@ -382,25 +382,62 @@ function bHall(g, col) {
   for (let k = 0; k < 6; k++) box(g, 0.3, 0.35, 0.3, C.wood, -1.1 + (k % 3) * 1.1, 0, 2.1 + Math.floor(k / 3) * 0.55);
   g.userData.h = 3.6;
 }
-// 社團小秘書：拿著資料夾板的 NPC，頭上的對話泡泡顯示本學期還剩幾項待辦
+// 社團小秘書：參考東海牛奶節的乳牛造型（白身深藍斑點、黃色口鼻與角、頭頂捲毛），以低多邊形重新建模
+let cowMsg = null; // 解鎖動畫時泡泡暫時改成這句話
+function cowModel() {
+  const g = new THREE.Group();
+  const white = soft(0xfbfaf6), spot = soft(0x34495e), yellow = soft(0xe8c04a), dark = soft(0x1f2a36);
+  const spotOn = (r, x, y, z, s = 1) => { const m = mesh(new THREE.SphereGeometry(0.15 * s, 10, 8), spot, x, y, z, g); m.scale.set(1, 1, 0.35); m.lookAt(m.position.clone().sub(new V3(0, y, 0)).multiplyScalar(2).add(new V3(0, y, 0))); return m; };
+  // 腿與蹄
+  [-0.17, 0.17].forEach((x) => { mesh(new THREE.CapsuleGeometry(0.12, 0.22, 4, 8), white, x, 0.26, 0, g); mesh(new THREE.CylinderGeometry(0.13, 0.14, 0.12, 10), yellow, x, 0.06, 0.02, g); });
+  // 身體（圓滾）與斑點
+  const body = mesh(new THREE.SphereGeometry(0.42, 18, 14), white, 0, 0.78, 0, g); body.scale.set(1, 1.08, 0.92);
+  spotOn(0, 0.3, 0.88, 0.22); spotOn(0, -0.28, 0.66, 0.26, 1.2); spotOn(0, 0.05, 0.95, -0.36, 1.4); spotOn(0, -0.36, 0.95, -0.12);
+  // 手臂：右手揮手、左手抱著資料夾板
+  const armR = mesh(new THREE.CapsuleGeometry(0.09, 0.32, 4, 8), white, 0.48, 1.05, 0, g); armR.rotation.z = -2.3; g.userData.armR = armR;
+  mesh(new THREE.SphereGeometry(0.1, 10, 8), yellow, 0.72, 1.3, 0, g);
+  const armL = mesh(new THREE.CapsuleGeometry(0.09, 0.28, 4, 8), white, -0.42, 0.72, 0.14, g); armL.rotation.set(0.6, 0, 0.5);
+  box(g, 0.34, 0.44, 0.03, soft(0x8a5a3b), -0.22, 0.52, 0.42); box(g, 0.28, 0.34, 0.01, soft(0xfffdf9), -0.22, 0.56, 0.44);
+  // 頭、口鼻、鼻孔、眼睛、耳朵、角、頭頂捲毛
+  const head = new THREE.Group(); head.position.set(0, 1.55, 0.05); g.add(head);
+  const hd = mesh(new THREE.SphereGeometry(0.42, 20, 16), white, 0, 0, 0, head); hd.scale.set(1.05, 0.95, 0.95);
+  const sp = mesh(new THREE.SphereGeometry(0.16, 10, 8), spot, -0.2, 0.08, 0.3, head); sp.scale.set(1, 1, 0.4); sp.rotation.y = -0.5;
+  const muzzle = mesh(new THREE.SphereGeometry(0.3, 18, 12), yellow, 0, -0.13, 0.3, head); muzzle.scale.set(1.15, 0.75, 0.75);
+  [-0.09, 0.09].forEach((x) => mesh(new THREE.SphereGeometry(0.035, 8, 6), dark, x, -0.08, 0.53, head));
+  [-0.16, 0.16].forEach((x) => mesh(new THREE.SphereGeometry(0.045, 8, 6), dark, x, 0.12, 0.37, head));
+  [-1, 1].forEach((s) => {
+    const ear = mesh(new THREE.SphereGeometry(0.13, 10, 8), white, s * 0.44, 0.08, -0.02, head); ear.scale.set(1.3, 0.55, 0.6); ear.rotation.z = s * -0.3;
+    const horn = mesh(new THREE.ConeGeometry(0.07, 0.26, 8), yellow, s * 0.27, 0.42, -0.02, head); horn.rotation.z = s * -0.45;
+  });
+  for (let k = 0; k < 5; k++) { const c = mesh(new THREE.TorusGeometry(0.07, 0.03, 6, 12), white, -0.12 + k * 0.06, 0.4 + (k % 2) * 0.04, 0.1 - (k % 3) * 0.05, head); c.rotation.set(Math.PI / 2 + k * 0.4, k, 0); }
+  // 尾巴
+  const tail = mesh(new THREE.CapsuleGeometry(0.03, 0.3, 4, 6), white, 0.1, 0.65, -0.42, g); tail.rotation.x = 0.8;
+  mesh(new THREE.SphereGeometry(0.06, 8, 6), spot, 0.1, 0.5, -0.56, g);
+  return g;
+}
 function bTodo(g) {
   cyl(g, 0.9, 1, 0.18, 0xe2d6c3, 0, 0, 0, 16);
-  const p = person({ shirt: "#E8B04B", hair: "#3A2A20", skin: "#F6D7BE", prop: "clipboard" });
-  p.scale.setScalar(1.3); p.position.y = 0.18;
-  g.add(p);
-  g.userData.npc = p;
+  const cow = cowModel();
+  cow.scale.setScalar(1.35); cow.position.y = 0.18;
+  g.add(cow);
+  // 旁邊放一瓶牛奶
+  const bottle = new THREE.Group(); bottle.position.set(0.8, 0.18, 0.3); g.add(bottle);
+  cyl(bottle, 0.16, 0.18, 0.42, mat(0xfbfaf6, { flatShading: false }), 0, 0, 0, 14); cyl(bottle, 0.1, 0.16, 0.14, mat(0xfbfaf6, { flatShading: false }), 0, 0.42, 0, 14); cyl(bottle, 0.11, 0.11, 0.07, soft(0xe8c04a), 0, 0.56, 0, 14);
+  cyl(bottle, 0.165, 0.185, 0.16, soft(0xe8c04a), 0, 0.08, 0, 14);
+  g.userData.npc = cow;
   const bubble = textPlane(3.8, 1.5, (c, w, h) => {
     const left = todoLeft(), sem = SEM_NAME[curSem()];
     const bh = h * 0.78;
-    rr(c, 6, 6, w - 12, bh - 6, 34); c.fillStyle = "#FFFDF9"; c.fill(); c.lineWidth = 8; c.strokeStyle = "#2A211C"; c.stroke();
+    rr(c, 6, 6, w - 12, bh - 6, 34); c.fillStyle = cowMsg ? "#FFE9A8" : "#FFFDF9"; c.fill(); c.lineWidth = 8; c.strokeStyle = "#2A211C"; c.stroke();
     c.beginPath(); c.moveTo(w / 2 - 22, bh - 4); c.lineTo(w / 2, h - 6); c.lineTo(w / 2 + 22, bh - 4); c.closePath(); c.fill(); c.stroke();
-    c.fillStyle = "#FFFDF9"; c.fillRect(w / 2 - 18, bh - 14, 36, 14);
+    c.fillStyle = cowMsg ? "#FFE9A8" : "#FFFDF9"; c.fillRect(w / 2 - 18, bh - 14, 36, 14);
     c.textAlign = "center"; c.textBaseline = "middle";
+    if (cowMsg) { c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.34}px ${FONT}`; c.fillText(cowMsg, w / 2, bh * 0.52); return; }
     c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.2}px ${FONT}`; c.fillText("社團小秘書", w / 2, bh * 0.33);
-    c.fillStyle = "#2A211C"; c.font = `900 ${h * 0.19}px ${FONT}`; c.fillText(left ? `${sem}還有 ${left} 項待辦` : `${sem}待辦全部完成！`, w / 2, bh * 0.7);
+    c.fillStyle = "#2A211C"; c.font = `900 ${h * 0.19}px ${FONT}`; c.fillText(left ? `${sem}還有 ${left} 項任務` : `${sem}任務全部完成！`, w / 2, bh * 0.7);
   });
-  bubble.position.set(0, 3.55, 0); g.add(bubble);
-  g.userData.sign = bubble; g.userData.h = 4.5;
+  bubble.position.set(0, 3.7, 0); g.add(bubble);
+  g.userData.sign = bubble; g.userData.h = 4.7;
 }
 function bHouse(g, col) {
   box(g, 2.4, 1.6, 2, C.wall, 0, 0, 0);
@@ -896,7 +933,39 @@ function openIsle(i, tour) {
     if (touring) setTimeout(tourNext, 2600);
   });
 }
+// 點「任務」：鏡頭飛到小秘書，牛跳起來轉一圈、灑出星星，泡泡顯示「解鎖任務！」，接著打開任務清單
+let cowFx = null;
+function unlockTasks() {
+  touring = false;
+  closeSheet(true);
+  setSel("todo");
+  focusOn(SPOT.todo.pos, innerWidth < 600 ? 3 : 2.6);
+  walkTo("C", () => stamp("todo", "社團小秘書"));
+  cowMsg = "解鎖任務！"; centerObj.todo.userData.sign.userData.redraw();
+  const g = centerObj.todo, stars = [];
+  if (!RM) for (let k = 0; k < 14; k++) {
+    const s = mesh(new THREE.OctahedronGeometry(0.12 + Math.random() * 0.08, 0), mat(k % 2 ? 0xffe27a : 0xffffff, { emissive: k % 2 ? 0xffc93c : 0xffffff, emissiveIntensity: 0.6 }), 0, 2, 0, g);
+    s.castShadow = false; s.userData.v = new V3(Math.cos(k * 0.45) * (1.5 + Math.random()), 2 + Math.random() * 1.5, Math.sin(k * 0.45) * (1.5 + Math.random())); stars.push(s);
+  }
+  cowFx = { s: performance.now(), stars };
+  const first = !LS.get("tasksUnlocked", false);
+  LS.set("tasksUnlocked", true);
+  setTimeout(() => {
+    cowMsg = null; centerObj.todo.userData.sign.userData.redraw();
+    renderTodo(); setSel("todo");
+    focusOn(SPOT.todo.pos, innerWidth < 600 ? 2.1 : 1.8);
+    if (first) toast("任務解鎖！完成後記得打勾");
+  }, RM ? 300 : 1400);
+}
+function stepCowFx(now) {
+  if (!cowFx) return;
+  const k = (now - cowFx.s) / 1000, cow = centerObj.todo.userData.npc;
+  if (k < 1) { cow.position.y = 0.18 + Math.sin(k * Math.PI) * 1.2; cow.rotation.y = k * Math.PI * 2; }
+  cowFx.stars.forEach((s) => { const f = Math.min(k, 1.3); s.position.set(s.userData.v.x * f, 2 + s.userData.v.y * f - 2.2 * f * f, s.userData.v.z * f); s.rotation.y += 0.2; s.scale.setScalar(Math.max(0, 1 - k / 1.4)); });
+  if (k > 1.4) { cowFx.stars.forEach((s) => centerObj.todo.remove(s)); cow.position.y = 0.18; cow.rotation.y = 0; cowFx = null; }
+}
 function openSpot(id) {
+  if (id === "todo") return unlockTasks();
   touring = false;
   setSel(id);
   ({ office: renderOffice, deadlines: renderDeadlines, news: renderNews, todo: () => renderTodo(), links: renderLinks })[id]();
@@ -993,7 +1062,7 @@ function renderIsle(d, keepScroll) {
     ${d.guides.map((g) => `<div class="sec"><h4>${E(g.topic)}・辦事步驟</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 步</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
     ${sectionsHtml(d)}
     ${dl.length || !d.sections?.length ? `<div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>` : ""}
-    ${isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政待辦</h4>${todoItems(isleTodos(d))}</div>` : ""}
+    ${isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政任務</h4>${todoItems(isleTodos(d))}</div>` : ""}
     <div class="sec"><h4>相關公告</h4>${newsItems(news)}</div>
     <div class="sec"><h4>這一島在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
     <p class="foot">還有問題？請在辦公時間到中心島的課外組詢問。</p>`;
@@ -1022,7 +1091,7 @@ function renderDeadlines() {
   const html = `${head("⏰", "CLOCK TOWER · 截止日", "截止日鐘塔")}
     <p class="lead">所有分類的截止日都在這裡。</p>
     <p class="quote">7 天內轉黃、3 天內轉紅，對應的島上方也會浮出菱形提醒。</p>
-    <div class="tags"><span class="tag">${upcoming().length} 項待辦</span>${stampTag("deadlines")}</div>
+    <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag("deadlines")}</div>
     <div class="acts"><a class="btn t" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" data-ics="all">全部加入行事曆</button><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
     <p class="foot">訂閱後，新的截止日會自動同步到手機，並在截止前 3 天、1 天提醒。</p>
     <div class="sec"><h4>依日期排序</h4>${dlItems(upcoming(), true, true)}</div>
@@ -1032,7 +1101,7 @@ function renderDeadlines() {
 }
 const isleTodos = (d) => todoList(curSem()).filter((x) => x.island === d.key);
 function todoItems(list) {
-  if (!list.length) return '<p class="empty">沒有待辦項目。</p>';
+  if (!list.length) return '<p class="empty">沒有任務。</p>';
   return '<ul class="items">' + list.map((x) => {
     const done = !!todoDone[x.key], d = isleOf(x.island);
     const btns = (x.links || []).map((l) => (l[1] ? `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>` : `<span class="btn g pend" aria-disabled="true">${E(l[0])}・連結待補</span>`)).join("");
@@ -1043,13 +1112,13 @@ let todoSem = null;
 function renderTodo(sem) {
   todoSem = sem || todoSem || curSem();
   const list = todoList(todoSem), n = list.filter((x) => todoDone[x.key]).length;
-  const html = `${head("🧑‍💼", "SECRETARY · 社團小秘書", "社團行政待辦清單")}
-    <p class="lead">我是社團小秘書！每學期要完成的行政事項都幫你記著，完成後打勾。</p>
+  const html = `${head("🐮", "SECRETARY · 社團小秘書", "社團行政任務")}
+    <p class="lead">哞～我是社團小秘書！每學期要完成的行政任務都幫你記著，完成後打勾。</p>
     <div class="tabs two" role="tablist">${["s1", "s2"].map((s) => `<button type="button" role="tab" data-sem="${s}" aria-selected="${todoSem === s}">${SEM_NAME[s]}${s === curSem() ? "・本學期" : ""}</button>`).join("")}</div>
     <div class="sec"><h4>完成進度・<span id="todoProg">${n}/${list.length}</span></h4><div class="prog"><i id="todoBar" style="width:${list.length ? (n / list.length) * 100 : 0}%"></i></div></div>
     <div class="tags">${stampTag("todo")}</div>
     <div class="sec"><h4>每學期共同項目</h4>${todoItems(list.filter((x) => x.sem === "common"))}</div>
-    <div class="sec"><h4>${SEM_NAME[todoSem]}待辦</h4>${todoItems(list.filter((x) => x.sem !== "common"))}</div>
+    <div class="sec"><h4>${SEM_NAME[todoSem]}任務</h4>${todoItems(list.filter((x) => x.sem !== "common"))}</div>
     <p class="foot">打勾紀錄只存在你自己的手機或電腦。標示「連結待補」的按鈕，課外組補上連結後就能點。</p>`;
   showSheet("todo", html);
 }
@@ -1072,7 +1141,7 @@ function listResults(q) {
     isleDl(d).forEach((x) => { if ((x.title + (x.detail || "")).includes(q)) res.push({ d, t: x.title, s: `截止日・${fmt(x.at)}` }); });
     (d.sections || []).forEach((s) => (s.rules || []).forEach((r) => { if ([s.title, r.when, r.title, r.note, ...(r.files || [])].filter(Boolean).join(" ").includes(q)) res.push({ d, t: r.title, s: `${s.title}・${r.when || ""}` }); }));
     isleNews(d).forEach((a) => { if ((a.title + (a.body || "")).includes(q)) res.push({ d, t: a.title, s: "公告" + (a.body ? "・" + a.body : "") }); });
-    ["s1", "s2"].forEach((sem) => todoList(sem).filter((x) => x.island === d.key && (sem === "s1" || x.sem !== "common")).forEach((x) => { if ((x.title + (x.note || "")).includes(q)) res.push({ d, t: x.title, s: `${x.sem === "common" ? "每學期" : SEM_NAME[sem]}待辦${x.note ? "・" + x.note : ""}` }); }));
+    ["s1", "s2"].forEach((sem) => todoList(sem).filter((x) => x.island === d.key && (sem === "s1" || x.sem !== "common")).forEach((x) => { if ((x.title + (x.note || "")).includes(q)) res.push({ d, t: x.title, s: `${x.sem === "common" ? "每學期" : SEM_NAME[sem]}任務${x.note ? "・" + x.note : ""}` }); }));
   });
   const hl = (s) => E(s).split(E(q)).join(`<mark>${E(q)}</mark>`);
   return `<div class="sec"><h4>搜尋結果・${res.length} 筆</h4>${res.length ? '<ul class="items">' + res.map((r) => `<li class="item" style="--c:${r.d.color}"><button type="button" data-isle="${r.d.i}"><span class="dot"></span><span class="nm">${hl(r.t)}<small>${E(r.d.name)}・${hl(r.s)}</small></span><span class="meta"></span><span class="chev">›</span></button></li>`).join("") + "</ul>" : `<p class="empty">找不到「${E(q)}」。可以在辦公時間到課外組當面詢問。</p>`}</div>`;
@@ -1171,7 +1240,7 @@ $("sbody").addEventListener("change", (e) => {
   if (k) {
     todoDone[k] = e.target.checked; LS.set(todoKey, todoDone);
     e.target.closest("li").classList.toggle("done", e.target.checked);
-    if ($("todoProg")) { const list = todoList(todoSem), n = list.filter((x) => todoDone[x.key]).length; $("todoProg").textContent = `${n}/${list.length}`; $("todoBar").style.width = `${(n / list.length) * 100}%`; if (n === list.length) { toast(`${SEM_NAME[todoSem]}待辦全部完成！`); confetti(); } }
+    if ($("todoProg")) { const list = todoList(todoSem), n = list.filter((x) => todoDone[x.key]).length; $("todoProg").textContent = `${n}/${list.length}`; $("todoBar").style.width = `${(n / list.length) * 100}%`; if (n === list.length) { toast(`${SEM_NAME[todoSem]}任務全部完成！`); confetti(); } }
     centerObj.todo.userData.sign.userData.redraw(); updHud();
     return;
   }
@@ -1207,7 +1276,7 @@ $("bChar").addEventListener("click", () => (panelView && panelView.startsWith("c
 $("bList").addEventListener("click", () => (panelView === "list" ? closeSheet() : renderList()));
 $("bDl").addEventListener("click", () => (panelView === "deadlines" ? closeSheet() : openSpot("deadlines")));
 $("bNews").addEventListener("click", () => (panelView === "news" ? closeSheet() : openSpot("news")));
-$("bTodo").addEventListener("click", () => (panelView === "todo" ? closeSheet() : openSpot("todo")));
+$("bTodo").addEventListener("click", () => (panelView === "todo" ? closeSheet() : unlockTasks()));
 $("pOffice").addEventListener("click", () => openSpot("office"));
 $("pNext").addEventListener("click", () => { const n = upcoming()[0], d = n && isleOf(n.category); d ? openIsle(d.i) : openSpot("deadlines"); });
 
@@ -1229,7 +1298,7 @@ function tickerMsgs() {
   ISL.filter(myDuty).forEach((d) => { const n = isleDl(d)[0]; if (n) m.push({ t: `${me.role}注意：${d.name}「${n.title}」還有 ${daysLeft(n.at)} 天`, go: () => openIsle(d.i) }); });
   upcoming().slice(0, 3).forEach((x) => { const d = isleOf(x.category); m.push({ t: `${d ? d.name + "：" : ""}「${x.title}」還有 ${daysLeft(x.at)} 天`, go: () => (d ? openIsle(d.i) : openSpot("deadlines")) }); });
   if (unread().length) m.push({ t: `公告欄有 ${unread().length} 則新公告`, go: () => openSpot("news") });
-  if (todoLeft()) m.push({ t: `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政待辦`, go: () => openSpot("todo") });
+  if (todoLeft()) m.push({ t: `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務`, go: unlockTasks });
   m.push({ t: `課外組${st.text}`, go: () => openSpot("office") });
   m.push({ t: "拖曳移動群島，兩指縮放或旋轉", go: null });
   return m;
@@ -1261,7 +1330,7 @@ function teacherTalk() {
   const n = upcoming()[0], st = officeStatus(), L = [];
   if (n) { const d = isleOf(n.category); L.push(["最近的截止日", `「${n.title}」還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`]); }
   if (unread().length) L.push(["有新公告", `公告欄有 ${unread().length} 則你還沒看過的公告。`]);
-  if (todoLeft()) L.push(["行政待辦", `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政待辦，找社團小秘書可以一項一項打勾。`]);
+  if (todoLeft()) L.push(["行政任務", `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務，找社團小秘書（那頭乳牛）可以一項一項打勾。`]);
   L.push(["隨時來找我們", `課外組${st.text}。週一至週五 9:00–12:00、13:30–17:00 都可以來。`, "好"]);
   talk("課外組老師", L);
 }
@@ -1307,11 +1376,14 @@ function loop(now) {
     newsMarker.rotation.y += dt * 1.5;
     const boat = centerObj.links.userData.boat; boat.position.y = -1.15 + Math.sin(t * 1.4) * 0.08; boat.rotation.z = Math.sin(t * 1.1) * 0.05;
     teacher.position.y = Math.abs(Math.sin(t * 2)) * 0.03;
-    const sec = centerObj.todo.userData.npc; sec.position.y = 0.18 + Math.abs(Math.sin(t * 2.2)) * 0.05; sec.rotation.y = Math.sin(t * 0.8) * 0.25;
+    const cow = centerObj.todo.userData.npc;
+    cow.userData.armR.rotation.z = -2.3 + Math.sin(t * 5) * 0.35; // 揮手
+    if (!cowFx) { cow.position.y = 0.18 + Math.abs(Math.sin(t * 2.2)) * 0.05; cow.rotation.y = Math.sin(t * 0.8) * 0.25; }
     selRing.rotation.z += dt * 1.2;
     stepNpcs(dt, t);
   }
   selRing.visible = !!(panelView && panelView.startsWith("char"));
+  stepCowFx(now);
   stepWalk(dt, t);
   stepTween(now);
   controls.update();

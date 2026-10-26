@@ -266,7 +266,7 @@ footer a { color: var(--band-fg); }
       <a href="#deadlines">截止日</a>
       <a href="#news">公告<span class="dot" id="unreadDot" hidden></span></a>
       <a href="#guide">資訊站</a>
-      <a href="#todo">待辦</a>
+      <a href="#todo">任務</a>
       <a href="#onboard">新任幹部</a>
       <a href="#office">課外組</a>
       <a href="index.html">3D 群島</a>
@@ -336,7 +336,7 @@ footer a { color: var(--band-fg); }
 
     <section id="todo" aria-labelledby="h-todo">
       <div class="sec-head">
-        <div><h2 id="h-todo">社團行政待辦清單</h2><p class="sub">每學期都要完成的行政事項，完成後打勾（紀錄只存在你的手機或電腦）。</p></div>
+        <div><h2 id="h-todo">社團行政任務</h2><p class="sub">每學期都要完成的行政任務，完成後打勾（紀錄只存在你的手機或電腦）。</p></div>
         <span class="score" style="font-size:28px;font-weight:700" id="todoCount">0/0</span>
       </div>
       <div class="chips" id="semChips" role="group" aria-label="選擇學期"></div>
@@ -621,7 +621,7 @@ footer a { color: var(--band-fg); }
   var curSem = twParts(new Date()).m >= 2 && twParts(new Date()).m <= 7 ? "s2" : "s1", sem = curSem;
   var todoKey = "todo:" + ((D.term || "").match(/\d+/) || [""])[0];
   var todoDone = store.get(todoKey, {});
-  function todoList(s) { return TODO.common.map(function (x) { return Object.assign({}, x, { grp: "每學期共同項目", key: s + ":" + x.id }); }).concat((TODO[s] || []).map(function (x) { return Object.assign({}, x, { grp: SEM[s] + "待辦", key: s + ":" + x.id }); })); }
+  function todoList(s) { return TODO.common.map(function (x) { return Object.assign({}, x, { grp: "每學期共同項目", key: s + ":" + x.id }); }).concat((TODO[s] || []).map(function (x) { return Object.assign({}, x, { grp: SEM[s] + "任務", key: s + ":" + x.id }); })); }
   function renderTodo() {
     $("semChips").innerHTML = ["s1", "s2"].map(function (s) { return '<button type="button" class="chip" aria-pressed="' + (s === sem) + '" data-sem="' + s + '">' + SEM[s] + (s === curSem ? "・本學期" : "") + "</button>"; }).join("");
     var list = todoList(sem), html = "", grp = "";
