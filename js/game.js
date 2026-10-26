@@ -147,25 +147,27 @@ MAIN.forEach((d, i) => {
 });
 // 圓環到外圈的連絡道路：每隔一個建築區一條
 const SPOKES = MAIN.filter((d, i) => i % 2 === 0).map((d) => d.a);
-// 獨立小島（例如場地器材島）：放在本島右前方兩個建築區之間，以橋相連
-const ISLET = OFF.length ? (() => {
-  const a = front - Math.PI / NM * 2, dir = new V3(Math.cos(a), 0, Math.sin(a)), r = 8;
+// 獨立小島：data.js 裡 islet 名稱相同的館放在同一座小島，以橋接到本島外圈道路
+// 小島方位（相對鏡頭正前方）；沒列在這裡的小島依序往外放
+const ISLET_AT = { "場地器材島": -Math.PI / 3, "活動島": (Math.PI * 8) / 9 };
+const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
+  const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = 8;
   const pos = dir.clone().multiplyScalar(R_ISLE + r + 5.5);
-  return { a, dir, r, pos, name: OFF[0].islet, coast: dir.clone().multiplyScalar(R_ISLE * 0.92), entry: pos.clone().sub(dir.clone().multiplyScalar(r * 0.88)) };
-})() : null;
-if (ISLET) {
-  const perp = new V3(-ISLET.dir.z, 0, ISLET.dir.x);
-  OFF.forEach((d, i) => {
-    const side = OFF.length === 1 ? 0 : (i / (OFF.length - 1)) * 2 - 1; // 小島上左右排開
-    d.dir = perp.clone().multiplyScalar(side || 1).add(ISLET.dir.clone().multiplyScalar(0.35)).normalize();
+  const I = { a, dir, r, pos, name, halls: OFF.filter((d) => d.islet === name), coast: dir.clone().multiplyScalar(R_ISLE * 0.92), entry: pos.clone().sub(dir.clone().multiplyScalar(r * 0.88)) };
+  const perp = new V3(-dir.z, 0, dir.x);
+  I.halls.forEach((d, i) => {
+    const side = I.halls.length === 1 ? 0 : (i / (I.halls.length - 1)) * 2 - 1; // 小島上左右排開
+    d.isl = I;
+    d.dir = perp.clone().multiplyScalar(side || 1).add(dir.clone().multiplyScalar(0.35)).normalize();
     d.a = Math.atan2(d.dir.z, d.dir.x);
-    d.pos = ISLET.pos.clone().add(perp.clone().multiplyScalar(side * 3.6)).add(ISLET.dir.clone().multiplyScalar(1.2));
+    d.pos = pos.clone().add(perp.clone().multiplyScalar(side * 3.6)).add(dir.clone().multiplyScalar(1.2));
   });
-}
-const WORLD_R = ISLET ? R_ISLE + 2 * ISLET.r + 6 : R_ISLE + 1;
-// 鏡頭取景：以本島為主，往小島方向偏一點，讓兩座島都放得進畫面
-const CAM_R = ISLET ? R_ISLE + 10 : R_ISLE + 1;
-const HOME_C = ISLET ? ISLET.dir.clone().multiplyScalar(8.5) : new V3(0, 0, 0);
+  return I;
+});
+const WORLD_R = ISLETS.length ? R_ISLE + 2 * 8 + 6 : R_ISLE + 1;
+// 鏡頭取景：以本島為主，往小島的方向偏一點，讓所有島都放得進畫面
+const CAM_R = ISLETS.length ? R_ISLE + 10 + (ISLETS.length - 1) * 3 : R_ISLE + 1;
+const HOME_C = ISLETS.reduce((v, I) => v.add(I.dir.clone().multiplyScalar(8.5 / ISLETS.length)), new V3(0, 0, 0));
 
 const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, -300, 500);
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -670,7 +672,7 @@ const SPOT = {
   office: { a: mid(NM / 2), r: 7.4, build: bOffice },
   deadlines: { a: mid(NM / 2 + 1), r: 7.2, build: bClock },
   news: { a: mid(NM / 2 - 1), r: 7, build: bBoard },
-  todo: { a: mid(NM - 1) + Math.PI / NM * 0.6, r: 7, build: bTodo },
+  todo: { a: mid(NM - 1) + Math.PI / NM * 1.2, r: 7, build: bTodo },
   links: { a: front, r: R_ISLE * 0.95, build: bDock },
 };
 radialRoad(front, RO + 0.7, R_ISLE * 0.93); // 通往碼頭的路
@@ -713,17 +715,17 @@ ISL.forEach((d) => {
 });
 
 /* ---- 獨立小島與橋 ---- */
-if (ISLET) {
+ISLETS.forEach((ISLET) => {
   const g = new THREE.Group(); g.position.copy(ISLET.pos); world.add(g);
   const L = landmass(g, ISLET.r, 4.2);
-  tag(L.top, { t: "isle", i: OFF[0].i });
+  tag(L.top, { t: "isle", i: ISLET.halls[0].i });
   // 本島外圈道路 → 海岸、小島入口 → 小島中央 → 各建築區
   const seg = (p, q, w = 1.4) => { const len = p.distanceTo(q), m = p.clone().add(q).multiplyScalar(0.5), a = Math.atan2(q.z - p.z, q.x - p.x);
     const road = box(world, len, 0.05, w, C.road, m.x, 0, m.z); road.rotation.y = -a; road.castShadow = false;
     for (let s = 0.6; s < len - 0.3; s += 1.1) { const pt = p.clone().lerp(q, s / len); dashAt(world, pt.x, pt.z, -a + Math.PI / 2); } };
   seg(ISLET.dir.clone().multiplyScalar(RO + 0.7), ISLET.coast);
   seg(ISLET.entry, ISLET.pos);
-  OFF.forEach((d) => seg(ISLET.pos, d.pos.clone().sub(d.dir.clone().multiplyScalar(1.6)), 1.3));
+  ISLET.halls.forEach((d) => seg(ISLET.pos, d.pos.clone().sub(d.dir.clone().multiplyScalar(1.6)), 1.3));
   // 木橋
   const p0 = ISLET.coast, p1 = ISLET.entry, len = p0.distanceTo(p1), m = p0.clone().add(p1).multiplyScalar(0.5);
   const bg = new THREE.Group(); bg.position.copy(m); bg.rotation.y = -ISLET.a; world.add(bg);
@@ -737,16 +739,16 @@ if (ISLET) {
   const sg = new THREE.Group(); sg.position.copy(ISLET.entry.clone().lerp(ISLET.pos, 0.35)).add(new V3(-ISLET.dir.z, 0, ISLET.dir.x).multiplyScalar(1.4)); sg.rotation.y = FACE;
   cyl(sg, 0.07, 0.07, 1.4, C.dark, -1, 0, 0, 5); cyl(sg, 0.07, 0.07, 1.4, C.dark, 1, 0, 0, 5); sign.position.set(0, 1.5, 0.05); sg.add(sign); world.add(sg);
   for (let i = 0, k = 0; i < 120 && k < 10; i++) {
-    const a = hash("it" + i) * Math.PI * 2, r = 2 + hash("ir" + i) * (ISLET.r * 0.82 - 2), x = ISLET.pos.x + Math.cos(a) * r, z = ISLET.pos.z + Math.sin(a) * r;
-    if (OFF.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.4) || Math.hypot(ISLET.pos.x - x, ISLET.pos.z - z) < 1.8) continue;
+    const a = hash("it" + ISLET.name + i) * Math.PI * 2, r = 2 + hash("ir" + ISLET.name + i) * (ISLET.r * 0.82 - 2), x = ISLET.pos.x + Math.cos(a) * r, z = ISLET.pos.z + Math.sin(a) * r;
+    if (ISLET.halls.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.4) || Math.hypot(ISLET.pos.x - x, ISLET.pos.z - z) < 1.8) continue;
     const toE = new V3(x, 0, z).sub(ISLET.pos), along = toE.dot(ISLET.dir.clone().negate()); if (along > 0 && Math.abs(toE.clone().cross(ISLET.dir).y) < 1.4) continue;
     tree(world, x, z, 0.65 + hash("is" + i) * 0.4, hash("ik" + i)); k++;
   }
-}
+});
 
 /* ---- 樹：避開道路、建築區與中央地點 ---- */
 {
-  const roadAngles = [...SPOKES, front, ...(ISLET ? [ISLET.a] : [])];
+  const roadAngles = [...SPOKES, front, ...ISLETS.map((I) => I.a)];
   const nearRadial = (x, z, r) => roadAngles.some((a) => { const along = x * Math.cos(a) + z * Math.sin(a), side = Math.abs(-x * Math.sin(a) + z * Math.cos(a)); return along > 4 && side < 1.6; }) ||
     MAIN.some((d) => { const along = x * Math.cos(d.a) + z * Math.sin(d.a), side = Math.abs(-x * Math.sin(d.a) + z * Math.cos(d.a)); return along > RO && along < R_LOT && side < 1.5; });
   let n = 0;
@@ -914,7 +916,7 @@ const nearestSpoke = (a) => SPOKES.reduce((b, s) => (angOff(a, s) < angOff(a, b)
 const isleSpot = (d) => d.pos.clone().add(d.spot);
 // 路線：建築區 ⇄ 外圈道路 ⇄（連絡道路）⇄ 中央圓環
 // 外圈道路 ⇄ 海岸 ⇄ 橋 ⇄ 小島中央
-function isletPath(outbound) {
+function isletPath(ISLET, outbound) {
   const b = ISLET.bridge, m = Math.ceil(b.len / 0.4), br = [];
   for (let k = 0; k <= m; k++) { const t = k / m, p = b.p0.clone().lerp(b.p1, t); p.y = Math.sin(t * Math.PI) * 0.35; br.push(p); }
   const pts = [ringPt(ISLET.a, RO), ...br, ISLET.pos.clone()];
@@ -924,17 +926,17 @@ function route(to) {
   const pts = [], curA = Math.atan2(av.position.z, av.position.x);
   let posA, onOuter;
   const from = avAt !== "C" ? ISL[avAt] : null;
-  if (from && from.islet) { pts.push(ISLET.pos.clone()); if (ISL[to] && ISL[to].islet) { pts.push(isleSpot(ISL[to])); return pts; } pts.push(...isletPath(false)); posA = ISLET.a; onOuter = true; }
+  if (from && from.isl) { const I = from.isl; pts.push(I.pos.clone()); if (ISL[to] && ISL[to].isl === I) { pts.push(isleSpot(ISL[to])); return pts; } pts.push(...isletPath(I, false)); posA = I.a; onOuter = true; }
   else if (from) { posA = from.a; pts.push(ringPt(posA, RO)); onOuter = true; }
   else { posA = curA; pts.push(ringPt(curA, RW)); onOuter = false; }
   if (to === "C") {
     if (onOuter) { const s = nearestSpoke(posA); pts.push(...arc(posA, s, RO), ringPt(s, RW)); posA = s; }
     pts.push(...arc(posA, front, RW), AV_HOME.clone());
   } else {
-    const d = ISL[to], ta = d.islet ? ISLET.a : d.a;
+    const d = ISL[to], ta = d.isl ? d.isl.a : d.a;
     if (!onOuter) { const s = nearestSpoke(ta); pts.push(...arc(posA, s, RW), ringPt(s, RO)); posA = s; }
     pts.push(...arc(posA, ta, RO));
-    if (d.islet) pts.push(...isletPath(true));
+    if (d.isl) pts.push(...isletPath(d.isl, true));
     pts.push(isleSpot(d));
   }
   return pts;
@@ -1018,11 +1020,11 @@ function buildLabels() {
       d.pos.clone().add(d.build.position).setY(d.build.userData.h + 0.5), () => openIsle(d.i), "", { pri: 100 + (isleBadge(d).includes("hot") ? 5 : 0), selId: "isle:" + d.key, minZoom: d.islet ? ISLET_LOD : 0 });
   });
   // 小島：拉遠時只顯示一個島名，放大後才分成各館名牌
-  if (ISLET) {
-    const soon = OFF.filter((d) => isleBadge(d)).sort((a, b) => isleDl(a)[0].at - isleDl(b)[0].at)[0];
-    mkLabel(`<span class="no" style="--nc:${OFF[0].color}">${OFF.map((d) => d.no).join("・")}</span>${E(ISLET.name)}${soon ? isleBadge(soon) : ""}`, ISLET.pos.clone().setY(4),
-      () => focusOn(ISLET.pos, ISLET_LOD + 0.5), "", { pri: 100, maxZoom: ISLET_LOD, hideFor: OFF.map((d) => "isle:" + d.key) });
-  }
+  ISLETS.forEach((I) => {
+    const soon = I.halls.filter((d) => isleBadge(d)).sort((a, b) => isleDl(a)[0].at - isleDl(b)[0].at)[0];
+    mkLabel(`<span class="no" style="--nc:${I.halls[0].color}">${I.halls.map((d) => d.no).join("・")}</span>${E(I.name)}${soon ? isleBadge(soon) : ""}`, I.pos.clone().setY(4),
+      () => focusOn(I.pos, ISLET_LOD + 0.5), "", { pri: 100, maxZoom: ISLET_LOD, hideFor: I.halls.map((d) => "isle:" + d.key) });
+  });
   CENTER_SPOTS.forEach((s) => {
     const o = centerObj[s.id], st = officeStatus();
     let extra = "";
