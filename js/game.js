@@ -1072,40 +1072,25 @@ function markRead(list) { let ch = false; list.forEach((a) => { if (!read.includ
 
 // 島內分區：相對期限的提醒（例如活動結束後 2 週內），附要準備的文件與下載按鈕
 function sectionsHtml(d) {
-  return (d.sections || []).map((s, k) => `<div class="sec" id="i-sec${k}"><h4>${E(s.title)}</h4><ul class="items">${(s.rules || []).map((r) => `<li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(r.title)}${r.note ? `<small>${E(r.note)}</small>` : ""}</span><span class="meta warn">${E(r.when || "")}</span><span class="chev">›</span></button>
+  return (d.sections || []).map((s) => `<div class="sec"><h4>${E(s.title)}</h4><ul class="items">${(s.rules || []).map((r) => `<li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(r.title)}${r.note ? `<small>${E(r.note)}</small>` : ""}</span><span class="meta warn">${E(r.when || "")}</span><span class="chev">›</span></button>
     <div class="more">${r.files?.length ? `<p>${E(r.prep || "需準備：")}</p><ul class="files">${r.files.map((f) => `<li>${E(f)}</li>`).join("")}</ul>` : ""}${r.links?.length ? `<div class="acts">${r.links.map((l) => (l[1] ? `<a class="btn t" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>` : `<span class="btn g pend" aria-disabled="true">${E(l[0])}・連結待補</span>`)).join("")}</div>` : ""}</div></li>`).join("")}</ul></div>`).join("");
 }
 const sectionText = (d) => (d.sections || []).flatMap((s) => [s.title, ...(s.rules || []).flatMap((r) => [r.when, r.title, r.note, r.prep, ...(r.files || [])])]).filter(Boolean);
-// 段落跳轉按鈕（課外組與各館共用）：[id, 圖示, 名稱]
-const jumpBar = (list) => list.length > 1 ? `<div class="jump" role="navigation" aria-label="跳到這一頁的段落">${list.map(([id, ic, nm]) => `<button class="btn g" type="button" data-jump="${id}">${ic} ${E(nm)}</button>`).join("")}</div>` : "";
 function renderIsle(d, keepScroll) {
-  const dl = isleDl(d), news = isleNews(d), steps = d.guides.reduce((n, g) => n + g.steps.length, 0), duty = DUTY[d.key] || [], todos = isleTodos(d);
+  const dl = isleDl(d), news = isleNews(d), steps = d.guides.reduce((n, g) => n + g.steps.length, 0), duty = DUTY[d.key] || [];
   const mine = (r) => me.club && me.role === r;
   const st = $("sbody").scrollTop;
-  const showDl = dl.length || !d.sections?.length;
-  // 一行文字摘要（取代原本像按鈕的膠囊）
-  const summary = [steps && `辦事步驟 ${steps} 步`, d.sections?.length && `${d.sections.length} 個分區`, showDl && `${dl.length} 項截止`, todos.length && `${todos.length} 項任務`, `${news.length} 則公告`].filter(Boolean).join("・");
-  const jumps = [
-    ...(d.guides.length ? [["i-steps", "📝", "辦事步驟"]] : []),
-    ...(d.sections || []).map((s, k) => [`i-sec${k}`, "📂", s.title]),
-    ...(showDl ? [["i-dl", "⏰", "截止日"]] : []),
-    ...(todos.length ? [["i-todo", "✅", "任務"]] : []),
-    ["i-news", "📌", "相關公告"],
-    ...(duty.length ? [["i-duty", "👥", "誰在照顧"]] : []),
-  ];
   const html = `${head(d.icon, `HALL ${d.no} · ${E(d.key)}`, d.name)}
     <p class="lead">${E(d.guides[0]?.title || d.tagline)}</p>
     <p class="quote">「${E(d.tagline)}」</p>
     ${d.links?.length ? `<div class="acts">${d.links.map((l) => `<a class="btn big t ring" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}
-    <p class="hours">${E(d.key)}類：${E(summary)}</p>
-    ${jumpBar(jumps)}
-    <div class="tags">${stampTag("isle:" + d.key)}</div>
-    ${d.guides.map((g, k) => `<div class="sec"${k === 0 ? ' id="i-steps"' : ""}><h4>${E(g.topic)}・辦事步驟</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 步</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
+    <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span>${d.sections?.length ? `<span class="tag">${d.sections.length} 個分區</span>` : `<span class="tag">${dl.length} 項截止</span>`}<span class="tag">${steps} 個步驟</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
+    ${d.guides.map((g) => `<div class="sec"><h4>${E(g.topic)}・辦事步驟</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 步</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
     ${sectionsHtml(d)}
-    ${showDl ? `<div class="sec" id="i-dl"><h4>截止日</h4>${dlItems(dl, false, true)}</div>` : ""}
-    ${todos.length ? `<div class="sec" id="i-todo"><h4>${SEM_NAME[curSem()]}行政任務</h4>${todoItems(todos)}</div>` : ""}
-    <div class="sec" id="i-news"><h4>相關公告</h4>${newsItems(news)}</div>
-    <div class="sec" id="i-duty"><h4>這一館在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
+    ${dl.length || !d.sections?.length ? `<div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>` : ""}
+    ${isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政任務</h4>${todoItems(isleTodos(d))}</div>` : ""}
+    <div class="sec"><h4>相關公告</h4>${newsItems(news)}</div>
+    <div class="sec"><h4>這一館在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
     <p class="foot">還有問題？請在辦公時間到中央的課外組詢問。</p>`;
   showSheet("isle:" + d.key, html);
   if (keepScroll) $("sbody").scrollTop = st;
@@ -1126,7 +1111,12 @@ function renderOffice() {
     <p class="lead">島上 ${ISL.length} 座行政館都有道路通到這裡，有問題就回來找我們。</p>
     <div class="bigst"><span class="lamp ${st.open ? "on" : "off"}"></span>${E(st.text)}</div>
     <p class="hours">辦公時間：週一至週五 ${D.office.hours.slots.map((s) => s.join("–")).join("、")}（國定假日不辦公）</p>
-    ${jumpBar([["o-hours", "🕘", "本週辦公時間"], ["o-map", "📍", "位置與導航"], ["o-tips", "💡", "洽公小提醒"], ["o-isles", "🏛", "各行政館"]])}
+    <div class="jump" role="navigation" aria-label="跳到這一頁的段落">
+      <button class="btn g" type="button" data-jump="o-hours">🕘 本週辦公時間</button>
+      <button class="btn g" type="button" data-jump="o-map">📍 位置與導航</button>
+      <button class="btn g" type="button" data-jump="o-tips">💡 洽公小提醒</button>
+      <button class="btn g" type="button" data-jump="o-isles">🏛 各行政館</button>
+    </div>
     <div class="tags">${stampTag("office")}</div>
     <div class="sec" id="o-hours"><h4>本週辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
     <div class="sec" id="o-map"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : ""}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div>${D.office.mapUrl ? "" : '<p class="foot">Google 地圖導航建置中。</p>'}</div>
@@ -1138,7 +1128,7 @@ function renderDeadlines() {
   const html = `${head("⏰", "CLOCK TOWER · 截止日", "截止日鐘塔")}
     <p class="lead">所有分類的截止日都在這裡。</p>
     <p class="quote">7 天內轉黃、3 天內轉紅，對應的館上方也會浮出菱形提醒。</p>
-    <p class="hours">目前共有 ${upcoming().length} 項截止日。</p><div class="tags">${stampTag("deadlines")}</div>
+    <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag("deadlines")}</div>
     <div class="acts"><a class="btn t" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" data-ics="all">全部加入行事曆</button><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
     <p class="foot">訂閱後，新的截止日會自動同步到手機，並在截止前 3 天、1 天提醒。</p>
     <div class="sec"><h4>依日期排序</h4>${dlItems(upcoming(), true, true)}</div>
@@ -1170,7 +1160,7 @@ function renderTodo(sem) {
   showSheet("todo", html);
 }
 function renderNews() {
-  const html = `${head("📌", "BULLETIN · 公告", "公告欄")}<p class="lead">學期間的行政公告都貼在這裡。</p><p class="hours">共 ${anns.length} 則公告${unread().length ? `，${unread().length} 則未讀` : ""}。</p><div class="tags">${stampTag("news")}</div><div class="sec"><h4>最新公告</h4>${newsItems(anns)}</div>`;
+  const html = `${head("📌", "BULLETIN · 公告", "公告欄")}<p class="lead">學期間的行政公告都貼在這裡。</p><div class="tags"><span class="tag">${anns.length} 則公告</span>${unread().length ? `<span class="tag c" style="--c:#C8443A">${unread().length} 則未讀</span>` : ""}${stampTag("news")}</div><div class="sec"><h4>最新公告</h4>${newsItems(anns)}</div>`;
   showSheet("news", html);
   markRead(anns);
 }
