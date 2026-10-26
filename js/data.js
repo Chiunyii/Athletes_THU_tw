@@ -90,15 +90,15 @@ var SITE_DATA = {
    * --------------------------------------------------------- */
   islands: [
     {
-      key: "會議", name: "期初會議島", icon: "📣", color: "#8C9A5B", building: "hall",
+      key: "會議", name: "期初會議館", icon: "📣", color: "#8C9A5B", building: "hall",
       tagline: "每學期初召開的體能性社團會議，請先到指定表單報名。",
       // links：島上最醒目的按鈕；每學期換成新的會議資料與報名表單
       links: [["115-1 期初會議資料", "https://reurl.cc/8YYKp4"]],
     },
-    { key: "行政", name: "行政島", icon: "📋", color: "#6E8FB5", building: "track", tagline: "幹部交接、名冊繳交，新任幹部的第一站。" },
-    { key: "活動", name: "活動島", icon: "⛺", color: "#D98B4E", building: "tent", tagline: "辦活動前要送什麼、活動後要交什麼。" },
+    { key: "行政", name: "行政館", icon: "📋", color: "#6E8FB5", building: "track", tagline: "幹部交接、名冊繳交，新任幹部的第一站。" },
+    { key: "活動", name: "活動館", icon: "⛺", color: "#D98B4E", building: "tent", tagline: "辦活動前要送什麼、活動後要交什麼。" },
     {
-      key: "經費", name: "經費島", icon: "💰", color: "#D9B24E", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。",
+      key: "經費", name: "經費館", icon: "💰", color: "#D9B24E", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。",
       // sections：島內分區；rules 是「相對期限」的提醒（例如活動結束後 2 週內），沒有固定日期所以不倒數
       // prep + files：要先準備給承辦老師的電子檔
       sections: [
@@ -129,10 +129,10 @@ var SITE_DATA = {
         },
       ],
     },
-    { key: "場地", name: "場地借用", islet: "借用島", icon: "🏟", color: "#6FA38C", building: "gym", tagline: "練習場地借用與使用規範。" },
-    { key: "安全", name: "安全島", icon: "⛑", color: "#C8623F", building: "aid", tagline: "保險、急救、校外活動安全，體能性社團最重要的事。" },
-    { key: "器材", name: "器材借用", islet: "借用島", icon: "🏐", color: "#9C83B5", building: "store", tagline: "器材清冊、借用與保管。" },
-    { key: "評鑑", name: "評鑑島", icon: "🏆", color: "#C97A8F", building: "podium", tagline: "成果與評鑑資料，平常就要存。" },
+    { key: "場地", name: "場地借用館", islet: "借用島", icon: "🏟", color: "#6FA38C", building: "gym", tagline: "練習場地借用與使用規範。" },
+    { key: "安全", name: "安全館", icon: "⛑", color: "#C8623F", building: "aid", tagline: "保險、急救、校外活動安全，體能性社團最重要的事。" },
+    { key: "器材", name: "器材借用館", islet: "借用島", icon: "🏐", color: "#9C83B5", building: "store", tagline: "器材清冊、借用與保管。" },
+    { key: "評鑑", name: "評鑑館", icon: "🏆", color: "#C97A8F", building: "podium", tagline: "成果與評鑑資料，平常就要存。" },
   ],
 
   /* ---------------------------------------------------------
