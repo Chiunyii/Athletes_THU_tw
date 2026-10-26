@@ -92,10 +92,15 @@ a { color: var(--terra); }
 .lead { margin: 0; font-size: 16.5px; font-weight: 500; }
 .quote { margin: 0; border-left: 4px solid var(--terra); padding: 2px 0 2px 16px; color: #5B4B40; font-size: 15.5px; }
 .tags { display: flex; gap: 8px; flex-wrap: wrap; }
-.tag { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--line); font: 700 13.5px/1 var(--f-body); color: #5B4B40; background: var(--card); }
-.tag.c { border-color: color-mix(in srgb, var(--c) 45%, white); background: color-mix(in srgb, var(--c) 12%, white); }
+/* 標籤只是資訊，不可點：扁平、無外框，避免看起來像按鈕 */
+.tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 6px; font: 700 12.5px/1.2 var(--f-body); color: #6B5A4C; background: #F3ECE2; }
+.hours { margin: 0; font-size: 15px; font-weight: 500; color: #5B4B40; }
+.jump { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.jump .btn { justify-content: center; padding: 11px 10px; font-size: 14px; border-radius: 14px; }
+.sec { scroll-margin-top: 12px; }
+.tag.c { background: color-mix(in srgb, var(--c) 16%, white); }
 .tag.c::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
-.tag.ok { border-color: #BFD6B8; background: #EEF6EA; color: var(--ok); }
+.tag.ok { background: #EEF6EA; color: var(--ok); }
 .sec { display: grid; gap: 10px; }
 .sec h4 { font: 700 13px/1.2 var(--f-body); letter-spacing: .18em; color: var(--mut); }
 .items { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }

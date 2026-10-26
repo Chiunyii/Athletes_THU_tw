@@ -1103,14 +1103,22 @@ function renderOffice() {
   const now = new Date(), monday = new Date(now.getTime() - ((p.wd + 6) % 7) * 864e5);
   const rows = [0, 1, 2, 3, 4, 5, 6].map((k) => { const di = dayInfo(new Date(monday.getTime() + k * 864e5)), isToday = di.key === ymd(p);
     return `<tr class="${isToday ? "today" : ""}"><td>${di.p.m}/${di.p.d}（${WEEK[di.p.wd]}）${isToday ? "今天" : ""}</td><td class="${di.open ? "" : "closed"}">${di.open ? slots : di.holiday ? `不辦公（${E(di.holiday)}）` : "不辦公"}</td></tr>`; }).join("");
-  const html = `${head("🏛", "CENTER 00 · 群島中心", D.office.name)}
+  const unit = D.office.name.match(/^(\S+處)\s*(.+)$/); // 「學務處 課外活動暨學生發展組」拆成上方小字與標題
+  const html = `${head("🏛", `CENTER 00 · ${unit ? unit[1] : "島嶼中心"}`, unit ? unit[2] : D.office.name)}
     <p class="lead">島上 ${ISL.length} 個行政建築區都有道路通到這裡，有問題就回來找我們。</p>
     <div class="bigst"><span class="lamp ${st.open ? "on" : "off"}"></span>${E(st.text)}</div>
-    <div class="tags"><span class="tag">週一至週五</span><span class="tag">9:00–12:00</span><span class="tag">13:30–17:00</span><span class="tag">國定假日不辦公</span>${stampTag("office")}</div>
-    <div class="sec"><h4>本週辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
-    <div class="sec"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : '<span class="btn g" aria-disabled="true">導航建置中</span>'}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div></div>
-    <div class="sec"><h4>洽公小提醒</h4><ul class="items">${D.office.tips.map((t) => `<li class="item"><div class="row"><span class="dot"></span><span class="nm">${E(t)}</span><span></span><span></span></div></li>`).join("")}</ul></div>
-    <div class="sec"><h4>${ISL.length} 座行政島</h4>${placeItems()}</div>`;
+    <p class="hours">辦公時間：週一至週五 ${D.office.hours.slots.map((s) => s.join("–")).join("、")}（國定假日不辦公）</p>
+    <div class="jump" role="navigation" aria-label="跳到這一頁的段落">
+      <button class="btn g" type="button" data-jump="o-hours">🕘 本週辦公時間</button>
+      <button class="btn g" type="button" data-jump="o-map">📍 位置與導航</button>
+      <button class="btn g" type="button" data-jump="o-tips">💡 洽公小提醒</button>
+      <button class="btn g" type="button" data-jump="o-isles">🗺 各行政島</button>
+    </div>
+    <div class="tags">${stampTag("office")}</div>
+    <div class="sec" id="o-hours"><h4>本週辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
+    <div class="sec" id="o-map"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : ""}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div>${D.office.mapUrl ? "" : '<p class="foot">Google 地圖導航建置中。</p>'}</div>
+    <div class="sec" id="o-tips"><h4>洽公小提醒</h4><ul class="items">${D.office.tips.map((t) => `<li class="item"><div class="row"><span class="dot"></span><span class="nm">${E(t)}</span><span></span><span></span></div></li>`).join("")}</ul></div>
+    <div class="sec" id="o-isles"><h4>${ISL.length} 座行政島</h4>${placeItems()}</div>`;
   showSheet("office", html);
 }
 function renderDeadlines() {
@@ -1237,6 +1245,7 @@ $("sbody").addEventListener("input", (e) => { if (e.target.id === "meName") { me
 $("sbody").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return;
   if (b.hasAttribute("aria-expanded") && b.parentElement.classList.contains("item")) { const open = b.getAttribute("aria-expanded") !== "true"; b.setAttribute("aria-expanded", open); const m = b.nextElementSibling; if (m) m.hidden = !open; return; }
+  if (b.dataset.jump) { const el = $(b.dataset.jump); if (el) el.scrollIntoView({ behavior: RM ? "auto" : "smooth", block: "start" }); return; }
   if (b.dataset.isle !== undefined) return openIsle(+b.dataset.isle);
   if (b.dataset.spot) return openSpot(b.dataset.spot);
   if (b.dataset.tab) { charTab = b.dataset.tab; return renderChar(); }
