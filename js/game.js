@@ -73,6 +73,8 @@ function officeStatus() {
 /* ---------------- 資料 ---------------- */
 const deadlines = D.allDeadlines().map((x) => ({ ...x, at: parse(x.due) })).filter((x) => x.at).sort((a, b) => a.at - b.at);
 const upcoming = () => deadlines.filter((x) => x.at >= new Date());
+const passed = () => deadlines.filter((x) => x.at < new Date()).reverse(); // 最近截止的在上
+let showPast = false;
 const anns = D.announcements.slice().sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0)); // 其餘依 data.js 的順序（最新在上）
 let read = LS.get("read", []);
 let stamps = LS.get("stamps", {});
@@ -1063,6 +1065,11 @@ function dlItems(list, showIsle, openFirst) {
       <div class="more" ${open ? "" : "hidden"}>${x.detail ? `<p>${E(x.detail)}</p>` : ""}<div class="acts"><a class="btn g" target="_blank" rel="noopener" href="${E(gcal(x))}">Google 日曆</a><button class="btn g" type="button" data-ics="${E(x.id)}">iPhone／其他</button>${x.link ? `<a class="btn g" target="_blank" rel="noopener" href="${E(x.link)}">相關文件 ↗</a>` : ""}${showIsle && d ? `<button class="btn" type="button" data-isle="${d.i}">去${E(d.name)}</button>` : ""}</div></div></li>`;
   }).join("") + "</ul>";
 }
+function pastItems(list) {
+  return '<ul class="items past">' + list.map((x) => { const d = isleOf(x.category);
+    return `<li class="item" style="--c:var(--mut);opacity:.75"><button type="button" aria-expanded="false"><span class="dot"></span><span class="nm">${E(x.title)}<small>${fmt(x.at)} 已截止${d ? "・" + E(d.name) : ""}</small></span><span class="meta">已截止</span><span class="chev">›</span></button>
+      <div class="more" hidden>${x.detail ? `<p>${E(x.detail)}</p>` : ""}${x.link ? `<div class="acts"><a class="btn g" target="_blank" rel="noopener" href="${E(x.link)}">相關文件 ↗</a></div>` : ""}</div></li>`; }).join("") + "</ul>";
+}
 function newsItems(list) {
   if (!list.length) return '<p class="empty">目前沒有公告。</p>';
   return '<ul class="items">' + list.map((a) => { const d = isleOf(a.tag), nw = !read.includes(a.id);
@@ -1132,6 +1139,7 @@ function renderDeadlines() {
     <div class="acts"><a class="btn t" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" data-ics="all">全部加入行事曆</button><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
     <p class="foot">訂閱後，新的截止日會自動同步到手機，並在截止前 3 天、1 天提醒。</p>
     <div class="sec"><h4>依日期排序</h4>${dlItems(upcoming(), true, true)}</div>
+    ${passed().length ? `<div class="sec"><button class="btn g" type="button" data-past="1">${showPast ? "隱藏已截止項目" : `顯示已截止項目（${passed().length}）`}</button>${showPast ? pastItems(passed()) : ""}</div>` : ""}
     <p class="foot">正式期程以 <a target="_blank" rel="noopener" href="${E(D.links.schedule)}">體能性社團作業期程表 ↗</a> 為準。</p>`;
   showSheet("deadlines", html);
   renderNotifyBtn();
@@ -1263,6 +1271,7 @@ $("sbody").addEventListener("click", (e) => {
   if (b.id === "tourBtn") { closeSheet(true); return startTour(); }
   if (b.id === "shoot") return shoot();
   if (b.id === "savePhoto" && lastPhoto) return fetch(lastPhoto).then((r) => r.blob()).then((bl) => saveFile(`行政群島-${me.name || "合照"}.png`, bl, "已下載合照"));
+  if (b.dataset.past) { const y = $("sbody").scrollTop; showPast = !showPast; renderDeadlines(); $("sbody").scrollTop = y; return; }
   if (b.dataset.ics) {
     if (b.dataset.ics === "all") return download("東海體能性社團截止日.ics", icsFor(upcoming()));
     const x = deadlines.find((d) => d.id === b.dataset.ics); return x && download(x.id + ".ics", icsFor([x]));

@@ -310,6 +310,7 @@ footer a { color: var(--band-fg); }
         </div>
         <div class="chips" id="dlChips" role="group" aria-label="依類別篩選"></div>
         <ul class="dl" id="dlList"></ul>
+        <button class="btn small ghost past-toggle" id="pastToggle" type="button" hidden></button>
       </section>
 
       <div style="display:grid; gap:24px; align-content:start; min-width:0">
@@ -489,7 +490,7 @@ footer a { color: var(--band-fg); }
   // ---------- 截止日 ----------
   var deadlines = D.allDeadlines().map(function (x) { return Object.assign({}, x, { at: parse(x.due) }); })
     .filter(function (x) { return x.at; }).sort(function (a, b) { return a.at - b.at; });
-  var dlCat = "全部";
+  var dlCat = "全部", showPast = false;
 
   function gcal(x) {
     var z = function (d) { return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); };
@@ -523,11 +524,11 @@ footer a { color: var(--band-fg); }
 
   function renderDeadlines() {
     var now = new Date();
-    var cats = ["全部"].concat(deadlines.filter(function (x) { return x.at >= now; }).map(function (x) { return x.category; }).filter(function (c, i, a) { return c && a.indexOf(c) === i; }));
+    var cats = ["全部"].concat(deadlines.map(function (x) { return x.category; }).filter(function (c, i, a) { return c && a.indexOf(c) === i; }));
     $("dlChips").innerHTML = cats.map(function (c) { return '<button type="button" class="chip" aria-pressed="' + (c === dlCat) + '" data-c="' + esc(c) + '">' + esc(c) + "</button>"; }).join("");
     var list = deadlines.filter(function (x) { return dlCat === "全部" || x.category === dlCat; });
-    var future = list.filter(function (x) { return x.at >= now; });
-    var shown = future; // 已截止的不再顯示
+    var future = list.filter(function (x) { return x.at >= now; }), past = list.filter(function (x) { return x.at < now; });
+    var shown = showPast ? past.concat(future) : future; // 已截止的預設收起，按鈕可展開
     $("dlList").innerHTML = shown.length ? shown.map(function (x) {
       var n = daysLeft(x.at, now), isPast = x.at < now;
       var lvl = isPast ? "past" : n <= 3 ? "hot" : n <= 7 ? "warn" : "ok";
@@ -541,6 +542,8 @@ footer a { color: var(--band-fg); }
           (x.link ? '<a class="btn small ghost" target="_blank" rel="noopener" href="' + esc(x.link) + '">相關文件</a>' : "") + "</div>") +
         "</div></li>";
     }).join("") : '<li style="display:block" class="empty">這個類別目前沒有截止日。</li>';
+    $("pastToggle").hidden = !past.length;
+    $("pastToggle").textContent = showPast ? "隱藏已截止項目" : "顯示已截止項目（" + past.length + "）";
 
     var next = deadlines.filter(function (x) { return x.at >= now; })[0];
     if (next) {
@@ -560,6 +563,7 @@ footer a { color: var(--band-fg); }
     var x = deadlines.filter(function (d) { return d.id === b.dataset.ics; })[0];
     if (x) download(x.id + ".ics", icsFor([x]));
   });
+  $("pastToggle").addEventListener("click", function () { showPast = !showPast; renderDeadlines(); });
   $("allIcs").addEventListener("click", function () { download("東海體能性社團截止日.ics", icsFor(deadlines.filter(function (x) { return x.at >= new Date(); }))); });
 
   // ---------- 公告 ----------
