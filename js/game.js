@@ -138,7 +138,8 @@ const NI = ISL.length;
 const front = Math.atan2(FACE_DIR.z, FACE_DIR.x);
 const R_ISLE = 21;           // 大島半徑
 const RW = 3.9, RO = 12.3;   // 角色走的路線：中央圓環、外圈環狀道路（車道中心）
-const R_LOT = 16.4;          // 各分類建築區的中心
+const R_LOT = 16.4;
+const HALL_S = 1.3;          // 各館建築的放大倍率（不超過課外組峮老師的高度）          // 各分類建築區的中心
 const MAIN = ISL.filter((d) => !d.islet), OFF = ISL.filter((d) => d.islet);
 const NM = MAIN.length;
 MAIN.forEach((d, i) => {
@@ -155,7 +156,7 @@ const ISLET_MTN = new Set(["活動島"]); // 島中央後方放一座登山的�
 const ISLET_EN = { "場地器材島": "Venue & Equipment Isle", "活動島": "Activity Isle", "行政島": "Administration Isle" };
 const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
   const halls = OFF.filter((d) => d.islet === name), big = halls.length > 2;
-  const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = big ? 14 : 8;
+  const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = big ? 14.5 : 9;
   const pos = dir.clone().multiplyScalar(R_ISLE + r + 5.5);
   const I = { a, dir, r, pos, name, halls, coast: dir.clone().multiplyScalar(R_ISLE * 0.92), entry: pos.clone().sub(dir.clone().multiplyScalar(r * 0.88)) };
   const perp = new V3(-dir.z, 0, dir.x);
@@ -169,7 +170,7 @@ const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
     } else {
       const side = I.halls.length === 1 ? 0 : (i / (I.halls.length - 1)) * 2 - 1; // 小島上左右排開
       d.dir = perp.clone().multiplyScalar(side || 1).add(dir.clone().multiplyScalar(0.35)).normalize();
-      d.pos = pos.clone().add(perp.clone().multiplyScalar(side * 3.6)).add(dir.clone().multiplyScalar(1.2));
+      d.pos = pos.clone().add(perp.clone().multiplyScalar(side * 4.3)).add(dir.clone().multiplyScalar(1.2));
     }
     d.a = Math.atan2(d.dir.z, d.dir.x);
   });
@@ -892,25 +893,26 @@ ISL.forEach((d) => {
   world.add(g);
   d.group = g;
   const col = new THREE.Color(d.color).getHex();
-  const lot = cyl(g, 2.7, 2.7, 0.07, new THREE.Color(d.color).lerp(new THREE.Color(0xfbf3e6), 0.6).getHex(), 0, 0, 0, 24);
+  const lot = cyl(g, 2.7 * HALL_S, 2.7 * HALL_S, 0.07, new THREE.Color(d.color).lerp(new THREE.Color(0xfbf3e6), 0.6).getHex(), 0, 0, 0, 24);
   lot.castShadow = false;
   tag(lot, { t: "isle", i: d.i });
   // 從外圈道路接到建築區的短車道（小島上的建築區另外鋪路）
-  if (!d.islet) radialRoad(d.a, RO + 0.7, R_LOT - 1.6, 1.3);
+  if (!d.islet) radialRoad(d.a, RO + 0.7, R_LOT - 1.6 * HALL_S, 1.3);
   const b = new THREE.Group();
   (BUILD[d.building] || bHouse)(b, col);
   b.position.copy(d.dir).multiplyScalar(0.9); // 建築在車道的另一側，正面朝鏡頭
-  b.rotation.y = FACE;
+  b.rotation.y = FACE; b.scale.setScalar(HALL_S);
+  b.userData.h *= HALL_S;
   g.add(b);
   tag(b, { t: "isle", i: d.i });
   d.build = b;
   // 角色站在建築的右前方（靠鏡頭那一側），拍照時不會被建築擋住；從車道口繞過建築側邊走過去
   const SR = new V3(Math.cos(FACE), 0, -Math.sin(FACE));
-  d.door = d.dir.clone().multiplyScalar(-1.7);
-  d.side = SR.clone().multiplyScalar(2.7).add(FACE_DIR.clone().multiplyScalar(0.4));
-  d.spot = FACE_DIR.clone().multiplyScalar(2.1).add(SR.clone().multiplyScalar(1.5));
+  d.door = d.dir.clone().multiplyScalar(-1.7 * HALL_S);
+  d.side = SR.clone().multiplyScalar(2.7 * HALL_S).add(FACE_DIR.clone().multiplyScalar(0.4));
+  d.spot = FACE_DIR.clone().multiplyScalar(2.1 * HALL_S).add(SR.clone().multiplyScalar(1.5 * HALL_S));
   const perp = new V3(-d.dir.z, 0, d.dir.x);
-  lampPost(g, perp.x * 2.4 - d.dir.x * 1.6, perp.z * 2.4 - d.dir.z * 1.6);
+  lampPost(g, (perp.x * 2.4 - d.dir.x * 1.6) * HALL_S, (perp.z * 2.4 - d.dir.z * 1.6) * HALL_S);
 });
 
 /* ---- 獨立小島與橋 ---- */
@@ -925,7 +927,7 @@ ISLETS.forEach((ISLET) => {
     for (let s = 0.6; s < len - 0.3; s += 1.1) { const pt = p.clone().lerp(q, s / len); dashAt(world, pt.x, pt.z, -a + Math.PI / 2); } };
   seg(ISLET.dir.clone().multiplyScalar(RO + 0.7), ISLET.coast);
   seg(ISLET.entry, ISLET.roadEnd || ISLET.pos);
-  ISLET.halls.forEach((d) => seg(d.junction || ISLET.pos, d.pos.clone().sub(d.dir.clone().multiplyScalar(1.6)), 1.3));
+  ISLET.halls.forEach((d) => seg(d.junction || ISLET.pos, d.pos.clone().sub(d.dir.clone().multiplyScalar(1.6 * HALL_S)), 1.3));
   // 木橋
   const p0 = ISLET.coast, p1 = ISLET.entry, len = p0.distanceTo(p1), m = p0.clone().add(p1).multiplyScalar(0.5);
   const bg = new THREE.Group(); bg.position.copy(m); bg.rotation.y = -ISLET.a; world.add(bg);
@@ -950,7 +952,7 @@ ISLETS.forEach((ISLET) => {
   }
   for (let i = 0, k = 0; i < 160 && k < (ISLET.halls.length > 2 ? 14 : 10); i++) {
     const a = hash("it" + ISLET.name + i) * Math.PI * 2, r = 2 + hash("ir" + ISLET.name + i) * (ISLET.r * 0.82 - 2), x = ISLET.pos.x + Math.cos(a) * r, z = ISLET.pos.z + Math.sin(a) * r;
-    if (ISLET.halls.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.4) || Math.hypot(ISLET.pos.x - x, ISLET.pos.z - z) < 1.8) continue;
+    if (ISLET.halls.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.4 * HALL_S) || Math.hypot(ISLET.pos.x - x, ISLET.pos.z - z) < 1.8) continue;
     // 不要種在館的正前方（鏡頭那一側），以免擋住建築
     if (ISLET.halls.some((d) => { const v = new V3(x - d.pos.x, 0, z - d.pos.z), f = v.dot(FACE_DIR); return f > -0.5 && f < 7 && Math.abs(v.x * FACE_DIR.z - v.z * FACE_DIR.x) < 3; })) continue;
     if (mtn && Math.hypot(mtn.pos.x - x, mtn.pos.z - z) < mtn.R + 0.9) continue;
@@ -973,7 +975,7 @@ ISLETS.forEach((ISLET) => {
     if (Math.abs(r - RO) < 1.4) continue;
     const x = Math.cos(a) * r, z = Math.sin(a) * r;
     if (nearRadial(x, z, r)) continue;
-    if (ISL.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.6)) continue;
+    if (ISL.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.6 * HALL_S)) continue;
     if (Object.values(SPOT).some((s) => Math.hypot(s.pos.x - x, s.pos.z - z) < 3)) continue;
     if (Math.hypot(SIGN_POS.x - x, SIGN_POS.z - z) < 2.6) continue;
     if (ACT_ZONES.some((q) => Math.hypot(q.pos.x - x, q.pos.z - z) < q.r + 0.8)) continue;
