@@ -139,7 +139,8 @@ const front = Math.atan2(FACE_DIR.z, FACE_DIR.x);
 const R_ISLE = 21;           // 大島半徑
 const RW = 3.9, RO = 12.3;   // 角色走的路線：中央圓環、外圈環狀道路（車道中心）
 const R_LOT = 16.4;
-const HALL_S = 1.3;          // 各館建築的放大倍率（不超過課外組峮老師的高度）
+const HALL_S = 1.3;          // 各館地面與站位的放大倍率
+const HALL_H = 4.4;          // 各館造型的統一高度（課外組峮老師約 5）
 const MAIN = ISL.filter((d) => !d.islet), OFF = ISL.filter((d) => d.islet);
 const NM = MAIN.length;
 MAIN.forEach((d, i) => {
@@ -934,8 +935,10 @@ ISL.forEach((d) => {
   const b = new THREE.Group();
   (BUILD[d.building] || bHouse)(b, col);
   b.position.copy(d.dir).multiplyScalar(0.9); // 建築在車道的另一側，正面朝鏡頭
-  b.rotation.y = FACE; b.scale.setScalar(HALL_S);
-  b.userData.h *= HALL_S;
+  // 每館的造型都等比縮放到 HALL_H 高（量實際外框，不含名牌），不超過課外組峮老師
+  const bh = new THREE.Box3().setFromObject(b).max.y, bs = HALL_H / bh;
+  b.rotation.y = FACE; b.scale.setScalar(bs);
+  b.userData.h = HALL_H + 0.3;
   g.add(b);
   tag(b, { t: "isle", i: d.i });
   d.build = b;
@@ -1302,7 +1305,7 @@ const pv = new V3();
 // 名牌避讓：依優先順序擺放，會和已擺好的名牌重疊就淡出（島仍可直接點 3D 模型）
 let wasCmp = null;
 function placeLabels() {
-  const W = innerWidth, H = innerHeight, z = camera.zoom, cmp = W < 600 && z < 1.6;
+  const W = innerWidth, H = innerHeight, z = camera.zoom, cmp = false; // 名牌文字固定大小，不隨縮放或螢幕寬度縮小
   if (cmp !== wasCmp) { lblEl.classList.toggle("cmp", cmp); labels.forEach((L) => (L.w = 0)); wasCmp = cmp; }
   const charOpen = !!(panelView && panelView.startsWith("char")), cand = [];
   labels.forEach((L) => {
