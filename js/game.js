@@ -155,7 +155,7 @@ const ISLET_MTN = new Set(["活動島"]); // 島中央後方放一座登山的�
 const ISLET_EN = { "場地器材島": "Venue & Equipment Isle", "活動島": "Activity Isle", "行政島": "Administration Isle" };
 const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
   const halls = OFF.filter((d) => d.islet === name), big = halls.length > 2;
-  const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = big ? 12 : 8;
+  const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = big ? 14 : 8;
   const pos = dir.clone().multiplyScalar(R_ISLE + r + 5.5);
   const I = { a, dir, r, pos, name, halls, coast: dir.clone().multiplyScalar(R_ISLE * 0.92), entry: pos.clone().sub(dir.clone().multiplyScalar(r * 0.88)) };
   const perp = new V3(-dir.z, 0, dir.x);
@@ -163,9 +163,9 @@ const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
     d.isl = I;
     if (big) { // 三館以上：一條路從入口一路往裡走，館左右交錯排在路邊
       const side = i % 2 ? 1 : -1;
-      d.junction = I.entry.clone().add(dir.clone().multiplyScalar(3.2 + i * 4.4));
+      d.junction = I.entry.clone().add(dir.clone().multiplyScalar(3.4 + i * 5.6));
       d.dir = perp.clone().multiplyScalar(side);
-      d.pos = d.junction.clone().add(d.dir.clone().multiplyScalar(4));
+      d.pos = d.junction.clone().add(d.dir.clone().multiplyScalar(4.6));
     } else {
       const side = I.halls.length === 1 ? 0 : (i / (I.halls.length - 1)) * 2 - 1; // 小島上左右排開
       d.dir = perp.clone().multiplyScalar(side || 1).add(dir.clone().multiplyScalar(0.35)).normalize();
@@ -173,7 +173,7 @@ const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
     }
     d.a = Math.atan2(d.dir.z, d.dir.x);
   });
-  if (big) I.roadEnd = I.entry.clone().add(dir.clone().multiplyScalar(3.2 + (I.halls.length - 1) * 4.4 + 2.4));
+  if (big) I.roadEnd = I.entry.clone().add(dir.clone().multiplyScalar(3.4 + (I.halls.length - 1) * 5.6 + 2.4));
   return I;
 });
 const WORLD_R = ISLETS.length ? R_ISLE + 2 * Math.max(...ISLETS.map((I) => I.r)) + 6 : R_ISLE + 1;
@@ -445,7 +445,7 @@ function bStore(g) {
   g.userData.bob = [crew1];
   g.userData.h = 3.4;
 }
-// 幹部交接館：新舊幹部在桌前交接資料夾與鑰匙
+// 交接館：新舊幹部在桌前交接資料夾與鑰匙
 function bHandover(g, col) {
   box(g, 3.6, 0.12, 2.6, 0xe2d6c3, 0, 0, 0);
   const banner = textPlane(2.4, 0.5, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 14); c.fillStyle = "#" + new THREE.Color(col).getHexString(); c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.55}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("新舊幹部交接", w / 2, h / 2 + 2); });
@@ -749,7 +749,7 @@ const SPOT = {
   office: { a: front + Math.PI, r: 7.4, build: bOffice },
   chapel: { a: front + Math.PI * 1.25, r: 7.2, build: bClock }, // 造景，不能點
   news: { a: front + Math.PI * 0.83, r: 7, build: bBoard },
-  todo: { a: front + Math.PI / 6, r: 7, build: bTodo },
+  todo: { a: front - 0.2, r: 17, build: bTodo }, // 外圈道路外、碼頭路右側
   links: { a: front, r: R_ISLE * 0.95, build: bDock },
 };
 radialRoad(front, RO + 0.7, R_ISLE * 0.93); // 通往碼頭的路
@@ -772,6 +772,84 @@ const SIGN_POS = FACE_DIR.clone().multiplyScalar(RO + 2.4).add(new V3(FACE_DIR.z
   const right = new V3(Math.cos(FACE), 0, -Math.sin(FACE)), dirTo = (p) => (p.clone().sub(SIGN_POS).dot(right) > 0 ? "r" : "l");
   const boards = [{ zh: "課外組峮老師", en: "Extracurricular Activities", dir: dirTo(new V3()) }, ...MAIN.map((d) => ({ zh: d.name, en: d.en, dir: dirTo(d.pos) })), ...ISLETS.map((I) => ({ zh: I.name, en: ISLET_EN[I.name], dir: dirTo(I.pos) }))];
   const sp = signPost(boards, 3.4 + Math.max(0, Math.ceil(boards.length / 2) - 4) * 0.58); sp.position.copy(SIGN_POS); sp.rotation.y = FACE; world.add(sp);
+}
+
+/* ---- 本島上的社團活動：各種運動的角色，讓島上熱鬧起來（純造景） ---- */
+const acts = [], ACT_ZONES = [];
+{
+  const at = (deg, r) => { const a = front + (deg * Math.PI) / 180; return new V3(Math.cos(a) * r, 0, Math.sin(a) * r); };
+  const zone = (deg, r, rad) => { const g = new THREE.Group(); g.position.copy(at(deg, r)); g.rotation.y = FACE; world.add(g); ACT_ZONES.push({ pos: g.position.clone(), r: rad }); return g; };
+  const guy = (g, o, x, z, ry = 0, s = 0.6) => { const p = person(o); p.scale.setScalar(s); p.position.set(x, 0.05, z); p.rotation.y = ry; g.add(p); return p; };
+  const line = (g, w, d, x, z) => box(g, w, 0.012, d, 0xffffff, x, 0.045, z).castShadow = false;
+  const court = (g, w, d, c) => { box(g, w, 0.04, d, c, 0, 0, 0).castShadow = false; line(g, w, 0.05, 0, d / 2 - 0.03); line(g, w, 0.05, 0, -d / 2 + 0.03); line(g, 0.05, d, w / 2 - 0.03, 0); line(g, 0.05, d, -w / 2 + 0.03, 0); };
+  const net = (g, h, y, d) => { [-d / 2, d / 2].forEach((z) => cyl(g, 0.03, 0.03, y + h / 2, 0xdddddd, 0, 0, z, 5)); const n = box(g, 0.02, h, d, mat(0xffffff, { transparent: true, opacity: 0.75 }), 0, y - h / 2, 0); n.castShadow = false; };
+  const ballMesh = (g) => ball(g, 0.12, soft(0xf6f0e2), 0, 0, 0, 1);
+  const S = ["#C8623F", "#6E8FB5", "#E8B04B", "#5F8F5A", "#9C83B5", "#D98B4E"], H = ["#3B2E26", "#2A211C", "#55463A"];
+  const P = (k, prop) => ({ shirt: S[k % 6], hair: H[k % 3], skin: k % 2 ? "#F1CDB0" : "#E9BF9E", prop });
+
+  // 籃球
+  { const g = zone(56, 8.4, 2.6); court(g, 3.6, 2.4, 0xc9714f); line(g, 0.05, 2.4, 0, 0);
+    cyl(g, 0.05, 0.05, 1.6, 0x8d97a5, 1.95, 0, 0, 6); box(g, 0.05, 0.5, 0.7, 0xffffff, 1.78, 1.3, 0); mesh(new THREE.TorusGeometry(0.14, 0.025, 6, 14), soft(0xc8443a), 1.62, 1.38, 0, g).rotation.x = Math.PI / 2;
+    const a = guy(g, P(0, "basketball"), 0.9, 0.2, Math.PI / 2), b = guy(g, P(1), -0.4, -0.5, Math.PI / 2), c = guy(g, P(2, "basketball"), -0.9, 0.5, Math.PI / 2);
+    acts.push((t) => { a.position.y = 0.05 + Math.max(0, Math.sin(t * 3)) * 0.45; b.position.z = -0.5 + Math.sin(t * 1.2) * 0.4; c.position.y = 0.05 + Math.abs(Math.sin(t * 6)) * 0.05; }); }
+  // 羽球
+  { const g = zone(20, 8.4, 2.4); court(g, 3.4, 2, 0x5f8f5a); net(g, 0.35, 0.9, 2);
+    guy(g, P(3, "racket"), -1.15, 0.1, Math.PI / 2); guy(g, P(4, "racket"), 1.15, -0.1, -Math.PI / 2);
+    const sh = cone(g, 0.06, 0.12, 0xffffff, 0, 0, 0, 6);
+    acts.push((t) => { const q = (Math.sin(t * 1.8) + 1) / 2; sh.position.set(-1 + 2 * q, 1.1 + Math.sin(q * Math.PI) * 0.8, 0); }); }
+  // 排球
+  { const g = zone(-62, 8.4, 2.6); court(g, 3.6, 2.2, 0xe8d3a0); net(g, 0.4, 1.3, 2.2);
+    [-1.2, -0.7].forEach((x, k) => guy(g, P(k + 5, k ? null : "volleyball"), x, k ? -0.5 : 0.4, Math.PI / 2)); [1.2, 0.7].forEach((x, k) => guy(g, P(k + 1), x, k ? 0.5 : -0.4, -Math.PI / 2));
+    const ball = ballMesh(g);
+    acts.push((t) => { const q = (Math.sin(t * 1.3) + 1) / 2; ball.position.set(-1.1 + 2.2 * q, 1.4 + Math.sin(q * Math.PI) * 1.1, 0); }); }
+  // 武術場：跆拳道、空手道、八極拳
+  { const g = zone(-24, 8.3, 2.4); box(g, 3.2, 0.06, 2.4, 0xc8443a, 0, 0, 0).castShadow = false; box(g, 2.9, 0.07, 2.1, 0x3f6fae, 0, 0, 0).castShadow = false;
+    const sign = textPlane(2.6, 0.42, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 10); c.fillStyle = "#2A211C"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.5}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("跆拳道・空手道・八極拳", w / 2, h / 2 + 2); });
+    [-1.2, 1.2].forEach((x) => cyl(g, 0.04, 0.04, 1.3, C.dark, x, 0, -1.25, 5)); sign.position.set(0, 1.15, -1.22); g.add(sign);
+    const m = [guy(g, { shirt: "#FBFAF6", hair: "#2A211C", skin: "#F1CDB0", prop: "belt" }, -0.95, 0.2), guy(g, { shirt: "#FBFAF6", hair: "#3B2E26", skin: "#E9BF9E", prop: "belt" }, 0, 0.35), guy(g, { shirt: "#2A211C", hair: "#2A211C", skin: "#F1CDB0" }, 0.95, 0.2)];
+    acts.push((t) => m.forEach((p, k) => { const s = Math.sin(t * 4 + k * 2); p.rotation.y = s * 0.6; p.position.y = 0.08 + Math.max(0, s) * 0.18; })); }
+  // 足球場（外圈道路外側）
+  { const g = zone(30, 16.8, 3.6); box(g, 5.2, 0.04, 3.4, 0x6fc35a, 0, 0, 0).castShadow = false; for (let k = 0; k < 5; k += 2) box(g, 5.2 / 5, 0.045, 3.4, 0x62b54e, -2.08 + k * 1.04, 0, 0).castShadow = false;
+    line(g, 5.2, 0.05, 0, 1.68); line(g, 5.2, 0.05, 0, -1.68); line(g, 0.05, 3.4, 2.57, 0); line(g, 0.05, 3.4, -2.57, 0); line(g, 0.05, 3.4, 0, 0);
+    [-2.55, 2.55].forEach((x) => { [-0.55, 0.55].forEach((z) => box(g, 0.06, 0.6, 0.06, 0xffffff, x, 0, z)); box(g, 0.06, 0.06, 1.16, 0xffffff, x, 0.6, 0); });
+    const pl = [guy(g, P(0, "soccer"), -1, 0.3, Math.PI / 2), guy(g, P(1, "soccer"), 1, -0.4, -Math.PI / 2), guy(g, P(2), 0, 0.9, Math.PI)];
+    acts.push((t) => pl.forEach((p, k) => { p.position.x = (k === 2 ? 0 : k ? 1 : -1) + Math.sin(t * 0.9 + k * 2) * 0.8; p.position.y = 0.05 + Math.abs(Math.sin(t * 8 + k)) * 0.06; })); }
+  // 射箭場
+  { const g = zone(122, 16.6, 2.8); box(g, 4.4, 0.04, 1.4, 0xd9c79a, 0, 0, 0).castShadow = false;
+    const tgt = textPlane(0.9, 0.9, (c, w, h) => { ["#FFFFFF", "#2A211C", "#6E8FB5", "#C8443A", "#E8B04B"].forEach((col, k) => { c.fillStyle = col; c.beginPath(); c.arc(w / 2, h / 2, (w / 2) * (1 - k * 0.19), 0, Math.PI * 2); c.fill(); }); });
+    tgt.position.set(1.9, 0.75, 0); tgt.rotation.y = -Math.PI / 2; g.add(tgt); box(g, 0.08, 0.9, 0.9, C.wood, 1.96, 0.05, 0);
+    guy(g, P(3, "bow"), -1.7, 0, Math.PI / 2);
+    const arrow = cyl(g, 0.015, 0.015, 0.5, 0x8a5a33, 0, 0, 0, 4); arrow.rotation.z = Math.PI / 2;
+    acts.push((t) => { const q = (t * 0.7) % 1; arrow.position.set(-1.4 + q * 3.2, 0.72 + Math.sin(q * Math.PI) * 0.15, 0); arrow.visible = q < 0.95; }); }
+  // 馬術：圍欄裡繞圈的馬
+  { const g = zone(-126, 16.6, 2.8);
+    for (let k = 0; k < 14; k++) { const a = (k / 14) * Math.PI * 2; cyl(g, 0.04, 0.04, 0.5, 0xa86a3a, Math.cos(a) * 2.1, 0, Math.sin(a) * 2.1, 5); }
+    mesh(new THREE.TorusGeometry(2.1, 0.03, 4, 40), soft(0xa86a3a), 0, 0.42, 0, g).rotation.x = Math.PI / 2;
+    const horse = new THREE.Group(); g.add(horse); const hc = soft(0x8a5a3b);
+    box(horse, 0.36, 0.38, 0.95, hc, 0, 0.55, 0); box(horse, 0.2, 0.42, 0.24, hc, 0, 0.8, 0.46).rotation.x = -0.4; box(horse, 0.2, 0.2, 0.36, hc, 0, 1.12, 0.62);
+    box(horse, 0.06, 0.3, 0.3, soft(0x3b2e26), 0, 0.95, 0.38); box(horse, 0.08, 0.35, 0.08, soft(0x3b2e26), 0, 0.5, -0.5).rotation.x = 0.4;
+    const legs = [[-0.12, 0.35], [0.12, 0.35], [-0.12, -0.35], [0.12, -0.35]].map(([x, z]) => box(horse, 0.08, 0.55, 0.08, hc, x, 0, z));
+    const rider = person(P(4, "helmet")); rider.scale.setScalar(0.5); rider.position.set(0, 0.72, -0.05); horse.add(rider);
+    acts.push((t) => { const a = t * 0.5; horse.position.set(Math.cos(a) * 1.3, Math.abs(Math.sin(t * 6)) * 0.05, Math.sin(a) * 1.3); horse.rotation.y = -a; legs.forEach((l, k) => (l.rotation.x = Math.sin(t * 6 + k * 1.6) * 0.35)); }); }
+  // 單車：沿著外圈道路騎
+  [0, 1].forEach((k) => {
+    const bike = new THREE.Group(); world.add(bike); const fc = soft([0xc8443a, 0x6e8fb5][k]);
+    [-0.42, 0.42].forEach((z) => mesh(new THREE.TorusGeometry(0.3, 0.04, 6, 16), soft(0x2a211c), 0, 0.32, z, bike).rotation.y = Math.PI / 2);
+    box(bike, 0.05, 0.05, 0.8, fc, 0, 0.5, 0); box(bike, 0.05, 0.35, 0.05, fc, 0, 0.35, -0.1); box(bike, 0.05, 0.4, 0.05, fc, 0, 0.45, 0.38); box(bike, 0.4, 0.04, 0.04, soft(0x2a211c), 0, 0.85, 0.38);
+    const r = person(P(k + 2)); r.scale.setScalar(0.5); r.position.set(0, 0.3, -0.12); r.rotation.x = 0.25; bike.add(r);
+    acts.push((t) => { const a = front + k * Math.PI + t * (0.07 + k * 0.02), rad = RO + (k ? -0.35 : 0.35); bike.position.set(Math.cos(a) * rad, 0, Math.sin(a) * rad); bike.rotation.y = -a; });
+  });
+  // 海邊：游泳與自由潛水
+  const wave = (x, z, t) => -1.15 + Math.sin(x * 0.16 + t * 0.9) * 0.16 + Math.cos(z * 0.2 + t * 0.7) * 0.14;
+  [[18, 24.6, 0], [26, 25.2, 1]].forEach(([deg, r, k]) => {
+    const sw = new THREE.Group(); world.add(sw); const p = person(P(k + 1)); p.scale.setScalar(0.55); p.rotation.x = Math.PI / 2; sw.add(p); // 趴著游
+    const c = at(deg, r), tan = new V3(-c.z, 0, c.x).normalize();
+    acts.push((t) => { const o = Math.sin(t * 0.3 + k) * 1.6, x = c.x + tan.x * o, z = c.z + tan.z * o; sw.position.set(x, wave(x, z, t) - 0.05, z); sw.rotation.y = Math.atan2(tan.x, tan.z) + (Math.cos(t * 0.3 + k) > 0 ? 0 : Math.PI); p.rotation.z = Math.sin(t * 5 + k) * 0.15; });
+  });
+  { const c = at(-30, 25.3); const buoy = ball(world, 0.22, soft(0xe8913f), c.x + 0.8, 0, c.z, 1); const flag = box(world, 0.02, 0.5, 0.02, 0xffffff, 0, 0, 0); const fl = box(world, 0.25, 0.16, 0.01, 0xc8443a, 0, 0, 0);
+    const d = person({ shirt: "#2A211C", hair: "#2A211C", skin: "#F1CDB0" }); d.scale.setScalar(0.55); world.add(d); [-0.13, 0.13].forEach((x) => box(d, 0.16, 0.04, 0.5, 0x6e8fb5, x, 0, 0.2));
+    acts.push((t) => { const y = wave(c.x, c.z, t); buoy.position.y = y + 0.1; flag.position.set(c.x + 0.8, y + 0.3, c.z); fl.position.set(c.x + 0.92, y + 0.48, c.z);
+      const q = (t * 0.25) % 1; d.position.set(c.x, y - 0.35 + Math.cos(q * Math.PI * 2) * 0.6, c.z); d.rotation.x = Math.PI; }); } // 頭朝下潛入，蛙鞋露出水面
 }
 
 /* ---- 各行政分類的建築區（沿外圈道路排列） ---- */
@@ -865,6 +943,7 @@ ISLETS.forEach((ISLET) => {
     if (ISL.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.6)) continue;
     if (Object.values(SPOT).some((s) => Math.hypot(s.pos.x - x, s.pos.z - z) < 3)) continue;
     if (Math.hypot(SIGN_POS.x - x, SIGN_POS.z - z) < 2.6) continue;
+    if (ACT_ZONES.some((q) => Math.hypot(q.pos.x - x, q.pos.z - z) < q.r + 0.8)) continue;
     if (ISL.some((d) => { const v = new V3(x - d.pos.x, 0, z - d.pos.z), f = v.dot(FACE_DIR); return f > -0.5 && f < 8 && Math.abs(v.x * FACE_DIR.z - v.z * FACE_DIR.x) < 3.2; })) continue; // 不擋住館的正面
     tree(world, x, z, 0.7 + hash("ts" + i) * 0.55, hash("tk" + i)); n++;
   }
@@ -1142,7 +1221,7 @@ function buildLabels() {
     // 啊牛站在教堂前面，名牌改放在牠腳下，才不會擋住教堂正面
     const below = s.id === "todo";
     s.label = mkLabel(`<span class="no">${s.no}</span>${E(s.name)}${extra}`, below ? o.position.clone() : o.position.clone().setY((o.userData.h || 3) * o.scale.y + 0.4), () => openSpot(s.id), "",
-      s.id === "office" ? { pri: 95, selId: s.id } : { pri: 50, minZoom: 1.5, selId: s.id, below });
+      s.id === "office" ? { pri: 150, selId: s.id } : { pri: 50, minZoom: 1.5, selId: s.id, below });
   });
   mkLabel(`<b>${E(me.name || "我")}</b>${me.club ? `<span>${E(me.club)}</span>` : ""}`, () => av.position.clone().setY(av.position.y + 2.25), () => openChar("look"), "me", { pri: 70, minZoom: 1.8, me: true });
   refreshLabelState();
@@ -1705,6 +1784,7 @@ function loop(now) {
       (u.floaty || []).forEach((m) => (m.position.y = m.userData.y0 + Math.sin(t * 2.4) * 0.12));
       (u.papers || []).forEach((p) => { const q = (t * 0.45 + p.userData.k / 3) % 1; p.position.set(-0.45 + q * 1.4, 1.1 + Math.sin(q * Math.PI) * 0.9, 0.05); p.rotation.set(q * 6, q * 3, 0); }); d.marker.rotation.y += dt * 1.5; d.marker.position.y = d.build.userData.h + 1.6 + Math.sin(t * 2.4 + d.i) * 0.15; });
     newsMarker.rotation.y += dt * 1.5;
+    acts.forEach((f) => f(t));
     hikers.forEach(({ h, q0, m }) => { const q = (t * 0.035 + q0) % 1, a = q * Math.PI * 5, y = q * m.H * 0.86, r = m.R * (1 - y / m.H) + 0.12; h.position.set(Math.cos(a) * r, y + Math.abs(Math.sin(t * 8 + q0 * 9)) * 0.04, Math.sin(a) * r); h.rotation.y = -a; });
     const boat = centerObj.links.userData.boat; boat.position.y = -1.15 + Math.sin(t * 1.4) * 0.08; boat.rotation.z = Math.sin(t * 1.1) * 0.05;
     teacher.position.y = Math.abs(Math.sin(t * 2)) * 0.03;

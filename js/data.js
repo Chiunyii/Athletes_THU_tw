@@ -169,7 +169,7 @@ var SITE_DATA = {
       tagline: "更是回顧社團組織運作、活動執行及成果展現的機會！評鑑成績是由定期評分、平時評分及年度評鑑加總而成。",
       links: [["說明會簡報", "https://activity.thu.edu.tw/upload/activity/downloads_upload/1790143799-115%E5%B9%B4%E5%BA%A6%E5%AD%B8%E7%94%9F%E7%A4%BE%E5%9C%98%E8%A9%95%E9%91%91%E8%AA%AA%E6%98%8E%E6%9C%83%E7%B0%A1%E5%A0%B1.pdf"]],
     },
-    { key: "交接", name: "幹部交接館", en: "Officer Handover Hall", islet: "行政島", icon: "🤝", color: "#7FA6A0", building: "handover", lead: "新舊幹部怎麼交接？", tagline: "帳冊、器材、帳號密碼、未完成事項，一次交接清楚。" },
+    { key: "交接", name: "交接館", en: "Handover Hall", islet: "行政島", icon: "🤝", color: "#7FA6A0", building: "handover", lead: "新舊幹部怎麼交接？", tagline: "帳冊、器材、帳號密碼、未完成事項，一次交接清楚。" },
     { key: "財產", name: "財產盤點館", en: "Property Inventory Hall", islet: "行政島", icon: "📦", color: "#B58A5E", building: "inventory", lead: "社團器材借用與保管", tagline: "財產盤點於每年 5 月上傳至指定表單。", links: [["財產盤點上傳表單", "https://form2.thu.edu.tw/5282503"]] },
   ],
 
@@ -390,11 +390,12 @@ var SITE_DATA = {
       summary: "帳冊、器材、帳號密碼、未完成事項，一次交接清楚。",
       steps: [
         "舊幹部整理交接清單：財務帳冊、器材清冊、社團帳號密碼、未結案活動。",
-        "新舊幹部當面點交器材與存摺，雙方簽名。",
-        "於期限內繳交新任幹部名冊至課外組。",
-        "更新 LINE 社群、IG 等管理員權限。",
+        "新舊幹部當面點交器材、存摺及社團運作資料等，雙方及指導老師皆需簽名（交接清冊文件請見下方下載）。",
+        "於公告期限內繳交社團基本資料表及改選報告書至課外組。",
+        "社團相關帳號密碼要記得交接唷！",
+        "卸任幹部協助新任幹部加入體能性社團與峮老師的 LINE 社群。",
       ],
-      links: [["作業期程表", "https://ithu.tw/aHSbj"]],
+      links: [["交接清冊文件下載", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=6"]],
     },
     {
       id: "g-activity",
