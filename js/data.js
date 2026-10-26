@@ -95,7 +95,11 @@ var SITE_DATA = {
       // links：島上最醒目的按鈕；每學期換成新的會議資料與報名表單
       links: [["115-1 期初會議資料", "https://reurl.cc/8YYKp4"]],
     },
-    { key: "行政", name: "社團行政館", icon: "📋", color: "#6E8FB5", building: "track", tagline: "幹部交接、名冊繳交，新任幹部的第一站。" },
+    {
+      key: "行政", name: "社團行政館", icon: "📋", color: "#6E8FB5", building: "track", tasks: true, // tasks：社團行政任務（打勾清單）放在這一館
+      lead: "社團有哪些行政事務？",
+      tagline: "基本資料表繳交、幹部及社員名冊登錄等，館內記載社團行政任務，完成後可以打勾唷！",
+    },
     { key: "活動", name: "社團活動館", islet: "活動島", icon: "⛺", color: "#D98B4E", building: "tent", tagline: "辦活動前要送什麼、活動後要交什麼。" },
     {
       key: "經費", name: "經費館", icon: "💰", color: "#D9B24E", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。",

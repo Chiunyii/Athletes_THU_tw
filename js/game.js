@@ -1,5 +1,5 @@
 /* 體能社團行政群島：Three.js
- * 大島中央 = 課外組（辦公室、截止提醒、公告欄、小秘書啊牛、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
+ * 大島中央 = 課外組（辦公室、截止提醒、公告欄、小秘書啊牛的截止日提醒、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
  * 玩家可以（選填）建立角色：身份、職位、外觀；角色會沿著島上的道路走到各館蓋章。
  * 內容全部來自 js/data.js；這個檔案只負責群島、角色與資訊卡。 */
 import * as THREE from "three";
@@ -94,7 +94,7 @@ const CENTER_SPOTS = [
   { id: "office", no: "00", name: "課外組", icon: "🏛" },
   { id: "deadlines", no: "◷", name: "截止提醒", icon: "⏰" },
   { id: "news", no: "✎", name: "公告欄", icon: "📌" },
-  { id: "todo", no: "✓", name: "小秘書啊牛", icon: "🐮" },
+  { id: "todo", no: "◷", name: "截止日提醒", icon: "🐮" },
   { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
 ];
 const STAMPS = [...CENTER_SPOTS.map((s) => ({ id: s.id, name: s.name, no: s.no })), ...ISL.map((d) => ({ id: "isle:" + d.key, name: d.name, no: d.no }))];
@@ -619,15 +619,15 @@ function bTodo(g) {
   cyl(bottle, 0.165, 0.185, 0.16, soft(0xe8c04a), 0, 0.08, 0, 14);
   g.userData.npc = cow;
   const bubble = textPlane(3.8, 1.5, (c, w, h) => {
-    const left = todoLeft(), sem = SEM_NAME[curSem()];
-    const bh = h * 0.78;
+        const bh = h * 0.78;
     rr(c, 6, 6, w - 12, bh - 6, 34); c.fillStyle = cowMsg ? "#FFE9A8" : "#FFFDF9"; c.fill(); c.lineWidth = 8; c.strokeStyle = "#2A211C"; c.stroke();
     c.beginPath(); c.moveTo(w / 2 - 22, bh - 4); c.lineTo(w / 2, h - 6); c.lineTo(w / 2 + 22, bh - 4); c.closePath(); c.fill(); c.stroke();
     c.fillStyle = cowMsg ? "#FFE9A8" : "#FFFDF9"; c.fillRect(w / 2 - 18, bh - 14, 36, 14);
     c.textAlign = "center"; c.textBaseline = "middle";
     if (cowMsg) { c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.34}px ${FONT}`; c.fillText(cowMsg, w / 2, bh * 0.52); return; }
-    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.2}px ${FONT}`; c.fillText("小秘書啊牛", w / 2, bh * 0.33);
-    c.fillStyle = "#2A211C"; c.font = `900 ${h * 0.19}px ${FONT}`; c.fillText(left ? `${sem}還有 ${left} 項任務` : `${sem}任務全部完成！`, w / 2, bh * 0.7);
+    const n = upcoming()[0], k = n ? daysLeft(n.at) : null, t = n ? (n.title.length > 9 ? n.title.slice(0, 9) + "…" : n.title) : "";
+    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.2}px ${FONT}`; c.fillText(n ? `截止日提醒・${k === 0 ? "今天截止" : "D-" + k}` : "截止日提醒", w / 2, bh * 0.33);
+    c.fillStyle = "#2A211C"; c.font = `900 ${h * 0.19}px ${FONT}`; c.fillText(n ? t : "目前沒有截止日", w / 2, bh * 0.7);
   });
   bubble.position.set(0, 3.7, 0); g.add(bubble);
   g.userData.sign = bubble; g.userData.h = 4.7;
@@ -1056,7 +1056,7 @@ function buildLabels() {
   // 小島：拉遠時只顯示一個島名，放大後才分成各館名牌
   ISLETS.forEach((I) => {
     const soon = I.halls.filter((d) => isleBadge(d)).sort((a, b) => isleDl(a)[0].at - isleDl(b)[0].at)[0];
-    mkLabel(`<span class="no" style="--nc:${I.halls[0].color}">${I.halls.map((d) => d.no).join("・")}</span>${E(I.name)}${soon ? isleBadge(soon) : ""}`, I.pos.clone().setY(4),
+    mkLabel(`${E(I.name)}${soon ? isleBadge(soon) : ""}`, I.pos.clone().setY(4),
       () => focusOn(I.pos, ISLET_LOD + 0.5), "", { pri: 100, maxZoom: ISLET_LOD, hideFor: I.halls.map((d) => "isle:" + d.key) });
   });
   CENTER_SPOTS.forEach((s) => {
@@ -1153,28 +1153,29 @@ function openIsle(i, tour) {
 }
 // 點「任務」：鏡頭飛到小秘書，牛跳起來轉一圈、灑出星星，泡泡顯示「解鎖任務！」，接著打開任務清單
 let cowFx = null;
-function unlockTasks() {
+// 點啊牛：跳一下、撒星星，然後打開截止日提醒
+function cowRemind() {
   touring = false;
   closeSheet(true);
   setSel("todo");
   focusOn(SPOT.todo.pos, innerWidth < 600 ? 3 : 2.6);
-  walkTo("C", () => stamp("todo", "小秘書啊牛"));
-  cowMsg = "解鎖任務！"; centerObj.todo.userData.sign.userData.redraw();
+  walkTo("C", () => stamp("todo", "截止日提醒"));
+  cowMsg = "截止提醒！"; centerObj.todo.userData.sign.userData.redraw();
   const g = centerObj.todo, stars = [];
   if (!RM) for (let k = 0; k < 14; k++) {
     const s = mesh(new THREE.OctahedronGeometry(0.12 + Math.random() * 0.08, 0), mat(k % 2 ? 0xffe27a : 0xffffff, { emissive: k % 2 ? 0xffc93c : 0xffffff, emissiveIntensity: 0.6 }), 0, 2, 0, g);
     s.castShadow = false; s.userData.v = new V3(Math.cos(k * 0.45) * (1.5 + Math.random()), 2 + Math.random() * 1.5, Math.sin(k * 0.45) * (1.5 + Math.random())); stars.push(s);
   }
   cowFx = { s: performance.now(), stars };
-  const first = !LS.get("tasksUnlocked", false);
-  LS.set("tasksUnlocked", true);
   setTimeout(() => {
     cowMsg = null; centerObj.todo.userData.sign.userData.redraw();
-    renderTodo(); setSel("todo");
+    renderDeadlines("todo"); setSel("todo");
     focusOn(SPOT.todo.pos, innerWidth < 600 ? 2.1 : 1.8);
-    if (first) toast("任務解鎖！完成後記得打勾");
   }, RM ? 300 : 1400);
 }
+// 社團行政任務放在社團行政館（data.js 裡 tasks: true 的館）
+const TASK_ISLE = ISL.find((d) => d.tasks);
+const openTasks = () => (TASK_ISLE ? openIsle(TASK_ISLE.i) : null);
 function stepCowFx(now) {
   if (!cowFx) return;
   const k = (now - cowFx.s) / 1000, cow = centerObj.todo.userData.npc;
@@ -1183,10 +1184,10 @@ function stepCowFx(now) {
   if (k > 1.4) { cowFx.stars.forEach((s) => centerObj.todo.remove(s)); cow.position.y = 0.18; cow.rotation.y = 0; cowFx = null; }
 }
 function openSpot(id) {
-  if (id === "todo") return unlockTasks();
+  if (id === "todo") return cowRemind();
   touring = false;
   setSel(id);
-  ({ office: renderOffice, deadlines: renderDeadlines, news: renderNews, todo: () => renderTodo(), links: renderLinks })[id]();
+  ({ office: renderOffice, deadlines: renderDeadlines, news: renderNews, todo: () => renderDeadlines("todo"), links: renderLinks })[id]();
   focusOn(SPOT[id].pos, innerWidth < 600 ? 2.1 : 1.8);
   walkTo("C", () => stamp(id, CENTER_SPOTS.find((s) => s.id === id).name));
 }
@@ -1206,13 +1207,13 @@ function tourNext() {
 
 /* ---------------- 資訊抽屜 ---------------- */
 let panelView = null;
-const RAIL = { char: "bChar", list: "bList", deadlines: "bDl", todo: "bTodo", news: "bNews" };
+const RAIL = { char: "bChar", list: "bList", deadlines: "bDl", [TASK_ISLE ? "isle:" + TASK_ISLE.key : "tasks"]: "bTodo", news: "bNews" };
 function showSheet(view, html) {
   panelView = view;
   $("sbody").innerHTML = html;
   $("sheet").hidden = false; document.body.classList.add("sheeted");
   $("sbody").scrollTop = 0; $("toTop").hidden = true;
-  Object.entries(RAIL).forEach(([v, id]) => $(id).setAttribute("aria-pressed", String(view === v || (v === "char" && view.startsWith("char")))));
+  Object.entries(RAIL).forEach(([v, id]) => $(id).setAttribute("aria-pressed", String(view === v || (v === "char" && view.startsWith("char")) || (v === "deadlines" && view === "todo"))));
   try { history.replaceState(null, "", "#" + view.replace("isle:", "isle-").replace(/^char.*/, "me")); } catch {}
 }
 function closeSheet(keepSel) {
@@ -1281,14 +1282,15 @@ function renderIsle(d, keepScroll) {
   const mine = (r) => me.club && me.role === r;
   const st = $("sbody").scrollTop;
   const html = `${head(d.icon, `HALL ${d.no} · ${E(d.key)}`, d.name)}
-    <p class="lead">${E(d.guides[0]?.title || d.tagline)}</p>
+    <p class="lead">${E(d.lead || d.guides[0]?.title || d.tagline)}</p>
     <p class="quote">「${E(d.tagline)}」</p>
     ${d.links?.length ? `<div class="acts">${d.links.map((l) => `<a class="btn big t ring" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}
     <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span>${d.sections?.length ? `<span class="tag">${d.sections.length} 個分區</span>` : `<span class="tag">${dl.length} 項截止</span>`}<span class="tag">${steps} 則攻略</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
+    ${d.tasks ? `<div class="sec" id="i-tasks"><h4>啊牛的任務提醒・社團行政任務</h4></div>${taskBlock()}` : ""}
     ${d.guides.map((g) => `<div class="sec"><h4>${E(g.topic)}・攻略</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 則</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
     ${sectionsHtml(d)}
     ${dl.length || !d.sections?.length ? `<div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>` : ""}
-    ${isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政任務</h4>${todoItems(isleTodos(d))}</div>` : ""}
+    ${!d.tasks && isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政任務</h4>${todoItems(isleTodos(d))}</div>` : ""}
     <div class="sec"><h4>相關公告</h4>${newsItems(news)}</div>
     <div class="sec"><h4>這一館在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
     <p class="foot">還有問題？請在辦公時間到中央的課外組詢問。</p>`;
@@ -1324,17 +1326,17 @@ function renderOffice() {
     <div class="sec" id="o-isles"><h4>${ISL.length} 座行政館</h4>${placeItems()}</div>`;
   showSheet("office", html);
 }
-function renderDeadlines() {
-  const html = `${head("⏰", "CHAPEL · 截止日", "截止提醒")}
-    <p class="lead">所有分類的截止日都在這裡。</p>
+function renderDeadlines(view = "deadlines") {
+  const html = `${view === "todo" ? head("🐮", "SECRETARY · 小秘書啊牛", "截止日提醒") : head("⏰", "CHAPEL · 截止日", "截止提醒")}
+    <p class="lead">${view === "todo" ? "哞～我是小秘書啊牛！快到期的截止日都幫你記著。" : "所有分類的截止日都在這裡。"}</p>
     <p class="quote">7 天內轉黃、3 天內轉紅，對應的館上方也會浮出菱形提醒。</p>
-    <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag("deadlines")}</div>
+    <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag(view)}</div>
     <div class="acts"><a class="btn t" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" data-ics="all">全部加入行事曆</button><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
     <p class="foot">訂閱後，新的截止日會自動同步到手機，並在截止前 3 天、1 天提醒。</p>
     <div class="sec"><h4>依日期排序</h4>${dlItems(upcoming(), true, true)}</div>
     ${passed().length ? `<div class="sec"><button class="btn g" type="button" data-past="1">${showPast ? "隱藏已截止項目" : `顯示已截止項目（${passed().length}）`}</button>${showPast ? pastItems(passed()) : ""}</div>` : ""}
     <p class="foot">正式期程以 <a target="_blank" rel="noopener" href="${E(D.links.schedule)}">體能性社團作業期程表 ↗</a> 為準。</p>`;
-  showSheet("deadlines", html);
+  showSheet(view, html);
   renderNotifyBtn();
 }
 const isleTodos = (d) => todoList(curSem()).filter((x) => x.island === d.key);
@@ -1347,18 +1349,14 @@ function todoItems(list) {
   }).join("") + "</ul>";
 }
 let todoSem = null;
-function renderTodo(sem) {
+function taskBlock(sem) {
   todoSem = sem || todoSem || curSem();
   const list = todoList(todoSem), n = list.filter((x) => todoDone[x.key]).length;
-  const html = `${head("🐮", "SECRETARY · 小秘書啊牛", "社團行政任務")}
-    <p class="lead">哞～我是小秘書啊牛！每學期要完成的行政任務都幫你記著，完成後打勾。</p>
-    <div class="tabs two" role="tablist">${["s1", "s2"].map((s) => `<button type="button" role="tab" data-sem="${s}" aria-selected="${todoSem === s}">${SEM_NAME[s]}${s === curSem() ? "・本學期" : ""}</button>`).join("")}</div>
+  return `<div class="tabs two" role="tablist">${["s1", "s2"].map((s) => `<button type="button" role="tab" data-sem="${s}" aria-selected="${todoSem === s}">${SEM_NAME[s]}${s === curSem() ? "・本學期" : ""}</button>`).join("")}</div>
     <div class="sec"><h4>完成進度・<span id="todoProg">${n}/${list.length}</span></h4><div class="prog"><i id="todoBar" style="width:${list.length ? (n / list.length) * 100 : 0}%"></i></div></div>
-    <div class="tags">${stampTag("todo")}</div>
     <div class="sec"><h4>每學期共同項目</h4>${todoItems(list.filter((x) => x.sem === "common"))}</div>
     <div class="sec"><h4>${SEM_NAME[todoSem]}任務</h4>${todoItems(list.filter((x) => x.sem !== "common"))}</div>
-    <p class="foot">打勾紀錄只存在你自己的手機或電腦。標示「連結待補」的按鈕，課外組補上連結後就能點。</p>`;
-  showSheet("todo", html);
+    <p class="foot">打勾紀錄與公告閱讀狀態會自動記在這台手機或電腦的瀏覽器裡，下次打開連結會接著顯示，不會重來（換裝置或清除瀏覽紀錄才會重新開始）。標示「連結待補」的按鈕，課外組補上連結後就能點。</p>`;
 }
 function renderNews() {
   const html = `${head("📌", "BULLETIN · 公告", "公告欄")}<p class="lead">學期間的行政公告都貼在這裡。</p><div class="tags"><span class="tag">${anns.length} 則公告</span>${unread().length ? `<span class="tag c" style="--c:#C8443A">${unread().length} 則未讀</span>` : ""}${stampTag("news")}</div><div class="sec"><h4>最新公告</h4>${newsItems(anns)}</div>`;
@@ -1454,7 +1452,7 @@ $("sbody").addEventListener("click", (e) => {
   if (b.dataset.isle !== undefined) return openIsle(+b.dataset.isle);
   if (b.dataset.spot) return openSpot(b.dataset.spot);
   if (b.dataset.tab) { charTab = b.dataset.tab; return renderChar(); }
-  if (b.dataset.sem) return renderTodo(b.dataset.sem);
+  if (b.dataset.sem) { todoSem = b.dataset.sem; return TASK_ISLE && renderIsle(TASK_ISLE, true); }
   if (b.dataset.club) { me.club = b.dataset.club; return applyMe(true); }
   if (b.dataset.role) { me.role = b.dataset.role; return applyMe(true); }
   if (b.dataset.shirt) { me.shirt = b.dataset.shirt; return applyMe(true); }
@@ -1517,7 +1515,7 @@ $("bChar").addEventListener("click", () => (panelView && panelView.startsWith("c
 $("bList").addEventListener("click", () => (panelView === "list" ? closeSheet() : renderList()));
 $("bDl").addEventListener("click", () => (panelView === "deadlines" ? closeSheet() : openSpot("deadlines")));
 $("bNews").addEventListener("click", () => (panelView === "news" ? closeSheet() : openSpot("news")));
-$("bTodo").addEventListener("click", () => (panelView === "todo" ? closeSheet() : unlockTasks()));
+$("bTodo").addEventListener("click", () => (TASK_ISLE && panelView === "isle:" + TASK_ISLE.key ? closeSheet() : openTasks()));
 $("pOffice").addEventListener("click", () => openSpot("office"));
 $("pNext").addEventListener("click", () => { const n = upcoming()[0], d = n && isleOf(n.category); d ? openIsle(d.i) : openSpot("deadlines"); });
 
@@ -1539,7 +1537,7 @@ function tickerMsgs() {
   ISL.filter(myDuty).forEach((d) => { const n = isleDl(d)[0]; if (n) m.push({ t: `${me.role}注意：${d.name}「${n.title}」還有 ${daysLeft(n.at)} 天`, go: () => openIsle(d.i) }); });
   upcoming().slice(0, 3).forEach((x) => { const d = isleOf(x.category); m.push({ t: `${d ? d.name + "：" : ""}「${x.title}」還有 ${daysLeft(x.at)} 天`, go: () => (d ? openIsle(d.i) : openSpot("deadlines")) }); });
   if (unread().length) m.push({ t: `公告欄有 ${unread().length} 則新公告`, go: () => openSpot("news") });
-  if (todoLeft()) m.push({ t: `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務`, go: unlockTasks });
+  if (todoLeft()) m.push({ t: `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務`, go: openTasks });
   m.push({ t: `課外組${st.text}`, go: () => openSpot("office") });
   m.push({ t: "拖曳移動群島，兩指縮放或旋轉", go: null });
   return m;
@@ -1571,7 +1569,7 @@ function teacherTalk() {
   const n = upcoming()[0], st = officeStatus(), L = [];
   if (n) { const d = isleOf(n.category); L.push(["最近的截止日", `「${n.title}」還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`]); }
   if (unread().length) L.push(["有新公告", `公告欄有 ${unread().length} 則你還沒看過的公告。`]);
-  if (todoLeft()) L.push(["行政任務", `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務，找小秘書啊牛可以一項一項打勾。`]);
+  if (todoLeft()) L.push(["行政任務", `${SEM_NAME[curSem()]}還有 ${todoLeft()} 項社團行政任務，到社團行政館可以一項一項打勾。`]);
   L.push(["隨時來找我們", `課外組${st.text}。週一至週五 9:00–12:00、13:30–17:00（國定假日除外）都可以來。`, "好"]);
   talk("課外組老師", L);
 }
@@ -1655,14 +1653,15 @@ async function start() {
   const h = decodeURIComponent(location.hash.slice(1));
   const isle = h.startsWith("isle-") && isleOf(h.slice(5));
   if (isle) setTimeout(() => openIsle(isle.i), 500);
-  else if (["office", "deadlines", "news", "todo", "links"].includes(h)) setTimeout(() => openSpot(h), 500);
+  else if (h === "todo" || h === "tasks") setTimeout(openTasks, 500); // 舊連結 #todo 仍會帶到任務
+  else if (["office", "deadlines", "news", "links"].includes(h)) setTimeout(() => openSpot(h), 500);
   else if (h === "me") setTimeout(() => openChar("look"), 500);
   else if (h === "list") setTimeout(renderList, 500);
   else if (!LS.get("intro", false)) {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每一館是一類行政", `島上有 ${ISL.length} 座行政館，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `島的中央是課外組，旁邊有截止提醒（路思義教堂）、公告欄、小秘書啊牛和碼頭。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
+      ["中心是課外組", `島的中央是課外組，旁邊有截止提醒（路思義教堂）、公告欄、小秘書啊牛（截止日提醒）和碼頭。社團行政任務放在社團行政館，完成可以打勾。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
       ["提醒會浮在館上", "館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的館，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);
