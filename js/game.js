@@ -125,7 +125,8 @@ catch (e) {
   document.body.insertAdjacentHTML("beforeend", '<div id="nogl"><div class="card"><b>這台裝置無法顯示 3D 群島</b><p>可以改看文字版，內容完全相同。</p><a class="btn" href="list.html">開啟文字版</a></div></div>');
   throw e;
 }
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+// 電腦螢幕多半是 1 倍解析度，3D 畫面用 1.5 倍繪製再縮小，邊緣與文字比較銳利
+renderer.setPixelRatio(Math.min(Math.max(devicePixelRatio, innerWidth >= 900 ? 1.5 : 1), 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -244,9 +245,10 @@ const FONT = '"Noto Sans TC", "PingFang TC", sans-serif';
 const MONO = '"Space Mono", ui-monospace, monospace';
 function textPlane(w, h, draw) {
   const cv = document.createElement("canvas");
-  cv.width = Math.round(w * 128); cv.height = Math.round(h * 128);
+  const ppu = Math.min(384, 2048 / Math.max(w, h)); // 每單位 384px，放大看也清楚（上限 2048px）
+  cv.width = Math.round(w * ppu); cv.height = Math.round(h * ppu);
   const tex = new THREE.CanvasTexture(cv);
-  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
   m.userData.redraw = () => { const c = cv.getContext("2d"); c.clearRect(0, 0, cv.width, cv.height); draw(c, cv.width, cv.height); tex.needsUpdate = true; };
   m.userData.redraw();
@@ -1342,7 +1344,10 @@ function placeLabels() {
     const off = pv.z > 1 || x < -80 || x > W + 80 || y < -40 || y > H + 40;
     L.el.classList.toggle("off", off);
     if (off) return;
-    L.el.style.transform = L.below ? `translate(${x}px, ${y + 8}px) translate(-50%, 0)` : `translate(${x}px, ${y - 10}px) translate(-50%, -100%)`;
+    if (!L.w) { L.w = L.el.offsetWidth; L.h = L.el.offsetHeight; }
+    // 位置取整數像素，名牌文字才不會因為落在半個像素上而變糊
+    const lx = Math.round(x - L.w / 2), ly = Math.round(L.below ? y + 8 : y - 10 - L.h);
+    L.el.style.transform = `translate(${lx}px, ${ly}px)`;
     const isSel = L.selId && L.selId === sel;
     if (!isSel && z < L.minZoom && !(L.me && charOpen)) { L.el.classList.add("hide"); return; }
     if (L.maxZoom && (z >= L.maxZoom || L.hideFor.includes(sel))) { L.el.classList.add("hide"); return; }
