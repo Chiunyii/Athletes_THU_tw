@@ -428,7 +428,7 @@ function bDock(g) {
 // 場地借用館：以銘賢堂的造型呈現（紅磚牆、整排木格窗、深灰大斜屋頂與深出簷）
 function bGym(g) {
   const brick = soft(0xb5533c), wallTop = 1.4;
-  box(g, 4, 0.25, 2.6, 0xcfcac0, 0, 0, 0);
+  g.userData.base = 0.25; // 底座拿掉（直接站在土地上），整棟往下移同樣高度
   box(g, 3.5, 1.15, 1.8, brick, 0, 0.25, 0);
   const win = textPlane(3.3, 0.48, (c, w, h) => { c.fillStyle = "#E9E1D2"; c.fillRect(0, 0, w, h); for (let k = 0; k < 6; k++) { const x = 12 + (k * (w - 24)) / 6; c.fillStyle = "#33403F"; c.fillRect(x + 6, 8, (w - 24) / 6 - 12, h - 16); c.strokeStyle = "#E9E1D2"; c.lineWidth = 3; for (let q = 1; q < 4; q++) { c.beginPath(); c.moveTo(x + 6 + (q * ((w - 24) / 6 - 12)) / 4, 8); c.lineTo(x + 6 + (q * ((w - 24) / 6 - 12)) / 4, h - 8); c.stroke(); } c.beginPath(); c.moveTo(x + 6, h / 2); c.lineTo(x + (w - 24) / 6 - 6, h / 2); c.stroke(); } });
   win.position.set(0, 1.08, 0.91); g.add(win);
@@ -443,7 +443,7 @@ function bGym(g) {
 }
 // 器材借用館：課外組共用的大舞台與音響，組裝人員正在架設
 function bStore(g) {
-  box(g, 3.8, 0.12, 2.8, 0xe2d6c3, 0, 0, 0);
+  g.userData.base = 0.12; // 底座拿掉（直接站在土地上），整棟往下移同樣高度
   box(g, 3.2, 0.5, 1.7, 0x2f2a33, 0, 0.12, -0.35); box(g, 3.22, 0.05, 1.72, 0x55505c, 0, 0.62, -0.35);
   box(g, 3.2, 0.42, 0.02, 0x3a3440, 0, 0.16, 0.51);
   // 桁架（Truss）：兩支立柱加一支橫樑，掛著舞台燈
@@ -464,7 +464,7 @@ function bStore(g) {
 }
 // 交接館：新舊幹部在桌前交接資料夾與鑰匙
 function bHandover(g, col) {
-  box(g, 3.6, 0.12, 2.6, 0xe2d6c3, 0, 0, 0);
+  g.userData.base = 0.12; // 底座拿掉（直接站在土地上），整棟往下移同樣高度
   const banner = textPlane(2.4, 0.5, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 14); c.fillStyle = "#" + new THREE.Color(col).getHexString(); c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.55}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("新舊幹部交接", w / 2, h / 2 + 2); });
   [-1.25, 1.25].forEach((x) => cyl(g, 0.05, 0.05, 2.1, 0xd9d2c5, x, 0.12, -1.0, 6));
   banner.position.set(0, 1.95, -0.98); g.add(banner);
@@ -478,7 +478,7 @@ function bHandover(g, col) {
 }
 // 財產盤點館：貨架上的器材箱，盤點人員拿著清冊逐一核對
 function bInventory(g, col) {
-  box(g, 3.6, 0.12, 2.6, 0xe2d6c3, 0, 0, 0);
+  g.userData.base = 0.12; // 底座拿掉（直接站在土地上），整棟往下移同樣高度
   const metal = soft(0x8d97a5), cs = [0xc8623f, 0x6e8fb5, 0xe8b04b, 0x5f8f5a, 0x9c83b5, 0xd9b98a];
   [-0.85, 0.85].forEach((x, r) => {
     [-0.65, 0.65].forEach((dx) => [-0.25, 0.25].forEach((dz) => box(g, 0.05, 2.0, 0.05, metal, x + dx, 0.12, -0.75 + dz)));
@@ -501,7 +501,7 @@ const mini = (p, o, s, x, y, z, ry = 0) => { const m = person(o); m.scale.setSca
 const MINI = [["#E8B04B", "#3B2E26"], ["#6E8FB5", "#55463A"], ["#5F8F5A", "#2A211C"], ["#C97A8F", "#7A4B2E"], ["#9C83B5", "#3B2E26"], ["#D98B4E", "#2A211C"]].map(([shirt, hair]) => ({ shirt, hair, skin: "#F1CDB0" }));
 // 活動安全館：活動現場的急救站（白色帳篷、紅十字旗、擔架、急救箱與救護人員）
 function bAid(g) {
-  box(g, 3.6, 0.12, 2.8, 0xe2d6c3, 0, 0, 0);
+  g.userData.base = 0.12; // 底座拿掉（直接站在土地上），整棟往下移同樣高度
   const red = soft(0xc8443a), white = soft(0xfbfaf6), pole = soft(0xd9d2c5);
   [[-1.3, -0.9], [1.3, -0.9], [-1.3, 0.9], [1.3, 0.9]].forEach(([x, z]) => cyl(g, 0.05, 0.05, 1.7, pole, x, 0.12, z, 6));
   const top = cone(g, 2.05, 0.75, white, 0, 1.82, 0, 4); top.rotation.y = Math.PI / 4; top.scale.set(1, 1, 0.72);
@@ -526,7 +526,7 @@ function bAid(g) {
 }
 // 期初會議館：小學教室的課桌椅，大家面對面開會，老師在黑板前說明
 function bHall(g) {
-  box(g, 3.9, 0.15, 3.1, 0xe2c79c, 0, 0, 0);
+  g.userData.base = 0.15; // 底座拿掉（直接站在土地上），整棟往下移同樣高度
   box(g, 3, 1.5, 0.12, 0x8a5a3b, 0, 0.75, -1.3);
   [-1.3, 1.3].forEach((x) => box(g, 0.1, 0.75, 0.1, 0x8a5a3b, x, 0.15, -1.3));
   const board = textPlane(2.8, 1.3, (c, w, h) => {
@@ -552,7 +552,7 @@ function bHall(g) {
 }
 // 社團行政館：活動服務台，服務員在櫃台後面
 function bTrack(g, col) {
-  box(g, 3.6, 0.15, 2.8, 0xe2d6c3, 0, 0, 0);
+  g.userData.base = 0.15; // 底座拿掉（直接站在土地上），整棟往下移同樣高度
   box(g, 3.2, 1.9, 0.15, C.wall, 0, 0.15, -1.15);
   [-1.55, 1.55].forEach((x) => cyl(g, 0.07, 0.07, 2.4, 0xffffff, x, 0.15, 0.2, 6));
   for (let k = 0; k < 6; k++) box(g, 3.3 / 6, 0.08, 1.6, k % 2 ? 0xfffdf9 : col, -1.65 + 3.3 / 12 + (k * 3.3) / 6, 2.5, -0.4).rotation.x = 0.18;
@@ -571,7 +571,7 @@ function bTrack(g, col) {
 }
 // 社團活動館：嘉年華旋轉木馬、氣球，還有在玩的人
 function bTent(g, col) {
-  box(g, 3.8, 0.12, 3, 0xf3e6ce, 0, 0, 0);
+  g.userData.base = 0.12; // 底座拿掉（直接站在土地上），整棟往下移同樣高度
   const cx = -0.55;
   cyl(g, 1.15, 1.2, 0.22, col, cx, 0.12, 0, 20);
   const spin = new THREE.Group(); spin.position.set(cx, 0.34, 0); g.add(spin);
@@ -598,7 +598,7 @@ function bTent(g, col) {
 }
 // 經費館：大計算機與一疊疊硬幣
 function bBank(g) {
-  box(g, 3.6, 0.15, 2.6, 0xe2d6c3, 0, 0, 0);
+  g.userData.base = 0.15; // 底座拿掉（直接站在土地上），整棟往下移同樣高度
   const calc = new THREE.Group(); calc.position.set(-0.55, 0.15, -0.2); calc.rotation.x = -0.22; g.add(calc);
   box(calc, 1.8, 2.5, 0.4, 0x3b4a5c, 0, 0, 0);
   const lcd = textPlane(1.5, 0.55, (c, w, h) => { c.fillStyle = "#BFD8B0"; c.fillRect(0, 0, w, h); c.fillStyle = "#2A3A2A"; c.font = `700 ${h * 0.5}px ${MONO}`; c.textAlign = "right"; c.textBaseline = "middle"; c.fillText("3,600", w - 18, h / 2 + 3); c.font = `700 ${h * 0.24}px ${MONO}`; c.textAlign = "left"; c.fillText("NT$", 14, h * 0.3); });
@@ -613,7 +613,7 @@ function bBank(g) {
 }
 // 評鑑館：埋首處理各種檔案的角色，旁邊有檔案櫃、資料夾，還有飛來飛去的文件
 function bPodium(g) {
-  box(g, 3.6, 0.15, 2.6, 0xe2d6c3, 0, 0, 0);
+  g.userData.base = 0.15; // 底座拿掉（直接站在土地上），整棟往下移同樣高度
   box(g, 0.9, 1.9, 0.7, 0x8d97a5, -1.25, 0.15, -0.7);
   for (let k = 0; k < 4; k++) { box(g, 0.8, 0.4, 0.04, 0xb4bcc6, -1.25, 0.25 + k * 0.45, -0.33); box(g, 0.24, 0.05, 0.05, 0x5a6370, -1.25, 0.42 + k * 0.45, -0.3); }
   const gold = mat(0xe8b04b, { metalness: 0.45, roughness: 0.4 });
@@ -936,8 +936,8 @@ ISL.forEach((d) => {
   (BUILD[d.building] || bHouse)(b, col);
   b.position.copy(d.dir).multiplyScalar(0.9); // 建築在車道的另一側，正面朝鏡頭
   // 每館的造型都等比縮放到 HALL_H 高（量實際外框，不含名牌），不超過課外組峮老師
-  const bh = new THREE.Box3().setFromObject(b).max.y, bs = HALL_H / bh;
-  b.rotation.y = FACE; b.scale.setScalar(bs);
+  const bh = new THREE.Box3().setFromObject(b).max.y - (b.userData.base || 0), bs = HALL_H / bh;
+  b.rotation.y = FACE; b.scale.setScalar(bs); b.position.y = -(b.userData.base || 0) * bs + 0.06;
   b.userData.h = HALL_H + 0.3;
   g.add(b);
   tag(b, { t: "isle", i: d.i });
@@ -1902,7 +1902,8 @@ async function start() {
   else if (h === "list") setTimeout(renderList, 500);
   else if (!LS.get("intro", false)) {
     LS.set("intro", true);
-    talk("HELLO, 幹部", [
+    talk("HELLO 體能性社團夥伴", [
+      ["歡迎來到體能行政群島", "這裡收藏了體能性社團的各項行政資訊：攻略、截止日提醒、社團行政任務與公告，跟著角色在島上走一圈就能找到。"],
       ["每一館是一類行政", `島上有 ${ISL.length} 座行政館，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
       ["本島是課外組", `本島中間是課外組，旁邊有路思義教堂、公告欄、小秘書啊牛（啊牛提醒：各項截止日）和出航機場。社團行政任務放在社團行政館，完成可以打勾。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
       ["提醒會浮在館上", "館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
