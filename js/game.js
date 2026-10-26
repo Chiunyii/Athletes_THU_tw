@@ -1,5 +1,5 @@
 /* 體能社團行政群島：Three.js
- * 大島中央 = 課外組（辦公室、路思義教堂、公告欄、小秘書啊牛的截止日提醒、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
+ * 大島中央 = 課外組（辦公室、路思義教堂、公告欄、小秘書啊牛的啊牛提醒、碼頭），外圈道路連到各「館」= 行政分類（由 data.js 的 islands 決定）。
  * 玩家可以（選填）建立角色：身份、職位、外觀；角色會沿著島上的道路走到各館蓋章。
  * 內容全部來自 js/data.js；這個檔案只負責群島、角色與資訊卡。 */
 import * as THREE from "three";
@@ -83,7 +83,7 @@ const unread = () => anns.filter((a) => !read.includes(a.id));
 const CLUBS = D.clubs || [];
 const ROLES = D.roles || ["社長", "幹部", "社員"];
 // 每種行政分類主要由哪些職位負責（用來提醒「這是你的事」）
-const DUTY = { 會議: ["社長", "副社長", "幹部", "輔導老師"], 行政: ["社長", "副社長"], 活動: ["社長", "活動長", "輔導老師"], 經費: ["社長", "財務", "輔導老師"], 場地: ["活動長", "器材長"], 安全: ["社長", "副社長", "活動長", "幹部", "輔導老師"], 器材: ["器材長", "幹部"], 評鑑: ["社長", "公關"] };
+const DUTY = { 會議: ["社長", "副社長", "幹部", "輔導老師"], 行政: ["社長", "副社長", "文書"], 活動: ["社長", "活動", "輔導老師"], 經費: ["社長", "財務", "輔導老師"], 場地: ["社長", "副社長", "活動", "幹部"], 安全: ["社長", "副社長", "活動", "幹部", "輔導老師"], 器材: ["器材", "幹部"], 評鑑: ["社長", "副社長", "文書"], 交接: ["社長", "副社長", "文書", "財務", "器材"], 財產: ["器材", "財務"] };
 
 const ISL = D.islands.map((d, i) => ({ ...d, i, no: pad2(i + 1), guides: D.guides.filter((g) => g.island === d.key) }));
 const isleOf = (key) => ISL.find((d) => d.key === key);
@@ -91,9 +91,9 @@ const isleDl = (d) => upcoming().filter((x) => x.category === d.key);
 const isleNews = (d) => anns.filter((a) => a.tag === d.key);
 const lvl = (n) => (n <= 3 ? "hot" : n <= 7 ? "warn" : "ok");
 const CENTER_SPOTS = [
-  { id: "office", no: "00", name: "課外組", icon: "🏛" },
+  { id: "office", no: "00", name: "課外組峮老師", icon: "🏛" },
   { id: "news", no: "✎", name: "公告欄", icon: "📌" },
-  { id: "todo", no: "◷", name: "截止日提醒", icon: "🐮" },
+  { id: "todo", no: "◷", name: "啊牛提醒", icon: "🐮" },
   { id: "links", no: "↗", name: "出航碼頭", icon: "⛵" },
 ];
 const stampCount = () => STAMPS.filter((s) => stamps[s.id]).length;
@@ -113,6 +113,7 @@ const SHIRTS = ["#C8623F", "#3E6E9E", "#5F8F5A", "#E8B04B", "#7E5A9B", "#2A211C"
 const HAIRS = ["#2B2118", "#5A3B28", "#8A5A3B", "#C9A36A", "#1F2A44"];
 const SKINS = ["#F6D7BE", "#E9BC98", "#C98E66", "#8E5B3C"];
 let me = Object.assign({ name: "", club: "", role: "社員", shirt: SHIRTS[1], hair: HAIRS[0], skin: SKINS[0] }, LS.get("me", {}));
+me.role = ({ 活動長: "活動", 器材長: "器材", 公關: "幹部" })[me.role] || me.role; // 舊版職位名稱
 const myDuty = (d) => !!me.club && (DUTY[d.key] || []).includes(me.role);
 const myProp = () => (CLUBS.find((c) => c.name === me.club) || {}).prop;
 
@@ -145,30 +146,37 @@ MAIN.forEach((d, i) => {
   d.dir = new V3(Math.cos(d.a), 0, Math.sin(d.a));
   d.pos = d.dir.clone().multiplyScalar(R_LOT);
 });
-// 圓環到外圈的連絡道路：每隔一個建築區一條
-const SPOKES = MAIN.filter((d, i) => i % 2 === 0).map((d) => d.a);
+// 圓環到外圈的連絡道路：建築區少時每館一條，多時每隔一館一條
+const SPOKES = MAIN.filter((d, i) => NM <= 3 || i % 2 === 0).map((d) => d.a);
 // 獨立小島：data.js 裡 islet 名稱相同的館放在同一座小島，以橋接到本島外圈道路
 // 小島方位（相對鏡頭正前方）；沒列在這裡的小島依序往外放
-const ISLET_AT = { "場地器材島": -Math.PI / 3, "活動島": (Math.PI * 8) / 9 };
-const ISLET_MTN = new Set(["活動島"]);
-const ISLET_EN = { "場地器材島": "Venue & Equipment Isle", "活動島": "Activity Isle" }; // 島中央後方放一座登山的小山
+const ISLET_AT = { "場地器材島": -Math.PI / 3, "活動島": (Math.PI * 8) / 9, "行政島": Math.PI / 3 };
+const ISLET_MTN = new Set(["活動島"]); // 島中央後方放一座登山的小山
+const ISLET_EN = { "場地器材島": "Venue & Equipment Isle", "活動島": "Activity Isle", "行政島": "Administration Isle" };
 const ISLETS = [...new Set(OFF.map((d) => d.islet))].map((name, k) => {
-  const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = 8;
+  const halls = OFF.filter((d) => d.islet === name), big = halls.length > 2;
+  const a = front + (ISLET_AT[name] ?? -Math.PI / 3 + k * 1.2), dir = new V3(Math.cos(a), 0, Math.sin(a)), r = big ? 10.5 : 8;
   const pos = dir.clone().multiplyScalar(R_ISLE + r + 5.5);
-  const I = { a, dir, r, pos, name, halls: OFF.filter((d) => d.islet === name), coast: dir.clone().multiplyScalar(R_ISLE * 0.92), entry: pos.clone().sub(dir.clone().multiplyScalar(r * 0.88)) };
+  const I = { a, dir, r, pos, name, halls, coast: dir.clone().multiplyScalar(R_ISLE * 0.92), entry: pos.clone().sub(dir.clone().multiplyScalar(r * 0.88)) };
   const perp = new V3(-dir.z, 0, dir.x);
   I.halls.forEach((d, i) => {
-    const side = I.halls.length === 1 ? 0 : (i / (I.halls.length - 1)) * 2 - 1; // 小島上左右排開
     d.isl = I;
-    d.dir = perp.clone().multiplyScalar(side || 1).add(dir.clone().multiplyScalar(0.35)).normalize();
+    if (big) { // 四館以上：前後兩排、左右排開
+      const row = i % 2, col = Math.floor(i / 2), cols = Math.ceil(I.halls.length / 2), side = cols === 1 ? 0 : (col / (cols - 1)) * 2 - 1;
+      d.pos = pos.clone().add(perp.clone().multiplyScalar(side * 3.9)).add(dir.clone().multiplyScalar(row ? 4.3 : -1.2));
+      d.dir = d.pos.clone().sub(pos).setY(0).normalize();
+    } else {
+      const side = I.halls.length === 1 ? 0 : (i / (I.halls.length - 1)) * 2 - 1; // 小島上左右排開
+      d.dir = perp.clone().multiplyScalar(side || 1).add(dir.clone().multiplyScalar(0.35)).normalize();
+      d.pos = pos.clone().add(perp.clone().multiplyScalar(side * 3.6)).add(dir.clone().multiplyScalar(1.2));
+    }
     d.a = Math.atan2(d.dir.z, d.dir.x);
-    d.pos = pos.clone().add(perp.clone().multiplyScalar(side * 3.6)).add(dir.clone().multiplyScalar(1.2));
   });
   return I;
 });
-const WORLD_R = ISLETS.length ? R_ISLE + 2 * 8 + 6 : R_ISLE + 1;
+const WORLD_R = ISLETS.length ? R_ISLE + 2 * Math.max(...ISLETS.map((I) => I.r)) + 6 : R_ISLE + 1;
 // 鏡頭取景：以本島為主，往小島的方向偏一點，讓所有島都放得進畫面
-const CAM_R = ISLETS.length ? R_ISLE + 10 + (ISLETS.length - 1) * 3 : R_ISLE + 1;
+const CAM_R = ISLETS.length ? R_ISLE + 10 + (ISLETS.length - 1) * 3.5 : R_ISLE + 1;
 const HOME_C = ISLETS.reduce((v, I) => v.add(I.dir.clone().multiplyScalar(8.5 / ISLETS.length)), new V3(0, 0, 0));
 
 const camera = new THREE.OrthographicCamera(-10, 10, 10, -10, -300, 500);
@@ -314,7 +322,7 @@ function bOffice(g) {
   const sign = textPlane(2.9, 0.75, (c, w, h) => {
     const st = officeStatus();
     rr(c, 4, 4, w - 8, h - 8, 22); c.fillStyle = "#2A211C"; c.fill();
-    c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.5}px ${FONT}`; c.textBaseline = "middle"; c.fillText("課外組", 24, h / 2 + 2);
+    c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.42}px ${FONT}`; c.textBaseline = "middle"; c.fillText("課外組峮老師", 22, h / 2 + 2);
     c.fillStyle = st.open ? "#8FD6A0" : "#F19A84"; c.font = `700 ${h * 0.36}px ${FONT}`; c.textAlign = "right"; c.fillText(st.short, w - 24, h / 2 + 2);
   });
   sign.position.set(0, 0.95, 2.4); g.add(sign);
@@ -414,24 +422,60 @@ function bGym(g) {
   box(g, 4.2, 0.1, 0.16, 0x3c3f42, 0, wallTop + 0.9, 0);
   g.userData.h = 3.1;
 }
-// 器材借用館：大扳手、鐵鎚、螺絲起子與工具箱
+// 器材借用館：課外組共用的大舞台與音響，組裝人員正在架設
 function bStore(g) {
-  box(g, 3.6, 0.15, 2.6, 0xe2d6c3, 0, 0, 0);
-  const steel = mat(0xb8c0c8, { metalness: 0.6, roughness: 0.35 });
-  const wr = new THREE.Group(); wr.position.set(0.2, 0.45, -0.2); wr.rotation.z = -0.55; g.add(wr); // 斜立的大扳手
-  box(wr, 0.38, 1.9, 0.14, steel, 0, 0.45, 0);
-  const jaw = mesh(new THREE.TorusGeometry(0.42, 0.2, 6, 18, Math.PI * 1.5), steel, 0, 2.75, 0, wr); jaw.rotation.z = -Math.PI * 0.25;
-  mesh(new THREE.TorusGeometry(0.3, 0.13, 6, 16), steel, 0, 0.2, 0, wr);
-  // 工具箱
-  box(g, 1.1, 0.55, 0.6, 0xc8443a, -1.05, 0.15, 0.25); box(g, 1.14, 0.08, 0.64, 0x9a2f28, -1.05, 0.62, 0.25);
-  mesh(new THREE.TorusGeometry(0.2, 0.035, 6, 12, Math.PI), soft(0x2a211c), -1.05, 0.72, 0.25, g);
-  box(g, 0.12, 0.1, 0.04, 0xe8b04b, -1.05, 0.48, 0.56);
-  // 鐵鎚斜靠、螺絲起子躺在地上
-  const hm = new THREE.Group(); hm.position.set(1.35, 0.15, 0.1); hm.rotation.z = 0.35; g.add(hm);
-  cyl(hm, 0.07, 0.08, 1.3, soft(0xd99a5b), 0, 0, 0, 8); box(hm, 0.62, 0.24, 0.24, soft(0x3c3f42), 0, 1.25, 0);
-  const sd = new THREE.Group(); sd.position.set(-0.3, 0.22, 0.85); sd.rotation.set(0, 0.5, Math.PI / 2); g.add(sd);
-  cyl(sd, 0.1, 0.12, 0.5, soft(0xe8b04b), 0, 0, 0, 8); cyl(sd, 0.03, 0.03, 0.6, steel, 0, 0.5, 0, 6);
+  box(g, 3.8, 0.12, 2.8, 0xe2d6c3, 0, 0, 0);
+  box(g, 3.2, 0.5, 1.7, 0x2f2a33, 0, 0.12, -0.35); box(g, 3.22, 0.05, 1.72, 0x55505c, 0, 0.62, -0.35);
+  box(g, 3.2, 0.42, 0.02, 0x3a3440, 0, 0.16, 0.51);
+  // 桁架（Truss）：兩支立柱加一支橫樑，掛著舞台燈
+  const truss = soft(0xb8c0c8);
+  [-1.5, 1.5].forEach((x) => { [-0.07, 0.07].forEach((dx) => [-0.07, 0.07].forEach((dz) => box(g, 0.03, 2.2, 0.03, truss, x + dx, 0.67, -1.05 + dz))); for (let k = 0; k < 6; k++) box(g, 0.17, 0.02, 0.02, truss, x, 0.8 + k * 0.36, -1.05 + (k % 2 ? 0.07 : -0.07)).rotation.z = 0.5; });
+  [-0.07, 0.07].forEach((dy) => [-0.07, 0.07].forEach((dz) => box(g, 3.1, 0.03, 0.03, truss, 0, 2.85 + dy, -1.05 + dz)));
+  [-0.9, -0.3, 0.3, 0.9].forEach((x, k) => { cyl(g, 0.09, 0.07, 0.2, 0x2a211c, x, 2.6, -1.0, 8).rotation.x = 0.5; mesh(new THREE.CircleGeometry(0.06, 10), mat([0xffe27a, 0xc8443a, 0x6e8fb5, 0xffe27a][k], { emissive: 0xffc93c, emissiveIntensity: 0.5 }), x, 2.58, -0.9, g).rotation.x = -1.1; });
+  // 舞台兩側的音響喇叭
+  const spk = (x, y, z, s = 1) => { box(g, 0.5 * s, 0.7 * s, 0.42 * s, 0x1f1c22, x, y, z); [0.22, -0.1].forEach((dy, i) => { const c = mesh(new THREE.CircleGeometry(i ? 0.15 * s : 0.08 * s, 14), soft(0x4a4550), x, y + 0.35 * s + dy * s, z + 0.215 * s, g); c.castShadow = false; }); };
+  spk(-1.65, 0.12, 0.75); spk(-1.65, 0.82, 0.75, 0.8); spk(1.65, 0.12, 0.75); spk(1.65, 0.82, 0.75, 0.8);
+  box(g, 0.05, 1.0, 0.05, 0x2a211c, 0, 0.67, -0.1); ball(g, 0.07, 0x2a211c, 0, 1.72, -0.1);
+  // 組裝人員：一位扛著喇叭、一位在舞台上調整燈架
+  const crew1 = mini(g, { shirt: "#2A211C", hair: "#3B2E26", skin: "#F1CDB0", prop: "helmet" }, 0.55, 0.95, 0.12, 0.95, -0.5);
+  box(crew1, 0.5, 0.42, 0.36, 0x1f1c22, 0, 1.62, 0.05);
+  const crew2 = mini(g, { shirt: "#E8B04B", hair: "#2A211C", skin: "#F3D2B8", prop: "helmet" }, 0.55, -0.7, 0.67, -0.5);
+  g.userData.bob = [crew1];
   g.userData.h = 3.4;
+}
+// 幹部交接館：新舊幹部在桌前交接資料夾與鑰匙
+function bHandover(g, col) {
+  box(g, 3.6, 0.12, 2.6, 0xe2d6c3, 0, 0, 0);
+  const banner = textPlane(2.4, 0.5, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 14); c.fillStyle = "#" + new THREE.Color(col).getHexString(); c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.55}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("新舊幹部交接", w / 2, h / 2 + 2); });
+  [-1.25, 1.25].forEach((x) => cyl(g, 0.05, 0.05, 2.1, 0xd9d2c5, x, 0.12, -1.0, 6));
+  banner.position.set(0, 1.95, -0.98); g.add(banner);
+  box(g, 1.8, 0.06, 0.8, C.wood, 0, 0.72, -0.1); [[-0.82, -0.42], [0.82, -0.42], [-0.82, 0.22], [0.82, 0.22]].forEach(([x, z]) => box(g, 0.06, 0.6, 0.06, C.dark, x, 0.12, z));
+  [[-0.5, 0xc8623f], [-0.35, 0x6e8fb5], [0.45, 0x5f8f5a]].forEach(([x, c], k) => box(g, 0.32, 0.06 + k * 0.02, 0.24, c, x, 0.78, -0.15));
+  box(g, 0.18, 0.04, 0.08, 0xe8b04b, 0.15, 0.79, 0.05); mesh(new THREE.TorusGeometry(0.06, 0.02, 6, 12), soft(0xe8b04b), 0.02, 0.81, 0.05, g).rotation.x = Math.PI / 2;
+  const oldP = mini(g, MINI[1], 0.6, -1.25, 0.12, -0.05, Math.PI / 2), newP = mini(g, MINI[3], 0.6, 1.25, 0.12, -0.05, -Math.PI / 2);
+  const folder = box(g, 0.34, 0.26, 0.04, col, 0, 0, 0); folder.position.set(0, 1.15, -0.05); folder.userData.y0 = 1.15;
+  g.userData.floaty = [folder]; g.userData.bob = [oldP, newP];
+  g.userData.h = 3.2;
+}
+// 財產盤點館：貨架上的器材箱，盤點人員拿著清冊逐一核對
+function bInventory(g, col) {
+  box(g, 3.6, 0.12, 2.6, 0xe2d6c3, 0, 0, 0);
+  const metal = soft(0x8d97a5), cs = [0xc8623f, 0x6e8fb5, 0xe8b04b, 0x5f8f5a, 0x9c83b5, 0xd9b98a];
+  [-0.85, 0.85].forEach((x, r) => {
+    [-0.65, 0.65].forEach((dx) => [-0.25, 0.25].forEach((dz) => box(g, 0.05, 2.0, 0.05, metal, x + dx, 0.12, -0.75 + dz)));
+    for (let k = 0; k < 3; k++) {
+      box(g, 1.4, 0.04, 0.56, metal, x, 0.42 + k * 0.6, -0.75);
+      for (let q = 0; q < 3; q++) { const w = 0.3 + hash("iv" + r + k + q) * 0.1; box(g, w, 0.34, 0.42, cs[(r * 3 + k + q) % 6], x - 0.42 + q * 0.42, 0.46 + k * 0.6, -0.75); box(g, 0.12, 0.06, 0.01, 0xfffdf9, x - 0.42 + q * 0.42, 0.62 + k * 0.6, -0.535); }
+    }
+  });
+  const sign = textPlane(1.6, 0.4, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 12); c.fillStyle = "#2A211C"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.55}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("財產盤點", w / 2, h / 2 + 2); });
+  sign.position.set(0, 2.35, -0.72); g.add(sign);
+  const checker = mini(g, { shirt: "#" + new THREE.Color(col).getHexString(), hair: "#3B2E26", skin: "#F3D2B8", prop: "clipboard" }, 0.62, 0.35, 0.12, 0.55, -0.3);
+  // 推車上的箱子
+  box(g, 0.6, 0.05, 0.45, metal, -1.15, 0.22, 0.75); [-0.25, 0.25].forEach((x) => cyl(g, 0.06, 0.06, 0.05, 0x2a211c, -1.15 + x, 0.12, 0.95, 8).rotation.x = Math.PI / 2); box(g, 0.05, 0.6, 0.05, metal, -1.42, 0.22, 0.55);
+  box(g, 0.42, 0.3, 0.34, cs[2], -1.12, 0.27, 0.75); box(g, 0.34, 0.24, 0.3, cs[0], -1.12, 0.57, 0.75);
+  g.userData.bob = [checker];
+  g.userData.h = 2.9;
 }
 // 館內的小角色（坐著或站著）
 const mini = (p, o, s, x, y, z, ry = 0) => { const m = person(o); m.scale.setScalar(s); m.position.set(x, y, z); m.rotation.y = ry; p.add(m); return m; };
@@ -616,7 +660,7 @@ function bTodo(g) {
     c.textAlign = "center"; c.textBaseline = "middle";
     if (cowMsg) { c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.34}px ${FONT}`; c.fillText(cowMsg, w / 2, bh * 0.52); return; }
     const n = upcoming()[0], k = n ? daysLeft(n.at) : null, t = n ? (n.title.length > 9 ? n.title.slice(0, 9) + "…" : n.title) : "";
-    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.2}px ${FONT}`; c.fillText(n ? `截止日提醒・${k === 0 ? "今天截止" : "D-" + k}` : "截止日提醒", w / 2, bh * 0.33);
+    c.fillStyle = "#C8623F"; c.font = `900 ${h * 0.2}px ${FONT}`; c.fillText(n ? `啊牛提醒・${k === 0 ? "今天截止" : "D-" + k}` : "啊牛提醒", w / 2, bh * 0.33);
     c.fillStyle = "#2A211C"; c.font = `900 ${h * 0.19}px ${FONT}`; c.fillText(n ? t : "目前沒有截止日", w / 2, bh * 0.7);
   });
   bubble.position.set(0, 3.7, 0); g.add(bubble);
@@ -628,7 +672,7 @@ function bHouse(g, col) {
   box(g, 0.7, 1, 0.08, C.dark, 0, 0, 1.02);
   g.userData.h = 3.4;
 }
-const BUILD = { hall: bHall, track: bTrack, tent: bTent, bank: bBank, gym: bGym, aid: bAid, store: bStore, podium: bPodium, house: bHouse };
+const BUILD = { hall: bHall, track: bTrack, tent: bTent, bank: bBank, gym: bGym, aid: bAid, store: bStore, podium: bPodium, house: bHouse, handover: bHandover, inventory: bInventory };
 
 // 圓滾滾的樹：兩三顆球疊在一起
 function tree(p, x, z, s, k) {
@@ -698,13 +742,12 @@ cyl(center, 0.06, 0.06, 4.2, 0xdddddd, 1.4, 0, -1.6, 6);
 flatRoad(world, new THREE.RingGeometry(RO - 0.7, RO + 0.7, 120), 0, 0);
 for (let k = 0; k < 64; k++) { const a = (k / 64) * Math.PI * 2; dashAt(world, Math.cos(a) * RO, Math.sin(a) * RO, -a); }
 SPOKES.forEach((a) => radialRoad(a, 4.6, RO - 0.7));
-// 中央區的地點放在兩條建築區方位之間（mid(k)），避開連絡道路
-const mid = (k) => front + (k * 2 * Math.PI) / NM;
+// 中央區的地點：方位相對鏡頭正前方，避開連絡道路（本島兩館各有一條）
 const SPOT = {
-  office: { a: mid(NM / 2), r: 7.4, build: bOffice },
-  chapel: { a: mid(NM / 2 + 1), r: 7.2, build: bClock }, // 造景，不能點
-  news: { a: mid(NM / 2 - 1), r: 7, build: bBoard },
-  todo: { a: mid(NM - 1) + Math.PI / NM * 1.2, r: 7, build: bTodo },
+  office: { a: front + Math.PI, r: 7.4, build: bOffice },
+  chapel: { a: front + Math.PI * 1.25, r: 7.2, build: bClock }, // 造景，不能點
+  news: { a: front + Math.PI * 0.83, r: 7, build: bBoard },
+  todo: { a: front + Math.PI / 6, r: 7, build: bTodo },
   links: { a: front, r: R_ISLE * 0.95, build: bDock },
 };
 radialRoad(front, RO + 0.7, R_ISLE * 0.93); // 通往碼頭的路
@@ -725,7 +768,7 @@ for (let k = 0; k < 8; k++) { const a = front + (k + 0.5) * Math.PI / 4; lampPos
 const SIGN_POS = FACE_DIR.clone().multiplyScalar(RO + 2.4).add(new V3(FACE_DIR.z, 0, -FACE_DIR.x).multiplyScalar(-5));
 {
   const right = new V3(Math.cos(FACE), 0, -Math.sin(FACE)), dirTo = (p) => (p.clone().sub(SIGN_POS).dot(right) > 0 ? "r" : "l");
-  const boards = [{ zh: "課外組", en: "Extracurricular Activities", dir: dirTo(new V3()) }, ...MAIN.map((d) => ({ zh: d.name, en: d.en, dir: dirTo(d.pos) })), ...ISLETS.map((I) => ({ zh: I.name, en: ISLET_EN[I.name], dir: dirTo(I.pos) }))];
+  const boards = [{ zh: "課外組峮老師", en: "Extracurricular Activities", dir: dirTo(new V3()) }, ...MAIN.map((d) => ({ zh: d.name, en: d.en, dir: dirTo(d.pos) })), ...ISLETS.map((I) => ({ zh: I.name, en: ISLET_EN[I.name], dir: dirTo(I.pos) }))];
   const sp = signPost(boards, 3.4 + Math.max(0, Math.ceil(boards.length / 2) - 4) * 0.58); sp.position.copy(SIGN_POS); sp.rotation.y = FACE; world.add(sp);
 }
 
@@ -748,7 +791,11 @@ ISL.forEach((d) => {
   g.add(b);
   tag(b, { t: "isle", i: d.i });
   d.build = b;
-  d.spot = d.dir.clone().multiplyScalar(-1.7); // 角色站在車道口
+  // 角色站在建築的右前方（靠鏡頭那一側），拍照時不會被建築擋住；從車道口繞過建築側邊走過去
+  const SR = new V3(Math.cos(FACE), 0, -Math.sin(FACE));
+  d.door = d.dir.clone().multiplyScalar(-1.7);
+  d.side = SR.clone().multiplyScalar(2.7).add(FACE_DIR.clone().multiplyScalar(0.4));
+  d.spot = FACE_DIR.clone().multiplyScalar(2.1).add(SR.clone().multiplyScalar(1.5));
   const perp = new V3(-d.dir.z, 0, d.dir.x);
   lampPost(g, perp.x * 2.4 - d.dir.x * 1.6, perp.z * 2.4 - d.dir.z * 1.6);
 });
@@ -757,7 +804,7 @@ ISL.forEach((d) => {
 const hikers = [];
 ISLETS.forEach((ISLET) => {
   const g = new THREE.Group(); g.position.copy(ISLET.pos); world.add(g);
-  const L = landmass(g, ISLET.r, 4.2);
+  const L = landmass(g, ISLET.r, 4.2 + ISLET.a);
   tag(L.top, { t: "isle", i: ISLET.halls[0].i });
   // 本島外圈道路 → 海岸、小島入口 → 小島中央 → 各建築區
   const seg = (p, q, w = 1.4) => { const len = p.distanceTo(q), m = p.clone().add(q).multiplyScalar(0.5), a = Math.atan2(q.z - p.z, q.x - p.x);
@@ -788,7 +835,7 @@ ISLETS.forEach((ISLET) => {
     [0.15, 0.55].forEach((q0, k) => { const h = person({ shirt: ["#5F8F5A", "#E8B04B"][k], hair: "#3B2E26", skin: "#F1CDB0", prop: "backpack" }); h.scale.setScalar(0.42); mg.add(h); hikers.push({ h, q0, m: mtn }); });
     tag(mg, { t: "isle", i: ISLET.halls[0].i });
   }
-  for (let i = 0, k = 0; i < 120 && k < 10; i++) {
+  for (let i = 0, k = 0; i < 160 && k < (ISLET.halls.length > 2 ? 14 : 10); i++) {
     const a = hash("it" + ISLET.name + i) * Math.PI * 2, r = 2 + hash("ir" + ISLET.name + i) * (ISLET.r * 0.82 - 2), x = ISLET.pos.x + Math.cos(a) * r, z = ISLET.pos.z + Math.sin(a) * r;
     if (ISLET.halls.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.4) || Math.hypot(ISLET.pos.x - x, ISLET.pos.z - z) < 1.8) continue;
     // 不要種在館的正前方（鏡頭那一側），以免擋住建築
@@ -814,6 +861,7 @@ ISLETS.forEach((ISLET) => {
     if (ISL.some((d) => Math.hypot(d.pos.x - x, d.pos.z - z) < 3.6)) continue;
     if (Object.values(SPOT).some((s) => Math.hypot(s.pos.x - x, s.pos.z - z) < 3)) continue;
     if (Math.hypot(SIGN_POS.x - x, SIGN_POS.z - z) < 2.6) continue;
+    if (ISL.some((d) => { const v = new V3(x - d.pos.x, 0, z - d.pos.z), f = v.dot(FACE_DIR); return f > -0.5 && f < 8 && Math.abs(v.x * FACE_DIR.z - v.z * FACE_DIR.x) < 3.2; })) continue; // 不擋住館的正面
     tree(world, x, z, 0.7 + hash("ts" + i) * 0.55, hash("tk" + i)); n++;
   }
 }
@@ -968,6 +1016,8 @@ function arc(a0, a1, r = RW) {
 }
 const nearestSpoke = (a) => SPOKES.reduce((b, s) => (angOff(a, s) < angOff(a, b) ? s : b), SPOKES[0]);
 const isleSpot = (d) => d.pos.clone().add(d.spot);
+const hallIn = (d) => [d.pos.clone().add(d.door), d.pos.clone().add(d.side), isleSpot(d)]; // 車道口 → 建築側邊 → 站位
+const hallOut = (d) => [d.pos.clone().add(d.side), d.pos.clone().add(d.door)];
 // 路線：建築區 ⇄ 外圈道路 ⇄（連絡道路）⇄ 中央圓環
 // 外圈道路 ⇄ 海岸 ⇄ 橋 ⇄ 小島中央
 function isletPath(ISLET, outbound) {
@@ -980,7 +1030,8 @@ function route(to) {
   const pts = [], curA = Math.atan2(av.position.z, av.position.x);
   let posA, onOuter;
   const from = avAt !== "C" ? ISL[avAt] : null;
-  if (from && from.isl) { const I = from.isl; pts.push(I.pos.clone()); if (ISL[to] && ISL[to].isl === I) { pts.push(isleSpot(ISL[to])); return pts; } pts.push(...isletPath(I, false)); posA = I.a; onOuter = true; }
+  if (from) pts.push(...hallOut(from));
+  if (from && from.isl) { const I = from.isl; pts.push(I.pos.clone()); if (ISL[to] && ISL[to].isl === I) { pts.push(...hallIn(ISL[to])); return pts; } pts.push(...isletPath(I, false)); posA = I.a; onOuter = true; }
   else if (from) { posA = from.a; pts.push(ringPt(posA, RO)); onOuter = true; }
   else { posA = curA; pts.push(ringPt(curA, RW)); onOuter = false; }
   if (to === "C") {
@@ -991,7 +1042,7 @@ function route(to) {
     if (!onOuter) { const s = nearestSpoke(ta); pts.push(...arc(posA, s, RW), ringPt(s, RO)); posA = s; }
     pts.push(...arc(posA, ta, RO));
     if (d.isl) pts.push(...isletPath(d.isl, true));
-    pts.push(isleSpot(d));
+    pts.push(...hallIn(d));
   }
   return pts;
 }
@@ -1179,8 +1230,8 @@ function cowRemind() {
   closeSheet(true);
   setSel("todo");
   focusOn(SPOT.todo.pos, innerWidth < 600 ? 3 : 2.6);
-  walkTo("C", () => stamp("todo", "截止日提醒"));
-  cowMsg = "截止提醒！"; centerObj.todo.userData.sign.userData.redraw();
+  walkTo("C", () => stamp("todo", "啊牛提醒"));
+  cowMsg = "啊牛提醒！"; centerObj.todo.userData.sign.userData.redraw();
   const g = centerObj.todo, stars = [];
   if (!RM) for (let k = 0; k < 14; k++) {
     const s = mesh(new THREE.OctahedronGeometry(0.12 + Math.random() * 0.08, 0), mat(k % 2 ? 0xffe27a : 0xffffff, { emissive: k % 2 ? 0xffc93c : 0xffffff, emissiveIntensity: 0.6 }), 0, 2, 0, g);
@@ -1293,7 +1344,7 @@ function markRead(list) { let ch = false; list.forEach((a) => { if (!read.includ
 
 // 島內分區：相對期限的提醒（例如活動結束後 2 週內），附要準備的文件與下載按鈕
 function sectionsHtml(d) {
-  return (d.sections || []).map((s) => `<div class="sec"><h4>${E(s.title)}</h4><ul class="items">${(s.rules || []).map((r) => `<li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(r.title)}${r.note ? `<small>${E(r.note)}</small>` : ""}</span><span class="meta warn">${E(r.when || "")}</span><span class="chev">›</span></button>
+  return (d.sections || []).map((s, k) => `<div class="sec" id="i-s${k}"><h4>${E(s.title)}</h4><ul class="items">${(s.rules || []).map((r) => `<li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(r.title)}${r.note ? `<small>${E(r.note)}</small>` : ""}</span><span class="meta warn">${E(r.when || "")}</span><span class="chev">›</span></button>
     <div class="more">${r.files?.length ? `<p>${E(r.prep || "需準備：")}</p><ul class="files">${r.files.map((f) => `<li>${E(f)}</li>`).join("")}</ul>` : ""}${r.links?.length ? `<div class="acts">${r.links.map((l) => (l[1] ? `<a class="btn t" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>` : `<span class="btn g pend" aria-disabled="true">${E(l[0])}・連結待補</span>`)).join("")}</div>` : ""}</div></li>`).join("")}</ul></div>`).join("");
 }
 const sectionText = (d) => (d.sections || []).flatMap((s) => [s.title, ...(s.rules || []).flatMap((r) => [r.when, r.title, r.note, r.prep, ...(r.files || [])])]).filter(Boolean);
@@ -1301,19 +1352,28 @@ function renderIsle(d, keepScroll) {
   const dl = isleDl(d), news = isleNews(d), steps = d.guides.reduce((n, g) => n + g.steps.length, 0), duty = DUTY[d.key] || [];
   const mine = (r) => me.club && me.role === r;
   const st = $("sbody").scrollTop;
-  const html = `${head(d.icon, `HALL ${d.no} · ${E(d.key)}`, d.name)}
+  const top = `${head(d.icon, `HALL ${d.no} · ${E(d.key)}`, d.name)}
     <p class="lead">${E(d.lead || d.guides[0]?.title || d.tagline)}</p>
     <p class="quote">「${E(d.tagline)}」</p>
-    ${d.links?.length ? `<div class="acts">${d.links.map((l) => `<a class="btn big t ring" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}
+    ${d.links?.length ? `<div class="acts">${d.links.map((l) => `<a class="btn big t ring" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}`;
+  const foot = '<p class="foot">如有相關問題，請與課外組峮老師聯繫。</p>';
+  // 社團行政館：只放社團行政任務
+  if (d.tasks) {
+    showSheet("isle:" + d.key, `${top}<div class="tags">${stampTag("isle:" + d.key)}</div><div class="sec" id="i-tasks"><h4>社團行政任務</h4></div>${taskBlock()}${foot}`);
+    if (keepScroll) $("sbody").scrollTop = st;
+    return;
+  }
+  // 頂部跳轉按鈕（data.js 設 jump: true 的館）
+  const parts = [...(d.sections || []).map((x, k) => [`i-s${k}`, x.title]), ...(d.guides.length ? [["i-g", "攻略"]] : []), ["i-dl", "截止日"], ["i-news", "相關公告"], ["i-duty", "這一館在照顧誰"]];
+  const html = `${top}
+    ${d.jump ? `<div class="jump" role="navigation" aria-label="跳到這一頁的段落">${parts.map(([id, t]) => `<button class="btn g" type="button" data-jump="${id}">${E(t)}</button>`).join("")}</div>` : ""}
     <div class="tags"><span class="tag c" style="--c:${d.color}">${E(d.key)}</span>${d.sections?.length ? `<span class="tag">${d.sections.length} 個分區</span>` : `<span class="tag">${dl.length} 項截止</span>`}<span class="tag">${steps} 則攻略</span><span class="tag">${news.length} 則公告</span>${stampTag("isle:" + d.key)}</div>
-    ${d.tasks ? `<div class="sec" id="i-tasks"><h4>啊牛的任務提醒・社團行政任務</h4></div>${taskBlock()}` : ""}
-    ${d.guides.map((g) => `<div class="sec"><h4>${E(g.topic)}・攻略</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 則</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
     ${sectionsHtml(d)}
-    ${dl.length || !d.sections?.length ? `<div class="sec"><h4>截止日</h4>${dlItems(dl, false, true)}</div>` : ""}
-    ${!d.tasks && isleTodos(d).length ? `<div class="sec"><h4>${SEM_NAME[curSem()]}行政任務</h4>${todoItems(isleTodos(d))}</div>` : ""}
-    <div class="sec"><h4>相關公告</h4>${newsItems(news)}</div>
-    <div class="sec"><h4>這一館在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
-    <p class="foot">還有問題？請在辦公時間到中央的課外組詢問。</p>`;
+    ${d.guides.map((g, k) => `<div class="sec" ${k ? "" : 'id="i-g"'}><h4>${E(g.topic)}・攻略</h4><ul class="items"><li class="item" style="--c:${d.color}"><button type="button" aria-expanded="true"><span class="dot"></span><span class="nm">${E(g.title)}<small>${E(g.summary)}</small></span><span class="meta">${g.steps.length} 則</span><span class="chev">›</span></button><div class="more"><ol>${g.steps.map((s) => `<li>${E(s)}</li>`).join("")}</ol>${g.links?.length ? `<div class="acts">${g.links.map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div>` : ""}</div></li></ul></div>`).join("")}
+    <div class="sec" id="i-dl"><h4>截止日</h4>${dlItems(dl, false, true)}</div>
+    <div class="sec" id="i-news"><h4>相關公告</h4>${newsItems(news)}</div>
+    <div class="sec" id="i-duty"><h4>這一館在照顧誰</h4><ul class="items">${duty.map((r) => `<li class="item ${mine(r) ? "hl" : ""}"><div class="row"><span class="dot"></span><span class="nm">${E(r)}${mine(r) ? `<small>就是你！${E(me.club)}的${E(r)}</small>` : ""}</span><span></span><span></span></div></li>`).join("")}</ul></div>
+    ${foot}`;
   showSheet("isle:" + d.key, html);
   if (keepScroll) $("sbody").scrollTop = st;
   markRead(news);
@@ -1337,17 +1397,19 @@ function renderOffice() {
       <button class="btn g" type="button" data-jump="o-hours">🕘 本週辦公時間</button>
       <button class="btn g" type="button" data-jump="o-map">📍 位置與導航</button>
       <button class="btn g" type="button" data-jump="o-tips">💡 洽公小提醒</button>
+      <button class="btn g" type="button" data-jump="o-forms">📝 常用表單</button>
       <button class="btn g" type="button" data-jump="o-isles">🏛 各行政館</button>
     </div>
     <div class="tags">${stampTag("office")}</div>
     <div class="sec" id="o-hours"><h4>本週辦公時間</h4><table class="week"><tbody>${rows}</tbody></table></div>
     <div class="sec" id="o-map"><h4>位置與導航</h4><p class="quote">${E(D.office.locationNote)}</p><div class="acts">${D.office.mapUrl ? `<a class="btn t" target="_blank" rel="noopener" href="${E(D.office.mapUrl)}">開啟 Google 地圖導航</a>` : ""}<a class="btn g" target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站 ↗</a></div>${D.office.mapUrl ? "" : '<p class="foot">Google 地圖導航建置中。</p>'}</div>
     <div class="sec" id="o-tips"><h4>洽公小提醒</h4><ul class="items">${D.office.tips.map((t) => `<li class="item"><div class="row"><span class="dot"></span><span class="nm">${E(t)}</span><span></span><span></span></div></li>`).join("")}</ul></div>
+    <div class="sec" id="o-forms"><h4>常用表單</h4><div class="acts">${(D.office.forms || []).map((l) => `<a class="btn g" target="_blank" rel="noopener" href="${E(l[1])}">${E(l[0])} ↗</a>`).join("")}</div></div>
     <div class="sec" id="o-isles"><h4>${ISL.length} 座行政館</h4>${placeItems()}</div>`;
   showSheet("office", html);
 }
 function renderDeadlines(view = "todo") {
-  const html = `${head("🐮", "SECRETARY · 小秘書啊牛", "截止日提醒")}
+  const html = `${head("🐮", "SECRETARY · 小秘書啊牛", "啊牛提醒")}
     <p class="lead">哞～我是小秘書啊牛！所有分類快到期的截止日都幫你記著。</p>
     <p class="quote">7 天內轉黃、3 天內轉紅，對應的館上方也會浮出菱形提醒。</p>
     <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag(view)}</div>
@@ -1386,7 +1448,7 @@ function renderNews() {
 function renderLinks() {
   const row = (t, s, href, ext = true) => `<li class="item"><a class="row" style="text-decoration:none;color:inherit" href="${E(href)}" ${ext ? 'target="_blank" rel="noopener"' : ""}><span class="dot"></span><span class="nm">${t}<small>${s}</small></span><span class="meta">${ext ? "↗" : ""}</span><span class="chev">›</span></a></li>`;
   const html = `${head("⛵", "HARBOR · 出航", "出航碼頭")}<p class="lead">從碼頭出航，前往課外組的其他平台。</p><div class="tags">${stampTag("links")}</div>
-    <div class="sec"><h4>常用連結</h4><ul class="items">${row("課外組網站", "activity.thu.edu.tw", D.links.office)}${row("體能性社團各項作業期程", "整學期的正式時程表", D.links.schedule)}${row("體能性社團 Linktree", "表單、雲端資料夾與常用連結", D.links.linktree)}${row("本站文字版", "不顯示 3D，內容相同", "list.html", false)}</ul></div>`;
+    <div class="sec"><h4>常用連結</h4><ul class="items">${row("課外組網站", "activity.thu.edu.tw", D.links.office)}${row("體能性社團 Linktree", "表單、雲端資料夾與常用連結", D.links.linktree)}${row("東海空間網場地借用", "space.thu.edu.tw", "https://space.thu.edu.tw/")}${row("推廣部場地借用", "中正堂、銘賢堂需要再登記推廣部借用網", "https://thurent.thu.edu.tw/borrow.php")}</ul></div>`;
   showSheet("links", html);
 }
 const isleHits = (d, q) => d.name.includes(q) || sectionText(d).some((s) => s.includes(q)) || ["s1", "s2"].some((sem) => todoList(sem).some((x) => x.island === d.key && (x.title + (x.note || "")).includes(q))) || d.guides.some((g) => [g.topic, g.title, g.summary, ...g.steps].some((s) => s.includes(q))) || isleDl(d).some((x) => (x.title + (x.detail || "")).includes(q)) || isleNews(d).some((a) => (a.title + (a.body || "")).includes(q));
@@ -1452,14 +1514,18 @@ function applyMe(redraw) {
 function shoot() {
   renderer.render(scene, camera); // 同一個 tick 內讀取畫面，不需要 preserveDrawingBuffer
   const src = renderer.domElement, W = Math.min(1200, src.width), H = Math.round((src.height / src.width) * W);
-  const cv = document.createElement("canvas"); cv.width = W; cv.height = H + 150;
+  const cv = document.createElement("canvas"); cv.width = W; cv.height = H + 200;
   const c = cv.getContext("2d");
   c.drawImage(src, 0, 0, W, H);
-  c.fillStyle = "#FBF6EE"; c.fillRect(0, H, W, 150);
-  c.fillStyle = "#C8623F"; c.font = "900 54px Archivo, sans-serif"; c.fillText("CLUB ON.", 40, H + 72);
-  c.fillStyle = "#2A211C"; c.font = `900 34px ${FONT}`; c.fillText(`${me.name || "我"}・${me.club || "體能性社團"}・${me.role}`, 40, H + 124);
-  c.textAlign = "right"; c.fillStyle = "#7A6B60"; c.font = `700 24px ${FONT}`;
-  const p = tw(); c.fillText(`東海體能社團行政群島・集章 ${stampCount()}/${STAMPS.length}・${p.y}/${p.m}/${p.d}`, W - 40, H + 124);
+  c.fillStyle = "#FBF6EE"; c.fillRect(0, H, W, 200);
+  // 三行由上往下排，文字太長時自動縮小，不會互相重疊
+  const fit = (txt, size, weight, max) => { let z = size; do { c.font = `${weight} ${z}px ${FONT}`; z -= 2; } while (c.measureText(txt).width > max && z > 12); };
+  const p = tw();
+  c.fillStyle = "#C8623F"; c.font = "900 50px Archivo, sans-serif"; c.fillText("CLUB ON.", 40, H + 64);
+  const who = `${me.name || "我"}・${me.club || "體能性社團"}・${me.role}`;
+  c.fillStyle = "#2A211C"; fit(who, 34, 900, W - 80); c.fillText(who, 40, H + 120);
+  const sub = `東海體能社團行政群島・集章 ${stampCount()}/${STAMPS.length}・${p.y}/${p.m}/${p.d}`;
+  c.fillStyle = "#7A6B60"; fit(sub, 24, 700, W - 80); c.fillText(sub, 40, H + 166);
   lastPhoto = cv.toDataURL("image/png");
   renderChar();
 }
@@ -1632,6 +1698,7 @@ function loop(now) {
     flag.rotation.y = Math.sin(t * 2) * 0.15;
     ISL.forEach((d) => { const u = d.build.userData, s = u.spin; if (s) s.rotation.y += dt * 1.2;
       (u.bob || []).forEach((m, k) => (m.position.y = 0.15 + (u.jump ? Math.abs(Math.sin(t * 5 + k * 1.3)) * 0.28 : Math.abs(Math.sin(t * 2 + k)) * 0.03)));
+      (u.floaty || []).forEach((m) => (m.position.y = m.userData.y0 + Math.sin(t * 2.4) * 0.12));
       (u.papers || []).forEach((p) => { const q = (t * 0.45 + p.userData.k / 3) % 1; p.position.set(-0.45 + q * 1.4, 1.1 + Math.sin(q * Math.PI) * 0.9, 0.05); p.rotation.set(q * 6, q * 3, 0); }); d.marker.rotation.y += dt * 1.5; d.marker.position.y = d.build.userData.h + 1.6 + Math.sin(t * 2.4 + d.i) * 0.15; });
     newsMarker.rotation.y += dt * 1.5;
     hikers.forEach(({ h, q0, m }) => { const q = (t * 0.035 + q0) % 1, a = q * Math.PI * 5, y = q * m.H * 0.86, r = m.R * (1 - y / m.H) + 0.12; h.position.set(Math.cos(a) * r, y + Math.abs(Math.sin(t * 8 + q0 * 9)) * 0.04, Math.sin(a) * r); h.rotation.y = -a; });
@@ -1680,7 +1747,7 @@ async function start() {
     LS.set("intro", true);
     talk("HELLO, 幹部", [
       ["每一館是一類行政", `島上有 ${ISL.length} 座行政館，各是一種行政分類：${ISL.map((d) => d.key).join("、")}。點一棟建築，或用右側清單探索每一類的截止日、流程與公告。`],
-      ["中心是課外組", `島的中央是課外組，旁邊有路思義教堂、公告欄、小秘書啊牛（截止日提醒）和碼頭。社團行政任務放在社團行政館，完成可以打勾。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
+      ["中心是課外組", `島的中央是課外組，旁邊有路思義教堂、公告欄、小秘書啊牛（啊牛提醒：各項截止日）和碼頭。社團行政任務放在社團行政館，完成可以打勾。外圈道路連到 ${ISL.length} 座行政館，有問題就回來。`],
       ["提醒會浮在館上", "館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。訂閱社團行事曆，手機也會提醒你。"],
       ["想要的話，也可以建立角色", "不建立也能直接逛。想讓角色帶著社團道具、看到自己職位要注意的館，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
     ]);

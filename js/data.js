@@ -75,6 +75,13 @@ var SITE_DATA = {
     closedDates: {},
     // 補班日（週末上班），格式："2027-01-23"
     workdays: [],
+    // 課外組資訊卡上的「常用表單」按鈕
+    forms: [
+      ["校外競賽填報表單", "https://form2.thu.edu.tw/4825104"],
+      ["社團校內指導老師聘任申請表", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=8"],
+      ["校外指導老師法規", "https://activity.thu.edu.tw/web/admissions/detail.php?cid=1&id=9"],
+      ["指導老師相關表單", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=8"],
+    ],
     tips: [
       "送件前先確認文件已由社長與指導老師簽名，並與峮老師約時間唷！",
       "12:00–13:30 為午休時間，請避開這段時間洽公。",
@@ -86,7 +93,8 @@ var SITE_DATA = {
    * 群島：每個行政分類是一座島，中心島是課外組
    * key 要和截止日的 category、公告的 tag、資訊站的 island 一致
    * islet：填同一個名稱的分類會放到本島旁邊的獨立小島（以橋相連），例如場地借用、器材借用都在「場地器材島」
- * building 可用：hall、track、tent、bank、gym、aid、store、podium、house
+ * building 可用：hall、track、tent、bank、gym、aid、store、podium、house、handover、inventory
+   * lead：資訊卡上方的問題；links：最醒目的按鈕；jump: true 會在上方加上跳到各段落的按鈕
    * --------------------------------------------------------- */
   islands: [
     {
@@ -96,7 +104,7 @@ var SITE_DATA = {
       links: [["115-1 期初會議資料", "https://reurl.cc/8YYKp4"]],
     },
     {
-      key: "行政", name: "社團行政館", en: "Club Administration Hall", icon: "📋", color: "#6E8FB5", building: "track", tasks: true, // tasks：社團行政任務（打勾清單）放在這一館
+      key: "行政", name: "社團行政館", en: "Club Administration Hall", islet: "行政島", icon: "📋", color: "#6E8FB5", building: "track", tasks: true, // tasks：社團行政任務（打勾清單）放在這一館
       lead: "社團有哪些行政事務？",
       tagline: "基本資料表繳交、幹部及社員名冊登錄等，館內記載社團行政任務，完成後可以打勾唷！",
     },
@@ -104,10 +112,13 @@ var SITE_DATA = {
       key: "活動", name: "社團活動館", en: "Club Activity Hall", islet: "活動島", icon: "⛺", color: "#D98B4E", building: "tent",
       lead: "辦活動多久要送出活動公文？",
       tagline: "活動前2週要完成場地借用及將活動公文送到課外組給峮老師。",
-      links: [["活動公文操作說明", "https://t365-my.sharepoint.com/:b:/g/personal/yccchiang_tdrive_thu_edu_tw/IQARwEaENFzHRKtlo05rcNa5AeKQeHE1Oxh7W4pjIA7qHok?e=3BMwrG"]],
+      links: [
+        ["活動公文操作說明", "https://t365-my.sharepoint.com/:b:/g/personal/yccchiang_tdrive_thu_edu_tw/IQARwEaENFzHRKtlo05rcNa5AeKQeHE1Oxh7W4pjIA7qHok?e=3BMwrG"],
+        ["臨時機車通行證申請", "https://carpass.stusrv.thu.edu.tw/"],
+      ],
     },
     {
-      key: "經費", name: "經費館", en: "Club Funding Hall", icon: "💰", color: "#D9B24E", building: "bank", tagline: "補助申請與核銷，收據一張都不能錯。",
+      key: "經費", name: "經費館", en: "Club Funding Hall", icon: "💰", color: "#D9B24E", building: "bank", jump: true, tagline: "補助申請與核銷，收據一張都不能錯。",
       // sections：島內分區；rules 是「相對期限」的提醒（例如活動結束後 2 週內），沒有固定日期所以不倒數
       // prep + files：要先準備給承辦老師的電子檔
       sections: [
@@ -131,17 +142,35 @@ var SITE_DATA = {
         {
           title: "校外指導老師鐘點費補助",
           rules: [{
-            when: "社課結束後 1 週內", title: "校外指導老師提交社課記錄表",
-            note: "需確認照片是否有拍攝到指導老師及社員，並詳述授課說明。",
-            links: [["社團社課授課紀錄表 文件下載", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=2"]],
+            when: "社課結束後 1 週內", title: "繳交社課記錄表",
+            links: [["文件下載", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=2"]],
           }],
         },
       ],
     },
-    { key: "場地", name: "場地借用館", en: "Venue Booking Hall", islet: "場地器材島", icon: "🏟", color: "#6FA38C", building: "gym", tagline: "練習場地借用與使用規範。" },
+    {
+      key: "場地", name: "場地借用館", en: "Venue Booking Hall", islet: "場地器材島", icon: "🏟", color: "#6FA38C", building: "gym", tagline: "練習場地借用與使用規範。",
+      links: [
+        ["場地借用說明", "https://activity.thu.edu.tw/web/page/page.php?lang=zh_tw&scid=7&sid=6"],
+        ["北側會議室借用系統", "http://student-space.thu.edu.tw/?fbclid=IwAR21sDWMpYoUxx5JJe1_3YS5UR_PiqMbXC71a8xrgMvupzeLSTQBpW0yHyA"],
+        ["東海空間網場地借用", "https://space.thu.edu.tw/"],
+        ["推廣部場地借用（中正堂、銘賢堂）", "https://thurent.thu.edu.tw/borrow.php"],
+      ],
+    },
     { key: "安全", name: "活動安全館", en: "Activity Safety Hall", islet: "活動島", icon: "⛑", color: "#C8623F", building: "aid", tagline: "保險、急救、校外活動安全，體能性社團最重要的事。" },
-    { key: "器材", name: "器材借用館", en: "Equipment Loan Hall", islet: "場地器材島", icon: "🏐", color: "#9C83B5", building: "store", tagline: "器材清冊、借用與保管。" },
-    { key: "評鑑", name: "評鑑館", en: "Club Evaluation Hall", icon: "🏆", color: "#C97A8F", building: "podium", tagline: "成果與評鑑資料，平常就要存。" },
+    {
+      key: "器材", name: "器材借用館", en: "Equipment Loan Hall", islet: "場地器材島", icon: "🎤", color: "#9C83B5", building: "store",
+      lead: "共用器材怎麼借？", tagline: "舞台、音響等課外組共用器材，領取前 3–14 天上網登記。",
+      links: [["器材借用系統", "https://oauth.thu.edu.tw/v1/wp-login.php?redirect_to=%2Fv1%2Findex.php%2Foauth%2Fauthorize%2F%3Fresponse_type%3Dcode%26client_id%3DRvmPMlzSklqta9ZzHt6JnEdkrTHWbq"]],
+    },
+    {
+      key: "評鑑", name: "評鑑館", en: "Club Evaluation Hall", islet: "行政島", icon: "🏆", color: "#C97A8F", building: "podium",
+      lead: "社團評鑑不只是「資料整理」",
+      tagline: "更是回顧社團組織運作、活動執行及成果展現的機會！評鑑成績是由定期評分、平時評分及年度評鑑加總而成。",
+      links: [["說明會簡報", "https://activity.thu.edu.tw/upload/activity/downloads_upload/1790143799-115%E5%B9%B4%E5%BA%A6%E5%AD%B8%E7%94%9F%E7%A4%BE%E5%9C%98%E8%A9%95%E9%91%91%E8%AA%AA%E6%98%8E%E6%9C%83%E7%B0%A1%E5%A0%B1.pdf"]],
+    },
+    { key: "交接", name: "幹部交接館", en: "Officer Handover Hall", islet: "行政島", icon: "🤝", color: "#7FA6A0", building: "handover", lead: "新舊幹部怎麼交接？", tagline: "帳冊、器材、帳號密碼、未完成事項，一次交接清楚。" },
+    { key: "財產", name: "財產盤點館", en: "Property Inventory Hall", islet: "行政島", icon: "📦", color: "#B58A5E", building: "inventory", lead: "社團器材借用與保管", tagline: "財產盤點於每年 5 月上傳至指定表單。", links: [["財產盤點上傳表單", "https://form2.thu.edu.tw/5282503"]] },
   ],
 
   /* ---------------------------------------------------------
@@ -179,7 +208,7 @@ var SITE_DATA = {
     { name: "競技啦啦社", prop: "pompom" },
     { name: "運動防護社", prop: "kit" },
   ],
-  roles: ["社長", "副社長", "財務", "活動長", "器材長", "公關", "幹部", "社員", "輔導老師"],
+  roles: ["社長", "副社長", "文書", "財務", "器材", "活動", "幹部", "社員", "輔導老師"],
 
   /* ---------------------------------------------------------
    * 截止日：會依日期自動排序、倒數，並可加入行事曆
@@ -221,11 +250,17 @@ var SITE_DATA = {
     // 格式：{ id, date（可省略，YYYY-MM-DD）, pinned, tag（對應島的 key，例如 "經費"）, title, body（可省略）, link（課外組公告網址）}
     // 列表依這裡的順序顯示（置頂的排最前面），最新的請加在最上面
     // 公告有截止日時加上 due（同截止日格式），會自動出現在截止日提醒；可另寫 dueTitle 作為截止日提醒上的名稱
-    // 一則公告有好幾個期限時改用 dues: [{ due, title, link（可省略）}, ...]
+    // 一則公告有好幾個期限時改用 dues: [{ due, title, link（可省略）}, ...]；dueDetail 只顯示在截止日提醒
+    {
+      id: "a-115-1813", tag: "評鑑",
+      title: "東海大學115年度學生社團評鑑實施分期時程公告",
+      link: "https://activity.thu.edu.tw/web/news/detail.php?cid=&id=1813",
+    },
     {
       id: "a-1151-1866", tag: "評鑑",
       title: "東海大學 115年度學生社團年度評鑑公告",
-      body: "評鑑日 11/21（六），地點：中正紀念堂大廳（舞台前）及社科院 SS101、SS102、SS108、SS109。報名社團 09:15–09:45 至中正紀念堂大廳報到並參加開幕式；下午場次簡報的社團 12:20–12:50 至各簡報教室報到；若中途離開，請於表定時間前 10 分鐘回到簡報教室，唱名未到改排該場次最後一組。展演結束後請指派至少 1 人於 15:30 前回中正紀念堂大廳參加評審講評、成績公佈及頒獎。展演方式為簡報、影片或實際展演，每社 5 分鐘＋評審問答 2 分鐘，內容範圍 114/11/1–115/10/31。當天請攜帶檔案隨身碟，除檔案無法開啟外，現場不接受更換檔案。展演規則、評分說明、展演教室及獎勵方式詳見公告附件第 2–4 頁。",
+      // dueDetail：只顯示在截止日提醒，公告欄只顯示標題
+      dueDetail: "評鑑日 11/21（六），地點：中正紀念堂大廳（舞台前）及社科院 SS101、SS102、SS108、SS109。報名社團 09:15–09:45 至中正紀念堂大廳報到並參加開幕式；下午場次簡報的社團 12:20–12:50 至各簡報教室報到；若中途離開，請於表定時間前 10 分鐘回到簡報教室，唱名未到改排該場次最後一組。展演結束後請指派至少 1 人於 15:30 前回中正紀念堂大廳參加評審講評、成績公佈及頒獎。展演方式為簡報、影片或實際展演，每社 5 分鐘＋評審問答 2 分鐘，內容範圍 114/11/1–115/10/31。當天請攜帶檔案隨身碟，除檔案無法開啟外，現場不接受更換檔案。展演規則、評分說明、展演教室及獎勵方式詳見公告附件第 2–4 頁。",
       link: "https://activity.thu.edu.tw/web/news/detail.php?cid=1&id=1866",
       dues: [
         { due: "2026-10-26 10:00", title: "年度評鑑線上報名", link: "https://ithu.tw/Y9BNr" },
@@ -271,18 +306,18 @@ var SITE_DATA = {
       {
         id: "t-contest", island: "評鑑", title: "填報校外競賽參與狀況",
         note: "需上傳獲獎狀況及照片至指定表單。",
-        links: [["校外競賽填報表單", ""]],
+        links: [["校外競賽填報表單", "https://form2.thu.edu.tw/4825104"]],
       },
     ],
     s1: [
       {
         id: "t1-advisor-in", island: "行政", title: "校內指導老師申請", note: "",
-        links: [["課外組網站公告", "https://activity.thu.edu.tw/"], ["相關文件", ""]],
+        links: [["社團校內指導老師聘任申請表", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=8"]],
       },
       {
         id: "t1-advisor-out", island: "行政", title: "校外指導老師申請",
         note: "各社團須於社課結束後繳交社課記錄表。",
-        links: [["法規及相關文件", ""]],
+        links: [["校外指導老師法規", "https://activity.thu.edu.tw/web/admissions/detail.php?cid=1&id=9"], ["相關表單", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=8"]],
       },
       {
         id: "t1-roster", island: "行政", title: "社員及幹部名單登錄", note: "",
@@ -301,14 +336,14 @@ var SITE_DATA = {
       {
         id: "t2-advisor-out", island: "行政", title: "校外指導老師申請",
         note: "已於第一學期申請者，僅需繳交授課大綱；欲新聘任者需繳交完整文件。各社團須於社課結束後繳交社課記錄表。",
-        links: [["法規及相關文件", ""]],
+        links: [["校外指導老師法規", "https://activity.thu.edu.tw/web/admissions/detail.php?cid=1&id=9"], ["相關表單", "https://activity.thu.edu.tw/web/downloads/list.php?lang=zh_tw&cid=8"]],
       },
       {
         id: "t2-roster", island: "行政", title: "社員及幹部名單更新", note: "",
         links: [["操作說明", "https://t365-my.sharepoint.com/:b:/g/personal/yccchiang_tdrive_thu_edu_tw/IQARwEaENFzHRKtlo05rcNa5AeKQeHE1Oxh7W4pjIA7qHok?e=3BMwrG"]],
       },
       {
-        id: "t2-inventory", island: "器材", when: "每年 5 月", title: "財產盤點",
+        id: "t2-inventory", island: "財產", when: "每年 5 月", title: "財產盤點",
         note: "課外組峮老師提供盤點表件，請各社團將盤點結果上傳至表單。",
         links: [["盤點結果上傳表單", "https://form2.thu.edu.tw/5282503"]],
       },
@@ -349,7 +384,7 @@ var SITE_DATA = {
     },
     {
       id: "g-handover",
-      island: "行政",
+      island: "交接",
       topic: "幹部交接",
       title: "新舊幹部怎麼交接？",
       summary: "帳冊、器材、帳號密碼、未完成事項，一次交接清楚。",
@@ -396,9 +431,14 @@ var SITE_DATA = {
       steps: [
         "確認場地管理單位與開放時段。",
         "依截止日送出借用申請。",
-        "使用後恢復原狀並關閉燈光、冷氣。",
+        "請遵守場地使用規範，使用完畢後落實場復作業並關閉燈光、冷氣。",
       ],
-      links: [],
+      links: [
+        ["場地借用說明", "https://activity.thu.edu.tw/web/page/page.php?lang=zh_tw&scid=7&sid=6"],
+        ["北側會議室借用系統", "http://student-space.thu.edu.tw/?fbclid=IwAR21sDWMpYoUxx5JJe1_3YS5UR_PiqMbXC71a8xrgMvupzeLSTQBpW0yHyA"],
+        ["東海空間網場地借用", "https://space.thu.edu.tw/"],
+        ["推廣部場地借用（中正堂、銘賢堂需要再登記推廣部借用網）", "https://thurent.thu.edu.tw/borrow.php"],
+      ],
     },
     {
       id: "g-safety",
@@ -417,28 +457,47 @@ var SITE_DATA = {
     {
       id: "g-equipment",
       island: "器材",
-      topic: "器材管理",
-      title: "社團器材借用與保管",
-      summary: "建立器材清冊，借出歸還都有紀錄。",
+      topic: "器材借用",
+      title: "共用器材借用申請",
+      summary: "舞台、音響等共用器材，請於領取時間前 3–14 天上網登記。",
       steps: [
-        "每學期初盤點器材，更新清冊與照片。",
-        "借出歸還登記日期與借用人。",
-        "損壞器材拍照記錄，交接時一併說明。",
+        "請各社團於領取時間前 3–14 天至器材借用系統網頁登記。",
+        "器材室開放時間：週一至週五 08:20–11:20、14:00–16:00。",
+        "領取器材前，社長需於社團資訊系統中完成此活動公文申請。",
+        "借用器材者請務必加入課外共用器材借用官方 LINE@（ID：@646ybuwv），以利即時溝通及聯繫器材借用相關事項。",
       ],
-      links: [],
+      links: [
+        ["課外組網站公告", "https://activity.thu.edu.tw/web/page/page.php?lang=zh_tw&scid=9&sid=11"],
+        ["器材借用系統", "https://oauth.thu.edu.tw/v1/wp-login.php?redirect_to=%2Fv1%2Findex.php%2Foauth%2Fauthorize%2F%3Fresponse_type%3Dcode%26client_id%3DRvmPMlzSklqta9ZzHt6JnEdkrTHWbq"],
+      ],
+    },
+    {
+      id: "g-property",
+      island: "財產",
+      topic: "財產盤點",
+      title: "社團器材借用與保管",
+      summary: "財產盤點於每年 5 月上傳至指定表單。",
+      steps: [
+        "建立器材清冊，借出歸還都有紀錄。",
+        "每學期初盤點器材，更新清冊、照片及維護說明。",
+        "借出歸還登記日期與借用人。",
+        "訂定器材報廢及維修流程，損壞器材拍照記錄，交接時一併說明。",
+        "學校補助之器材報廢請向峮老師申請，請勿自行報廢。",
+      ],
+      links: [["財產盤點上傳表單", "https://form2.thu.edu.tw/5282503"]],
     },
     {
       id: "g-review",
       island: "評鑑",
       topic: "社團評鑑",
-      title: "評鑑資料平常就要存",
-      summary: "照片、簽到表、成果報告，每次活動後就整理。",
+      title: "評鑑資料建置",
+      summary: "雲端資料夾依規定分類，連結記得開檢視權限。",
       steps: [
-        "建立共用雲端資料夾，依學期與活動分類。",
-        "每次活動後當週上傳照片與簽到表。",
-        "期末依評鑑格式彙整成果。",
+        "建立雲端資料夾，依規定進行分類，雲端連結繳交（記得要開檢視權限唷！）。",
+        "第二層資料請建置「組織運作」、「資源管理」、「規劃與執行」、「特色與績效」，可參考資料夾建置指引。",
+        "每年 9–10 月都會辦理評鑑攻略課程，請留意公告並記得報名參加唷！",
       ],
-      links: [],
+      links: [["雲端連結繳交", "https://forms.gle/5tReoFjPnz9EaLBH6"], ["資料夾建置指引", "https://ithu.tw/DSAus"]],
     },
   ],
 
@@ -448,12 +507,11 @@ var SITE_DATA = {
   onboarding: [
     "加入體能性社團幹部 LINE 社群",
     "把本站加到手機主畫面",
-    "把全部截止日加入自己的行事曆",
-    "到課外組認識承辦老師（記得看辦公時間）",
-    "完成新任幹部名冊繳交",
-    "與上一屆完成器材與帳冊點交",
-    "確認本學期練習場地借用",
-    "確認社員保險與校外活動流程",
+    "找到啊牛，並留意各項任務截止日",
+    "完成社團基本資料表並繳交給課外組峮老師",
+    "與上一屆完成器材與帳冊點交，並繳交移交清冊",
+    "確認本學期社課及活動場地借用",
+    "確認校外活動（含社課）社員保險與校外活動流程",
   ],
 };
 
@@ -465,7 +523,7 @@ SITE_DATA.allDeadlines = function () {
     if (a.due) list.unshift({ due: a.due, title: a.dueTitle });
     list.forEach(function (x, i) {
       fromNews.push({ id: "d-" + a.id + (i ? "-" + i : ""), title: x.title || a.title, due: x.due, category: a.tag || "",
-        detail: a.body || "公告欄：" + a.title, link: x.link || a.link || "", fromNews: true });
+        detail: a.dueDetail || a.body || "公告欄：" + a.title, link: x.link || a.link || "", fromNews: true });
     });
   });
   return SITE_DATA.deadlines.concat(fromNews);
