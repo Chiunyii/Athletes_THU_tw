@@ -37,9 +37,18 @@ const toMin = (s) => { const [h, m] = s.split(":"); return +h * 60 + +m; };
 const HOLIDAYS = Object.assign({}, D.office.holidays || {}, D.office.closedDates || {});
 const WORKDAYS = new Set(D.office.workdays || []);
 const ymd = (p) => `${p.y}-${pad2(p.m)}-${pad2(p.d)}`;
-const dayInfo = (date) => { const p = tw(date), k = ymd(p), name = HOLIDAYS[k];
-  const open = WORKDAYS.has(k) || (!name && D.office.hours.days.includes(p.wd));
-  return { p, key: k, open, holiday: !WORKDAYS.has(k) && name ? name : "" }; };
+// 颱風假：GitHub 每 30 分鐘抓人事行政總處的臺中市停班公告，存成 typhoon.json（half：pm 下午停班、am 上午停班）
+const TYPHOON = {};
+const dayInfo = (date) => { const p = tw(date), k = ymd(p), ty = TYPHOON[k];
+  if (ty && !ty.half) return { p, key: k, open: false, holiday: ty.label || "颱風假", typhoon: ty };
+  const name = HOLIDAYS[k], open = WORKDAYS.has(k) || (!name && D.office.hours.days.includes(p.wd));
+  return { p, key: k, open, holiday: !WORKDAYS.has(k) && name ? name : "", typhoon: open && ty ? ty : null }; };
+// 半天颱風假時，只留下有上班的那半天時段
+const daySlots = (di) => D.office.hours.slots.filter((s) => !di.typhoon || (di.typhoon.half === "pm" ? toMin(s[0]) < 720 : toMin(s[0]) >= 720));
+async function loadTyphoon() {
+  if (!D.office.typhoonUrl) return;
+  try { const r = await fetch(D.office.typhoonUrl + "?t=" + Math.floor(Date.now() / 3e5), { cache: "no-store" }); if (r.ok) Object.assign(TYPHOON, (await r.json()).days || {}); } catch {}
+}
 // 正式網站上自動抓最新的政府行政機關辦公日曆（當年與下一年）；抓不到就用 data.js 裡的清單
 async function loadHolidays() {
   const y = tw().y;
@@ -56,16 +65,17 @@ async function loadHolidays() {
   }));
 }
 function officeStatus() {
-  const h = D.office.hours, now = new Date(), today = dayInfo(now), p = today.p, cur = p.h * 60 + p.min;
-  if (today.open) for (let i = 0; i < h.slots.length; i++) {
-    const s = toMin(h.slots[i][0]), e = toMin(h.slots[i][1]);
-    if (cur >= s && cur < e) return { open: true, short: "辦公中", text: `辦公中 · ${h.slots[i][1]} 前都有人` };
-    if (cur < s) return { open: false, short: i ? "午休中" : "尚未開門", text: `${i ? "午休中" : "尚未開始"} · ${h.slots[i][0]} 開始辦公` };
+  const h = D.office.hours, now = new Date(), today = dayInfo(now), p = today.p, cur = p.h * 60 + p.min, sl = daySlots(today);
+  const tyNote = today.typhoon ? `（颱風假：${today.typhoon.note}）` : "";
+  if (today.open) for (let i = 0; i < sl.length; i++) {
+    const s = toMin(sl[i][0]), e = toMin(sl[i][1]);
+    if (cur >= s && cur < e) return { open: true, short: "辦公中", text: `辦公中 · ${sl[i][1]} 前都有人${tyNote}` };
+    if (cur < s) return { open: false, short: i ? "午休中" : "尚未開門", text: `${i ? "午休中" : "尚未開始"} · ${sl[i][0]} 開始辦公${tyNote}` };
   }
-  const why = today.holiday ? `今天${today.holiday}不辦公` : today.open ? "下班了" : "今天不辦公";
+  const why = today.typhoon?.half ? `今天${today.typhoon.note}（颱風假）` : today.holiday ? `今天${today.holiday}不辦公` : today.open ? "下班了" : "今天不辦公";
   for (let k = 1; k <= 14; k++) {
     const nx = dayInfo(new Date(now.getTime() + k * 864e5));
-    if (nx.open) return { open: false, short: today.holiday ? "放假中" : "休息中", holiday: today.holiday, text: `${why} · ${k === 1 ? "明天" : `${nx.p.m}/${nx.p.d}（週${WEEK[nx.p.wd]}）`} ${h.slots[0][0]} 開始辦公` };
+    if (nx.open) return { open: false, short: today.typhoon ? "颱風假" : today.holiday ? "放假中" : "休息中", holiday: today.holiday, text: `${why} · ${k === 1 ? "明天" : `${nx.p.m}/${nx.p.d}（週${WEEK[nx.p.wd]}）`} ${h.slots[0][0]} 開始辦公` };
   }
   return { open: false, short: "休息中", text: "目前休息" };
 }
@@ -1615,12 +1625,12 @@ function renderOffice() {
   // 本週（週一到週日）的實際日期，國定假日與補假標示不辦公
   const now = new Date(), monday = new Date(now.getTime() - ((p.wd + 6) % 7) * 864e5);
   const rows = [0, 1, 2, 3, 4, 5, 6].map((k) => { const di = dayInfo(new Date(monday.getTime() + k * 864e5)), isToday = di.key === ymd(p);
-    return `<tr class="${isToday ? "today" : ""}"><td>${di.p.m}/${di.p.d}（${WEEK[di.p.wd]}）${isToday ? "今天" : ""}</td><td class="${di.open ? "" : "closed"}">${di.open ? slots : di.holiday ? `不辦公（${E(di.holiday)}）` : "不辦公"}</td></tr>`; }).join("");
+    return `<tr class="${isToday ? "today" : ""}"><td>${di.p.m}/${di.p.d}（${WEEK[di.p.wd]}）${isToday ? "今天" : ""}</td><td class="${di.open && !di.typhoon ? "" : "closed"}">${di.open ? (di.typhoon ? `${daySlots(di).map((s) => s.join("–")).join("、")}（颱風假：${E(di.typhoon.note)}）` : slots) : di.holiday ? `不辦公（${E(di.holiday)}）` : "不辦公"}</td></tr>`; }).join("");
   const unit = D.office.name.match(/^(\S+處)\s*(.+)$/); // 「學務處 課外活動暨學生發展組」拆成上方小字與標題
   const html = `${head("🏛", `CENTER 00 · ${unit ? unit[1] : "島嶼中心"}`, unit ? unit[2] : D.office.name)}
     <p class="lead">島上 ${ISL.length} 座行政館都有道路通到這裡，有問題就回來找我們。</p>
     <div class="bigst"><span class="lamp ${st.open ? "on" : "off"}"></span>${E(st.text)}</div>
-    <p class="hours">辦公時間：週一至週五 ${D.office.hours.slots.map((s) => s.join("–")).join("、")}（國定假日不辦公）</p>
+    <p class="hours">辦公時間：週一至週五 ${D.office.hours.slots.map((s) => s.join("–")).join("、")}（國定假日、臺中市颱風假不辦公）</p>
     <div class="jump" role="navigation" aria-label="跳到這一頁的段落">
       <button class="btn g" type="button" data-jump="o-hours">🕘 本週辦公時間</button>
       <button class="btn g" type="button" data-jump="o-map">📍 位置與導航</button>
@@ -1959,6 +1969,9 @@ async function start() {
   camera.zoom = RM ? homeZoom() : 0.62; camera.updateProjectionMatrix(); controls.update();
   refreshTimed();
   loadHolidays().then(refreshTimed);
+  const tyRefresh = () => { refreshTimed(); if (panelView === "office") { const y = $("sbody").scrollTop; renderOffice(); $("sbody").scrollTop = y; } };
+  loadTyphoon().then(tyRefresh);
+  setInterval(() => loadTyphoon().then(tyRefresh), 10 * 60000); // 每 10 分鐘重抓颱風假
   $("splash").classList.add("out");
   requestAnimationFrame(loop);
   setTimeout(() => flyTo(framed(HOME_C, homeZoom()), homeZoom(), 1600), 50);

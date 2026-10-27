@@ -435,8 +435,11 @@ footer a { color: var(--band-fg); }
   var HOLIDAYS = Object.assign({}, D.office.holidays || {}, D.office.closedDates || {});
   var WORKDAYS = (D.office.workdays || []).slice();
   function ymd(p) { return p.y + "-" + String(p.m).padStart(2, "0") + "-" + String(p.d).padStart(2, "0"); }
+  var TYPHOON = {}; // 臺中市颱風假（typhoon.json）；文字版只標示全天停班
   function dayInfo(date) {
-    var p = twParts(date), k = ymd(p), name = HOLIDAYS[k], isWork = WORKDAYS.indexOf(k) >= 0;
+    var p = twParts(date), k = ymd(p), ty = TYPHOON[k];
+    if (ty && !ty.half) return { p: p, key: k, open: false, holiday: "颱風假" };
+    var name = HOLIDAYS[k], isWork = WORKDAYS.indexOf(k) >= 0;
     return { p: p, key: k, open: isWork || (!name && D.office.hours.days.indexOf(p.wd) >= 0), holiday: !isWork && name ? name : "" };
   }
   function loadHolidays(done) {
@@ -707,6 +710,7 @@ footer a { color: var(--band-fg); }
 
   // ---------- 啟動 ----------
   loadHolidays(renderOffice);
+  if (D.office.typhoonUrl) fetch(D.office.typhoonUrl + "?t=" + Math.floor(Date.now() / 3e5), { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (j) { Object.assign(TYPHOON, j.days || {}); renderOffice(); }).catch(function () {});
   renderOffice(); renderDeadlines(); renderNews(""); renderGuides(); renderTodo(); renderTasks(); renderNotifyBtn(); checkNotify();
   setInterval(function () { renderOffice(); renderDeadlines(); }, 60000);
 })();

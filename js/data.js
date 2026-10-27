@@ -70,6 +70,8 @@ var SITE_DATA = {
       "2027-12-24": "補假",
       "2027-12-31": "補假",
     },
+    // 臺中市颱風假：由 GitHub 自動檢查（.github/workflows/typhoon.yml）寫入 typhoon.json，網站開啟時讀取
+    typhoonUrl: "https://raw.githubusercontent.com/Chiunyii/Athletes_THU_tw/main/typhoon.json",
     // 學校另外公告的停止辦公日（例如校慶補假、颱風停班），格式同上：{ "2026-11-20": "校慶補假" }
     closedDates: {},
     // 補班日（週末上班），格式："2027-01-23"
@@ -84,7 +86,7 @@ var SITE_DATA = {
     tips: [
       "送件前先確認文件已由社長與指導老師簽名，並與峮老師約時間唷！",
       "12:00–13:30 為午休時間，請避開這段時間洽公。",
-      "國定假日與學校行政休假日不辦公。",
+      "國定假日、學校行政休假日及臺中市政府宣布的颱風假不辦公。",
     ],
   },
 
