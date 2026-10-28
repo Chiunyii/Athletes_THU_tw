@@ -249,8 +249,8 @@ const cyl = (p, rt, rb, h, c, x, y, z, seg = 8) => mesh(new THREE.CylinderGeomet
 const cone = (p, r, h, c, x, y, z, seg = 6) => mesh(new THREE.ConeGeometry(r, h, seg), c, x, y + h / 2, z, p);
 const ball = (p, r, c, x, y, z, det = 0) => mesh(new THREE.IcosahedronGeometry(r, det), c, x, y, z, p);
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
-const FONT = '"Noto Sans TC", "PingFang TC", sans-serif';
-const MONO = '"Space Mono", ui-monospace, monospace';
+const FONT = '"Zen Maru Gothic", "Noto Sans TC", "PingFang TC", sans-serif'; // 3D 招牌字體，與社團島一致
+const MONO = FONT;
 function textPlane(w, h, draw) {
   const cv = document.createElement("canvas");
   const ppu = Math.min(384, 2048 / Math.max(w, h)); // 每單位 384px，放大看也清楚（上限 2048px）
@@ -1772,7 +1772,7 @@ function shoot() {
   // 三行由上往下排，文字太長時自動縮小，不會互相重疊
   const fit = (txt, size, weight, max) => { let z = size; do { c.font = `${weight} ${z}px ${FONT}`; z -= 2; } while (c.measureText(txt).width > max && z > 12); };
   const p = tw();
-  c.fillStyle = "#C8623F"; c.font = "900 50px Archivo, sans-serif"; c.fillText("CLUB ON.", 40, H + 64);
+  c.fillStyle = "#C8623F"; c.font = `900 50px ${FONT}`; c.fillText("CLUB ON.", 40, H + 64);
   const who = `${me.name || "我"}・${me.club || "體能性社團"}・${me.role}`;
   c.fillStyle = "#2A211C"; fit(who, 34, 900, W - 80); c.fillText(who, 40, H + 120);
   const sub = `東海體能社團行政群島・集章 ${stampCount()}/${STAMPS.length}・${p.y}/${p.m}/${p.d}`;
