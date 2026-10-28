@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#E6EADF">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@900&family=Zen+Maru+Gothic:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
 <style>
 /* Layout: 全螢幕 3D 群島；左上品牌卡、右側直排按鈕、底部（桌機為右側）資訊抽屜；引導與角色建立都是同一套奶油色卡片。
    視覺參考「HEART 政策島」：奶油底、赤陶色強調、鼠尾草綠的低多邊形地景、等寬字的編號眉標。單一亮色主題。 */
@@ -21,6 +21,7 @@
   /* 字體與社團島一致：標題、名牌、按鈕用 Zen Maru Gothic（圓體），內文用 Noto Sans TC */
   --f-disp: "Zen Maru Gothic", "Noto Sans TC", system-ui, sans-serif;
   --f-latin: var(--f-disp);
+  --f-logo: "Archivo", "Noto Sans TC", system-ui, sans-serif; /* 「CLUB ON.」標誌維持原字體 */
   --f-mono: var(--f-disp);
   --f-body: "Noto Sans TC", "Zen Maru Gothic", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
   --sl: max(12px, env(safe-area-inset-left, 0px)); --sr: max(12px, env(safe-area-inset-right, 0px));
@@ -57,7 +58,7 @@ a { color: var(--terra); }
 
 /* 品牌卡 */
 #brand { position: fixed; z-index: 5; top: calc(var(--st) + 12px); left: var(--sl); display: grid; grid-template-columns: auto auto; align-items: center; gap: 4px 16px; padding: 14px 20px; max-width: calc(100% - 140px); transition: opacity .2s; }
-#brand .w { font: 900 34px/.9 var(--f-latin); color: var(--terra); letter-spacing: -.02em; }
+#brand .w { font: 900 34px/.9 var(--f-logo); color: var(--terra); letter-spacing: -.02em; }
 #brand .t { display: grid; gap: 6px; min-width: 0; }
 #brand .t b { font: 900 19px/1.15 var(--f-disp); letter-spacing: .08em; }
 #brand .t small { font: 700 12.5px/1.2 var(--f-body); letter-spacing: .06em; white-space: nowrap; }
@@ -193,7 +194,7 @@ mark { background: #FBE2B5; color: inherit; border-radius: 3px; padding: 0 1px; 
 #toast.on { opacity: 1; transform: none; }
 .cf { position: fixed; z-index: 14; pointer-events: none; width: 10px; height: 14px; border-radius: 2px; left: 50%; top: 40%; }
 #splash { position: fixed; inset: 0; z-index: 20; background: #E6EADF; display: grid; place-content: center; text-align: center; gap: 12px; transition: opacity .5s; }
-#splash .w { font: 900 54px/.9 var(--f-latin); color: var(--terra); }
+#splash .w { font: 900 54px/.9 var(--f-logo); color: var(--terra); }
 #splash p { margin: 0; font: 700 15px/1.4 var(--f-body); color: var(--mut); }
 #splash.out { opacity: 0; visibility: hidden; transition: opacity .5s, visibility 0s .5s; }
 #nogl { position: fixed; z-index: 21; inset: 0; display: grid; place-items: center; background: #E6EADF; padding: 24px; }

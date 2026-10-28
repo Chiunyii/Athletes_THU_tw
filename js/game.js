@@ -1772,7 +1772,7 @@ function shoot() {
   // 三行由上往下排，文字太長時自動縮小，不會互相重疊
   const fit = (txt, size, weight, max) => { let z = size; do { c.font = `${weight} ${z}px ${FONT}`; z -= 2; } while (c.measureText(txt).width > max && z > 12); };
   const p = tw();
-  c.fillStyle = "#C8623F"; c.font = `900 50px ${FONT}`; c.fillText("CLUB ON.", 40, H + 64);
+  c.fillStyle = "#C8623F"; c.font = "900 50px Archivo, sans-serif"; c.fillText("CLUB ON.", 40, H + 64);
   const who = `${me.name || "我"}・${me.club || "體能性社團"}・${me.role}`;
   c.fillStyle = "#2A211C"; fit(who, 34, 900, W - 80); c.fillText(who, 40, H + 120);
   const sub = `東海體能社團行政群島・集章 ${stampCount()}/${STAMPS.length}・${p.y}/${p.m}/${p.d}`;
