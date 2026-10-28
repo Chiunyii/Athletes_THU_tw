@@ -178,6 +178,10 @@ var SITE_DATA = {
       lead: "請有參加校外競賽的夥伴都務必填寫表單唷！", tagline: "如果有相關問題，請與峮老師聯繫～",
       links: [["電子表單上傳", "https://form2.thu.edu.tw/4825104"]],
     },
+    {
+      key: "培力", name: "社團培力館", en: "Club Empowerment Hall", islet: "社團培力島", icon: "🌱", color: "#5FA88A", building: "training",
+      lead: "課外組辦理的社團培力活動", tagline: "研習、工作坊、講座等課外組辦理的活動公告都會放在這裡，記得報名參加唷！",
+    },
   ],
 
   /* ---------------------------------------------------------
@@ -254,10 +258,15 @@ var SITE_DATA = {
    * 行政公告：pinned=true 會置頂；date 為公告日期
    * --------------------------------------------------------- */
   announcements: [
-    // 格式：{ id, date（可省略，YYYY-MM-DD）, pinned, tag（對應島的 key，例如 "經費"）, title, body（可省略）, link（課外組公告網址）}
+    // 格式：{ id, date（可省略，YYYY-MM-DD）, pinned, tag（對應島的 key，例如 "經費"；課外組辦理的活動請用 "培力"，會出現在社團培力館）, title, body（可省略）, link（課外組公告網址）}
     // 列表依這裡的順序顯示（置頂的排最前面），最新的請加在最上面
     // 公告有截止日時加上 due（同截止日格式），會自動出現在截止日提醒；可另寫 dueTitle 作為截止日提醒上的名稱
     // 一則公告有好幾個期限時改用 dues: [{ due, title, link（可省略）}, ...]；dueDetail 只顯示在截止日提醒
+    {
+      id: "a-1151-1878", tag: "活動",
+      title: "東海大學116年學生社團寒假服務隊申請公告",
+      link: "https://activity.thu.edu.tw/web/news/detail.php?cid=1&id=1878",
+    },
     {
       id: "a-1151-1877", tag: "評鑑",
       title: "【延長報名】東海大學 115年度學生社團年度評鑑延長報名至10/27 下午3:00，逾時將不再受理報名！",

@@ -161,9 +161,9 @@ MAIN.forEach((d, i) => {
 const SPOKES = MAIN.filter((d, i) => NM <= 3 || i % 2 === 0).map((d) => d.a);
 // 獨立小島：data.js 裡 islet 名稱相同的館放在同一座小島，以橋接到本島外圈道路
 // 小島方位（相對鏡頭正前方）；沒列在這裡的小島依序往外放
-const ISLET_AT = { "場地器材島": -Math.PI / 3, "活動島": (Math.PI * 8) / 9, "行政島": Math.PI / 3 };
+const ISLET_AT = { "場地器材島": -Math.PI / 3, "活動島": (Math.PI * 8) / 9, "行政島": Math.PI / 3, "社團培力島": (-Math.PI * 7) / 9 };
 const ISLET_MTN = new Set(["活動島"]); // 島中央後方放一座登山的小山
-const ISLET_EN = { "場地器材島": "Venue & Equipment Isle", "活動島": "Activity Isle", "行政島": "Administration Isle" };
+const ISLET_EN = { "場地器材島": "Venue & Equipment Isle", "活動島": "Activity Isle", "行政島": "Administration Isle", "社團培力島": "Club Empowerment Isle" };
 // ISLET_FROM：從另一座小島再往外延伸的小島（橋接在那座島的主路盡頭）
 const ISLET_FROM = { "校外競賽群島": "行政島" };
 ISLET_EN["校外競賽群島"] = "Competition Isles";
@@ -730,7 +730,21 @@ function bContest(g) {
   g.userData.bob = [ath[0]]; g.userData.floaty = [cup]; cup.userData.y0 = 2.35;
   g.userData.h = 3.2;
 }
-const BUILD = { hall: bHall, track: bTrack, tent: bTent, bank: bBank, gym: bGym, aid: bAid, store: bStore, podium: bPodium, house: bHouse, handover: bHandover, inventory: bInventory, podium2: bContest };
+// 社團培力館：課外組辦的研習與工作坊，講師站在白板前，學員坐著聽
+function bTraining(g, col) {
+  g.userData.base = 0.12;
+  [-1.5, 1.5].forEach((x) => [-1.0, 0.6].forEach((z) => cyl(g, 0.05, 0.05, 2.1, 0xd9d2c5, x, 0.12, z, 6)));
+  const top = cone(g, 2.3, 0.8, col, 0, 2.2, -0.2, 4); top.rotation.y = Math.PI / 4; top.scale.set(1, 1, 0.62);
+  const banner = textPlane(2.4, 0.5, (c, w, h) => { rr(c, 2, 2, w - 4, h - 4, 14); c.fillStyle = "#2A211C"; c.fill(); c.fillStyle = "#FFFDF9"; c.font = `900 ${h * 0.55}px ${FONT}`; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("社團培力工作坊", w / 2, h / 2 + 2); });
+  banner.position.set(0, 2.05, 0.62); g.add(banner);
+  box(g, 1.8, 1.1, 0.06, 0xfbfaf6, 0, 0.75, -1.0); [-0.8, 0.8].forEach((x) => box(g, 0.05, 0.7, 0.05, 0x8d97a5, x, 0.12, -1.0));
+  [[0xc8623f, -0.5, 1.45], [0x6e8fb5, 0.1, 1.3], [0x5f8f5a, 0.55, 1.5]].forEach(([c, x, y]) => box(g, 0.4, 0.05, 0.02, c, x, y, -0.96));
+  const speaker = mini(g, { shirt: "#" + new THREE.Color(col).getHexString(), hair: "#3B2E26", skin: "#F3D2B8" }, 0.62, 1.15, 0.12, -0.6, -0.3);
+  [[-0.9, 0.2], [0, 0.2], [0.9, 0.2], [-0.45, 0.95], [0.45, 0.95]].forEach(([x, z], k) => { box(g, 0.42, 0.32, 0.4, C.wood, x, 0.12, z); mini(g, MINI[k], 0.5, x, 0.44, z - 0.05, Math.PI); });
+  g.userData.bob = [speaker];
+  g.userData.h = 3.2;
+}
+const BUILD = { hall: bHall, track: bTrack, tent: bTent, bank: bBank, gym: bGym, aid: bAid, store: bStore, podium: bPodium, house: bHouse, handover: bHandover, inventory: bInventory, podium2: bContest, training: bTraining };
 
 // 圓滾滾的樹：兩三顆球疊在一起
 function tree(p, x, z, s, k) {
