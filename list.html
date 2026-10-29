@@ -581,7 +581,7 @@ footer a { color: var(--band-fg); }
       return '<li class="' + (unread ? "unread" : "") + '"><button type="button" aria-expanded="false" data-id="' + esc(a.id) + '">' +
         '<span class="t">' + hl(a.title, q) + '</span><span class="chev" aria-hidden="true">›</span>' +
         '<span class="d">' + (a.pinned ? '<span class="pin">置頂</span>' : "") + (a.date ? "<span>" + esc(a.date) + "</span>" : "") + '<span class="tag">' + esc(a.tag) + "</span></span>" +
-        '</button><div class="body" hidden>' + (a.body ? "<p style=\"margin:0 0 8px\">" + hl(a.body, q) + "</p>" : "") + (a.link ? '<a class="btn small" target="_blank" rel="noopener" href="' + esc(a.link) + '">' + esc(a.linkText || "查看公告") + ' ↗</a>' : "") + "</div></li>";
+        '</button><div class="body" hidden>' + (a.body ? "<p style=\"margin:0 0 8px;white-space:pre-line\">" + hl(a.body, q) + "</p>" : "") + (a.link ? '<a class="btn small" target="_blank" rel="noopener" href="' + esc(a.link) + '">' + esc(a.linkText || "查看公告") + ' ↗</a>' : "") + "</div></li>";
     }).join("") : '<li class="empty">沒有符合的公告。</li>';
     var n = anns.filter(function (a) { return read.indexOf(a.id) < 0; }).length;
     $("unreadDot").hidden = !n; $("unreadDot").textContent = n;
