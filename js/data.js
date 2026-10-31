@@ -471,7 +471,7 @@ var SITE_DATA = {
         "請遵守場地使用規範，使用完畢後落實場復作業並關閉燈光、冷氣。",
       ],
       links: [
-        ["北側會議室借用系統", "http://student-space.thu.edu.tw/?fbclid=IwAR21sDWMpYoUxx5JJe1_3YS5UR_PiqMbXC71a8xrgMvupzeLSTQBpW0yHyA"],
+        ["北側會議室借用系統", "http://student-space.thu.edu.tw/"],
         ["東海空間網場地借用", "https://space.thu.edu.tw/"],
         ["推廣部場地借用", "https://thurent.thu.edu.tw/borrow.php", "中正堂、銘賢堂需另至推廣部借用網登記"], // 第三項：按鈕下方的小字補充
       ],

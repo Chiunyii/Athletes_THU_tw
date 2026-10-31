@@ -1,0 +1,29 @@
+name: 每日資安檢查
+
+# 每天台灣時間 08:23 檢查一次，每次推送也會檢查；發現問題時工作會失敗，GitHub 會寄信通知
+on:
+  schedule:
+    - cron: "23 0 * * *"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: 原始碼資安檢查
+        run: node scripts/security-check.js
+      - name: 掃描整個提交紀錄有沒有外洩的金鑰
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
