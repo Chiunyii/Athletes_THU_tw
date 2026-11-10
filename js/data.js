@@ -17,7 +17,7 @@ var SITE_DATA = {
   // Google 試算表公告：試算表「檔案 → 共用 → 發布到網路」選 CSV，把網址貼在 csvUrl
   // 欄位說明見 js/sheet.js 開頭；試算表上的公告會排在下面 announcements 的前面
   sheet: {
-    csvUrl: "",
+    csvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiI9TwLuRwGQpUoliyRyqRZ7TO3sEh9HYJs_CwctXw6oVwKNzE3jOUGSqvcgj_wU3eprbHqKGfkLCC/pub?gid=950494038&single=true&output=csv",
   },
 
   links: {
