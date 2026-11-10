@@ -19,6 +19,7 @@
 
 | 檔案 | 內容 |
 |---|---|
+| `js/sheet.js`、`js/sheet-snapshot.js`、`scripts/build-sheet.js` | Google 試算表公告：網站開啟時讀試算表（`data.sheet.csvUrl`），讀不到用部署時的備份；`pages.yml` 每 3 小時重新部署更新備份與行事曆。 |
 | `js/data.js` | **所有內容**：各館、攻略、截止日、公告、行政任務、課外組資訊、角色職位、上任清單。日常更新只改這裡。 |
 | `js/game.js` | Three.js 3D 群島（建築造型、小島、角色、名牌、資訊卡）。 |
 | `index.html` | 主頁外殼與 CSS（字體：Zen Maru Gothic＋Noto Sans TC；「CLUB ON.」標誌用 Archivo）。 |
@@ -53,6 +54,8 @@
 ## 4. 日常更新怎麼做
 
 ### 新增公告（最常見）
+**老師自己可以在 Google 試算表新增**（「CLUB ON. 體能行政群島｜公告」，https://docs.google.com/spreadsheets/d/1TVEPkoI6d9qH9IQLxsjPA-HFE49DEOzyYjuW-yr5LC0/edit，欄位見 README「用 Google 試算表發公告」）。老師請 Claude 代為上架時，可以加在試算表（Google Drive 工具）或照下面的方式加在 `data.js`；多個截止日、`dueDetail` 等複雜公告只能放 `data.js`。
+
 在 `js/data.js` 的 `announcements:` 陣列**最上方**（註解行之後）加一筆，最新的放最上面：
 
 ```js
@@ -86,7 +89,7 @@
 3. 檢查：`node -e "require('./js/data.js')"`、`node --check`（game.js 是 ES module，可複製成 `.mjs` 再檢查）、`node scripts/security-check.js`；有新截止日時 `node scripts/build-ics.js`
 4. 畫面有變動時用 Playwright 截圖確認（沙盒擋 jsdelivr：用 `page.route` 把 `https://cdn.jsdelivr.net/npm/three@0.160.0/**` 導到本機 `npm i three@0.160.0` 的檔案；`localStorage thuarch:intro=true` 跳過開場；`python3 -m http.server 8765` 起本機伺服器）
 5. `python3 scripts/build-preview.py <scratchpad>/athletic-portal.html`，用 Artifact 工具發布到上面的預覽 URL
-6. `git commit`（訊息用中文，結尾加上系統要求的 Co-Authored-By／Claude-Session 行）→ `git push -u origin main`
+6. `git commit`（訊息用中文，結尾加上系統要求的 Co-Authored-By／Claude-Session 行）→ `git push -u origin main`（老師選擇「直接上線」；若對話環境指定了別的工作分支，也同步推一份過去）
 
 ## 6. 使用者偏好
 
@@ -101,7 +104,6 @@
 
 - 語文館施工公告：標題寫「南棟」，內文施工範圍寫「北棟」，已照原文上架，等老師確認。
 - `http://student-space.thu.edu.tw/`（北側會議室借用）不是 https，資安檢查列為提醒。
-- 社團培力館三則活動（企劃書、舞台燈光 11/23、運動防護 12/10）除企劃書外沒有報名截止日。
-- 課外組 Google 地圖導航（`office.mapUrl`）建置中。
-- 曾建議改用 Google 試算表當公告後台（老師尚未決定）。
+- Google 試算表公告：試算表已建立（2026-11-10），**等老師「發布到網路」並提供 CSV 網址**，填進 `data.js` 的 `sheet.csvUrl` 後才會啟用。
+- 課外組導航用老師給的 Google 地圖分享連結（地圖上還搜尋不到「課外組」，之後若出現可換成正式地點）。
 - GitHub 排程若 60 天沒有提交會暫停，需到 Actions 頁面重新啟用。

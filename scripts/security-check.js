@@ -5,13 +5,15 @@ const fs = require("fs");
 const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
-const FILES = ["index.html", "list.html", "js/game.js", "js/data.js", "scripts/build-ics.js", "scripts/typhoon.js"]
+const FILES = ["index.html", "list.html", "js/game.js", "js/data.js", "js/sheet.js", "js/sheet-snapshot.js", "scripts/build-ics.js", "scripts/build-sheet.js", "scripts/typhoon.js"]
   .concat(fs.readdirSync(path.join(ROOT, ".github/workflows")).map((f) => ".github/workflows/" + f));
 // 允許載入程式或樣式的外部網域（多一個就要人工確認）
 const SCRIPT_HOSTS = ["cdn.jsdelivr.net"];
 const STYLE_HOSTS = ["fonts.googleapis.com", "fonts.gstatic.com"];
 // 網站執行時會 fetch 的資料來源
 const FETCH_HOSTS = ["raw.githubusercontent.com"];
+// Google 試算表公告只能從 docs.google.com 讀（js/sheet.js 也會再檢查一次）
+const SHEET_PREFIX = "https://docs.google.com/spreadsheets/";
 
 const errors = [], warns = [];
 const read = (f) => fs.readFileSync(path.join(ROOT, f), "utf8");
@@ -60,6 +62,10 @@ for (const [u, at] of urls) {
   if (u.startsWith("http://")) warns.push(`data.js ${at} 連結不是 https（傳輸未加密）：${u.slice(0, 80)}`);
   try { hosts.add(new URL(u).host); } catch { errors.push(`data.js ${at} 連結格式錯誤：${u}`); }
 }
+
+// 5b. 試算表公告的網址只能是 Google 試算表；試算表裡的連結由 js/sheet.js 過濾（只收 https://）
+if (data.sheet && data.sheet.csvUrl && !data.sheet.csvUrl.startsWith(SHEET_PREFIX)) errors.push(`data.js sheet.csvUrl 不是 Google 試算表網址：${data.sheet.csvUrl}`);
+if (!read("js/sheet.js").includes('^https:\\/\\/[^\\s"')) errors.push("js/sheet.js 的連結過濾（只收 https://）被移除了");
 
 // 6. 工作流程權限：只有颱風假檢查可以寫入儲存庫
 for (const f of FILES.filter((x) => x.startsWith(".github/"))) {

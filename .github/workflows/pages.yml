@@ -3,6 +3,9 @@ name: 部署網站
 on:
   push:
     branches: [main, master]
+  # 每 3 小時重新部署一次，更新 Google 試算表公告的備份與 calendar.ics
+  schedule:
+    - cron: "41 */3 * * *"
   workflow_dispatch:
 
 permissions:
@@ -25,6 +28,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: 備份 Google 試算表公告
+        run: node scripts/build-sheet.js
       - name: 產生 calendar.ics
         run: node scripts/build-ics.js
       - uses: actions/configure-pages@v5

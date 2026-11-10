@@ -81,6 +81,7 @@ function officeStatus() {
 }
 
 /* ---------------- 資料 ---------------- */
+await D.loadSheet?.(); // 先讀 Google 試算表公告（js/sheet.js），抓不到就用備份
 const deadlines = D.allDeadlines().map((x) => ({ ...x, at: parse(x.due) })).filter((x) => x.at).sort((a, b) => a.at - b.at);
 const upcoming = () => deadlines.filter((x) => x.at >= new Date());
 const passed = () => deadlines.filter((x) => x.at < new Date()).reverse(); // 最近截止的在上

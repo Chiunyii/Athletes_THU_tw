@@ -3,6 +3,8 @@
 const fs = require("fs");
 const path = require("path");
 const D = require("../js/data.js");
+require("../js/sheet.js");
+D.applySheet(require("../js/sheet-snapshot.js")); // 加上 Google 試算表公告的截止日（先執行 build-sheet.js）
 
 function parse(s) {
   const m = String(s).trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/);

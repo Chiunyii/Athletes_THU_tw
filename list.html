@@ -392,8 +392,11 @@ footer a { color: var(--band-fg); }
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="js/data.js"></script>
+<script src="js/sheet-snapshot.js"></script>
+<script src="js/sheet.js"></script>
 <script>
-(function () {
+// 先讀 Google 試算表公告（js/sheet.js），再畫出整頁
+(window.SITE_DATA && SITE_DATA.loadSheet ? SITE_DATA.loadSheet() : Promise.resolve()).then(function () {
   "use strict";
   var D = window.SITE_DATA || SITE_DATA;
   var TZ = "Asia/Taipei";
@@ -714,7 +717,7 @@ footer a { color: var(--band-fg); }
   if (D.office.typhoonUrl) fetch(D.office.typhoonUrl + "?t=" + Math.floor(Date.now() / 3e5), { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : {}; }).then(function (j) { Object.assign(TYPHOON, j.days || {}); renderOffice(); }).catch(function () {});
   renderOffice(); renderDeadlines(); renderNews(""); renderGuides(); renderTodo(); renderTasks(); renderNotifyBtn(); checkNotify();
   setInterval(function () { renderOffice(); renderDeadlines(); }, 60000);
-})();
+});
 </script>
 <!-- PREVIEW-STRIP -->
 </body>

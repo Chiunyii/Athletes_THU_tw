@@ -12,6 +12,8 @@ s = re.sub(r"<!-- PREVIEW-STRIP -->.*?<!-- /PREVIEW-STRIP -->\n?", "", s, flags=
 d = (root / "js/data.js").read_text(encoding="utf-8")
 g = (root / "js/game.js").read_text(encoding="utf-8")
 s = s.replace('<script src="js/data.js"></script>', "<script>\n" + d + "\n</script>")
+for f in ("js/sheet-snapshot.js", "js/sheet.js"):
+    s = s.replace(f'<script src="{f}"></script>', "<script>\n" + (root / f).read_text(encoding="utf-8") + "\n</script>")
 s = s.replace('<script type="module" src="js/game.js"></script>', '<script type="module">\n' + g + "\n</script>")
 s = s.replace('href="list.html"', 'href="#links"').replace('"list.html", false', '"#links", false')
 out.write_text(s, encoding="utf-8")
