@@ -32,6 +32,9 @@ jobs:
         run: node scripts/build-sheet.js
       - name: 產生 calendar.ics
         run: node scripts/build-ics.js
+      # 網址加上版本號，瀏覽器才不會拿舊的程式與資料搭新的網頁
+      - name: 程式加上版本號
+        run: sed -i -E "s#src=\"(js/[a-z-]+\.js)\"#src=\"\1?v=${GITHUB_SHA::7}\"#g" index.html list.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
