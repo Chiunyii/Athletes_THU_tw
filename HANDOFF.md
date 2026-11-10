@@ -89,6 +89,7 @@
 3. 檢查：`node -e "require('./js/data.js')"`、`node --check`（game.js 是 ES module，可複製成 `.mjs` 再檢查）、`node scripts/security-check.js`；有新截止日時 `node scripts/build-ics.js`
 4. 畫面有變動時用 Playwright 截圖確認（沙盒擋 jsdelivr：用 `page.route` 把 `https://cdn.jsdelivr.net/npm/three@0.160.0/**` 導到本機 `npm i three@0.160.0` 的檔案；`localStorage thuarch:intro=true` 跳過開場；`python3 -m http.server 8765` 起本機伺服器）
 5. `python3 scripts/build-preview.py <scratchpad>/athletic-portal.html`，用 Artifact 工具發布到上面的預覽 URL
+   - 注意：Claude 沙盒連不到 docs.google.com，預覽頁沒有試算表公告（`js/sheet-snapshot.js` 在本機是空的，部署時才由 GitHub 抓）。要確認試算表內容，看 GitHub Actions「部署網站」的「備份 Google 試算表公告」步驟紀錄，或用 Google Drive 工具讀試算表。
 6. `git commit`（訊息用中文，結尾加上系統要求的 Co-Authored-By／Claude-Session 行）→ `git push -u origin main`（老師選擇「直接上線」；若對話環境指定了別的工作分支，也同步推一份過去）
 
 ## 6. 使用者偏好
