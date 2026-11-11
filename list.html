@@ -701,7 +701,7 @@ footer a { color: var(--band-fg); }
     var b = $("notifyBtn"), m = $("notifyMsg");
     if (!notifySupported()) { b.hidden = true; m.textContent = "這個瀏覽器不支援網頁通知，請使用訂閱行事曆。"; return; }
     if (Notification.permission === "granted") { b.textContent = "網頁通知已開啟"; b.disabled = true; m.textContent = "每天第一次開啟本站時，會通知 3 天內的截止日。"; }
-    else if (Notification.permission === "denied") { b.disabled = true; m.textContent = "通知已被封鎖，可到瀏覽器網站設定中重新允許。"; }
+    else if (Notification.permission === "denied") { b.disabled = true; m.textContent = "通知已關閉，可到瀏覽器的網站設定中重新開啟。"; }
   }
   $("notifyBtn").addEventListener("click", function () {
     try {

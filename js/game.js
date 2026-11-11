@@ -1899,7 +1899,7 @@ function renderNotifyBtn() {
   const b = $("notifyBtn"); if (!b) return;
   if (!("Notification" in window)) { b.hidden = true; return; }
   if (Notification.permission === "granted") { b.textContent = "網頁通知已開啟"; b.disabled = true; }
-  if (Notification.permission === "denied") { b.textContent = "通知已被封鎖"; b.disabled = true; }
+  if (Notification.permission === "denied") { b.textContent = "通知已關閉"; b.disabled = true; }
 }
 function askNotify() {
   try { Notification.requestPermission().then((p) => { renderNotifyBtn(); if (p === "granted") { toast("已開啟網頁通知"); checkNotify(); } else toast("沒有開啟通知，仍可訂閱行事曆"); }).catch(() => toast("此環境無法開啟通知，請訂閱行事曆")); }
