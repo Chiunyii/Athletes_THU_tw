@@ -1959,7 +1959,7 @@ let talkQ = [], talkK = "", talkI = 0, talkEnd = null;
 function talk(kicker, steps, onEnd) { talkQ = steps; talkK = kicker; talkI = 0; talkEnd = onEnd || null; showTalk(); }
 function showTalk() {
   const s = talkQ[talkI];
-  $("mKick").textContent = `${talkK} / ${pad2(talkI + 1)}`;
+  $("mKick").textContent = talkQ.length > 1 ? `${talkK} / ${pad2(talkI + 1)}` : talkK; // 只有一頁時不顯示頁碼
   $("mTitle").textContent = s[0]; $("mText").textContent = s[1];
   $("mNext").textContent = talkI < talkQ.length - 1 ? "下一步 →" : s[2] || "開始探索";
   $("mSkip").textContent = s[3] ? s[3].label : "略過"; // 最後一步的次要按鈕可以是另一個選擇
@@ -1970,6 +1970,13 @@ function showTalk() {
 function endTalk(skip) { $("modal").hidden = true; const f = talkEnd; talkEnd = null; if (!skip) f && f(); }
 $("mNext").addEventListener("click", () => { if (talkI < talkQ.length - 1) { talkI++; showTalk(); } else endTalk(); });
 $("mSkip").addEventListener("click", () => { const alt = talkQ[talkI] && talkQ[talkI][3]; endTalk(true); if (alt) alt.go(); });
+// 打開網站時，有沒看過的公告就先跳出提醒卡（同一個分頁只跳一次；從 LINE 帶 #連結 進來的不跳）
+function newsPopup() {
+  const u = unread(); if (!u.length || !$("modal").hidden) return;
+  try { if (sessionStorage.getItem("thuarch:newsPop")) return; sessionStorage.setItem("thuarch:newsPop", "1"); } catch {}
+  const list = u.slice(0, 5).map((a) => "・" + a.title).join("\n") + (u.length > 5 ? `\n…還有 ${u.length - 5} 則` : "");
+  talk("NEW · 新公告", [[`有 ${u.length} 則新公告`, list, "查看公告", { label: "稍後再看", go: () => {} }]], () => openSpot("news"));
+}
 function teacherTalk() {
   const n = upcoming()[0], st = officeStatus(), L = [];
   if (n) { const d = isleOf(n.category); L.push(["最近的截止日", `「${n.title}」還有 ${daysLeft(n.at)} 天${d ? `，在${d.name}` : ""}。記得加入行事曆。`]); }
@@ -2068,14 +2075,15 @@ async function start() {
   else if (["office", "deadlines", "news", "links"].includes(h)) setTimeout(() => openSpot(h), 500);
   else if (h === "me") setTimeout(() => openChar("look"), 500);
   else if (h === "list") setTimeout(renderList, 500);
-  else if (!LS.get("intro", false)) {
+  else if (LS.get("intro", false)) setTimeout(newsPopup, 1800); // 鏡頭飛到全景後再跳出新公告提醒
+  else {
     LS.set("intro", true);
     talk("HELLO 體能性社團夥伴", [
       ["歡迎來到體能行政群島", "島上的行政館，會陪著夥伴們完成社團行政任務。\n點選建築，或用右側清單探索這一座小島吧。"],
       ["我是課外組峮老師", "本島中間巨型人物94我，旁邊有公告欄、小秘書啊牛和出航機場。\n社團行政任務放在社團行政館，完成可以打勾。外圈道路連到各座行政館，有相關問題，可以到各館探索找到解答唷。"],
       ["行政群島是你的小夥伴", "各館的名牌上有 D-倒數；7 天內截止，館的上方會浮出黃色菱形，3 天內轉紅。\n歡迎訂閱社團行事曆，手機也會提醒你。"],
       ["啟程探索行政群島", "不建立角色也能直接逛。\n想讓角色帶著社團道具，隨時可以點右上「角色」設定身份與職位。", "開始探索", { label: "建立角色", go: () => openChar("look") }],
-    ]);
+    ], () => setTimeout(newsPopup, 400)); // 按「開始探索」後接著提醒新公告
   }
 }
 start();
