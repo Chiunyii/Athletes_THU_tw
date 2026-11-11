@@ -324,11 +324,13 @@ footer a { color: var(--band-fg); }
 
         <aside class="remind" aria-labelledby="h-remind">
           <h3 id="h-remind">讓提醒找到你</h3>
-          <p>訂閱社團行事曆後，新的截止日會自動出現在你的手機行事曆，並在截止前 3 天與 1 天提醒。</p>
+          <p>訂閱社團行事曆後，新的截止日會自動出現在你的行事曆。</p>
           <div class="row">
-            <a class="btn small" id="subIcs" href="calendar.ics">訂閱社團行事曆</a>
+            <a class="btn small" id="subIcs" href="calendar.ics">加入 Apple 日曆</a>
+            <a class="btn small" id="subGcal" href="https://calendar.google.com/calendar/render?cid=webcal%3A%2F%2Fchiunyii.github.io%2FAthletes_THU_tw%2Fcalendar.ics" target="_blank" rel="noopener">加入 Google 日曆</a>
             <button class="btn small plain" id="notifyBtn" type="button">開啟網頁通知</button>
           </div>
+          <p class="sub">Apple 日曆：iPhone、Mac 按一下就訂閱，截止前 3 天、1 天會提醒。<br>Google 日曆：建議用電腦開啟並按「新增」，Android 手機會跟著同步；新截止日約 1 天內出現，提醒請在 Google 日曆開啟這個日曆的通知。</p>
           <p id="notifyMsg"></p>
         </aside>
       </div>
@@ -431,7 +433,9 @@ footer a { color: var(--band-fg); }
   $("termLabel").textContent = D.term;
   $("sampleBar").hidden = !D.isSample;
   // 用 webcal:// 開啟時，手機會直接詢問是否「訂閱」，之後新增的截止日會自動同步
-  if (location.protocol === "https:") $("subIcs").href = "webcal://" + location.host + location.pathname.replace(/[^/]*$/, "") + "calendar.ics";
+  var calPath = (location.hostname.slice(-9) === "github.io" ? location.host + location.pathname.replace(/[^/]*$/, "") : "chiunyii.github.io/Athletes_THU_tw/") + "calendar.ics";
+  $("subIcs").href = "webcal://" + calPath;
+  $("subGcal").href = "https://calendar.google.com/calendar/render?cid=" + encodeURIComponent("webcal://" + calPath); // Google 日曆「以網址新增日曆」
 
   // ---------- 課外組辦公狀態 ----------
   // 辦公日判斷：國定假日、補假、學校停止辦公日不上班；補班日即使是週末也上班

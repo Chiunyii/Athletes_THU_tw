@@ -1640,7 +1640,10 @@ function saveFile(name, blob, okMsg) {
   catch { toast("無法下載，請改用其他方式儲存"); }
 }
 const download = (name, text) => saveFile(name, new Blob([text], { type: "text/calendar;charset=utf-8" }), "已下載行事曆檔，開啟即可加入");
-const subUrl = () => (location.protocol === "https:" ? "webcal://" + location.host + location.pathname.replace(/[^/]*$/, "") + "calendar.ics" : "calendar.ics");
+// 訂閱社團行事曆：Apple 用 webcal:// 直接訂閱；Google 用「以網址新增日曆」的連結（預覽或本機時改用正式網站的行事曆網址）
+const calPath = () => (location.hostname.endsWith("github.io") ? location.host + location.pathname.replace(/[^/]*$/, "") : "chiunyii.github.io/Athletes_THU_tw/") + "calendar.ics";
+const subUrl = () => "webcal://" + calPath();
+const gSubUrl = () => "https://calendar.google.com/calendar/render?cid=" + encodeURIComponent("webcal://" + calPath());
 const noTag = (no) => `<span style="font:700 13px var(--f-mono);color:var(--terra);margin-right:8px">${no}</span>`;
 
 function dlItems(list, showIsle, openFirst) {
@@ -1732,8 +1735,8 @@ function renderDeadlines(view = "todo") {
     <p class="lead">哞～我是小秘書啊牛！所有分類快到期的截止日都幫你記著。</p>
     <p class="quote">7 天內轉黃、3 天內轉紅，對應的館上方也會浮出菱形提醒。</p>
     <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag(view)}</div>
-    <div class="acts"><a class="btn t" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
-    <p class="foot">訂閱後，新的截止日會自動同步到手機，並在截止前 3 天、1 天提醒。</p>
+    <div class="acts"><a class="btn t" href="${E(subUrl())}">加入 Apple 日曆</a><a class="btn t" target="_blank" rel="noopener" href="${E(gSubUrl())}">加入 Google 日曆</a><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
+    <p class="foot">訂閱社團行事曆後，新的截止日會自動同步。<br>Apple 日曆：iPhone、Mac 按一下就訂閱，截止前 3 天、1 天會提醒。<br>Google 日曆：建議用電腦開啟並按「新增」，Android 手機會跟著同步；新截止日約 1 天內出現，提醒請在 Google 日曆開啟這個日曆的通知。</p>
     <div class="sec"><h4>依日期排序</h4>${dlItems(upcoming(), true, false)}</div>
     ${passed().length ? `<div class="sec"><button class="btn g" type="button" data-past="1">${showPast ? "隱藏已截止項目" : `顯示已截止項目（${passed().length}）`}</button>${showPast ? pastItems(passed()) : ""}</div>` : ""}
     <p class="foot">相關資訊請詳見 <a target="_blank" rel="noopener" href="${E(D.links.office)}">課外組網站公告 ↗</a></p>`;
