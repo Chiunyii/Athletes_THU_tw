@@ -1732,7 +1732,7 @@ function renderDeadlines(view = "todo") {
     <p class="lead">哞～我是小秘書啊牛！所有分類快到期的截止日都幫你記著。</p>
     <p class="quote">7 天內轉黃、3 天內轉紅，對應的館上方也會浮出菱形提醒。</p>
     <div class="tags"><span class="tag">${upcoming().length} 項截止日</span>${stampTag(view)}</div>
-    <div class="acts"><a class="btn t" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" data-ics="all">全部加入行事曆</button><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
+    <div class="acts"><a class="btn t" href="${E(subUrl())}">訂閱社團行事曆</a><button class="btn g" type="button" id="notifyBtn">開啟網頁通知</button></div>
     <p class="foot">訂閱後，新的截止日會自動同步到手機，並在截止前 3 天、1 天提醒。</p>
     <div class="sec"><h4>依日期排序</h4>${dlItems(upcoming(), true, false)}</div>
     ${passed().length ? `<div class="sec"><button class="btn g" type="button" data-past="1">${showPast ? "隱藏已截止項目" : `顯示已截止項目（${passed().length}）`}</button>${showPast ? pastItems(passed()) : ""}</div>` : ""}
@@ -1868,7 +1868,6 @@ $("sbody").addEventListener("click", (e) => {
   if (b.id === "savePhoto" && lastPhoto) return fetch(lastPhoto).then((r) => r.blob()).then((bl) => saveFile(`行政群島-${me.name || "合照"}.png`, bl, "已下載合照"));
   if (b.dataset.past) { const y = $("sbody").scrollTop; showPast = !showPast; renderDeadlines(); $("sbody").scrollTop = y; return; }
   if (b.dataset.ics) {
-    if (b.dataset.ics === "all") return download("東海體能性社團截止日.ics", icsFor(upcoming()));
     const x = deadlines.find((d) => d.id === b.dataset.ics); return x && download(x.id + ".ics", icsFor([x]));
   }
   if (b.dataset.stamp) { const id = b.dataset.stamp; return id.startsWith("isle:") ? openIsle(isleOf(id.slice(5)).i) : openSpot(id); }

@@ -306,7 +306,6 @@ footer a { color: var(--band-fg); }
       <section id="deadlines" aria-labelledby="h-dl">
         <div class="sec-head">
           <div><h2 id="h-dl">截止日提醒</h2><p class="sub">依日期排序，7 天內轉黃、3 天內轉紅。</p></div>
-          <button class="btn small plain" id="allIcs" type="button">全部加入行事曆</button>
         </div>
         <div class="chips" id="dlChips" role="group" aria-label="依類別篩選"></div>
         <ul class="dl" id="dlList"></ul>
@@ -571,7 +570,6 @@ footer a { color: var(--band-fg); }
     if (x) download(x.id + ".ics", icsFor([x]));
   });
   $("pastToggle").addEventListener("click", function () { showPast = !showPast; renderDeadlines(); });
-  $("allIcs").addEventListener("click", function () { download("東海體能性社團截止日.ics", icsFor(deadlines.filter(function (x) { return x.at >= new Date(); }))); });
 
   // ---------- 公告 ----------
   var anns = D.announcements.slice().sort(function (a, b) { return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0); });
