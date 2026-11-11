@@ -1006,6 +1006,87 @@ ISL.forEach((d) => {
   lampPost(g, (perp.x * 2.4 - d.dir.x * 1.6) * HALL_S, (perp.z * 2.4 - d.dir.z * 1.6) * HALL_S);
 });
 
+/* ---- 小島草地上的社團活動（純造景）：行政島的飛盤比賽、社團培力島的保齡球 ---- */
+// 在小島草地上找一塊空地：避開館、主路、支路、島名路牌與館的正前方（鏡頭那一側）
+function isletSpot(I, rad, seed, gap = 2.8 * HALL_S + rad * 0.6) {
+  const segs = [[I.entry, I.roadEnd || I.pos], ...I.halls.map((d) => [d.junction || I.pos, d.pos]),
+    ...ISLETS.filter((C) => C.parent === I).map((C) => [I.roadEnd || I.pos, C.coast])];
+  const segDist = (p, [a, b]) => { const ab = b.clone().sub(a), t = Math.max(0, Math.min(1, p.clone().sub(a).dot(ab) / ab.lengthSq())); return p.distanceTo(a.clone().add(ab.multiplyScalar(t))); };
+  const sign = I.entry.clone().lerp(I.pos, 0.35).add(new V3(-I.dir.z, 0, I.dir.x).multiplyScalar(1.4));
+  let best = null, bestScore = -Infinity;
+  for (let i = 0; i < 400; i++) {
+    const a = hash(seed + "a" + i) * Math.PI * 2, r = hash(seed + "r" + i) * (I.r * 0.82 - rad), p = I.pos.clone().add(new V3(Math.cos(a) * r, 0, Math.sin(a) * r));
+    if (r + rad * 0.8 > I.r * 0.82) continue;
+    if (I.halls.some((d) => p.distanceTo(d.pos) < gap)) continue;
+    if (segs.some((s) => segDist(p, s) < rad + 0.9)) continue;
+    if (p.distanceTo(sign) < rad + 1.2) continue;
+    if (I.halls.some((d) => { const v = p.clone().sub(d.pos), f = v.dot(FACE_DIR); return f > -0.5 && f < 6 && Math.abs(v.x * FACE_DIR.z - v.z * FACE_DIR.x) < 2.4 + rad * 0.5; })) continue;
+    const score = -p.clone().sub(I.pos).dot(FACE_DIR) * 0.1 - Math.abs(r - I.r * 0.45); // 偏好島的中段、稍微靠後，不擋住前方的館
+    if (score > bestScore) { bestScore = score; best = p; }
+  }
+  return best;
+}
+{
+  const isl = (name) => ISLETS.find((I) => I.name === name);
+  const S = ["#C8623F", "#6E8FB5", "#E8B04B", "#5F8F5A", "#9C83B5", "#D98B4E"], H = ["#3B2E26", "#2A211C", "#55463A"];
+  const P = (k, prop) => ({ shirt: S[k % 6], hair: H[k % 3], skin: k % 2 ? "#F1CDB0" : "#E9BF9E", prop });
+  const guy = (g, o, x, z, ry = 0, s = 0.6) => { const p = person(o); p.scale.setScalar(s); p.position.set(x, 0.05, z); p.rotation.y = ry; g.add(p); return p; };
+  const line = (g, w, d, x, z) => box(g, w, 0.012, d, 0xffffff, x, 0.045, z).castShadow = false;
+  const zoneAt = (p, rad) => { const g = new THREE.Group(); g.position.copy(p); g.rotation.y = FACE; world.add(g); ACT_ZONES.push({ pos: p.clone(), r: rad }); return g; };
+
+  // 行政島：飛盤比賽（兩隊各兩人，飛盤在隊友之間來回傳，防守的人跟著跑；場地兩端是得分區）
+  const adm = isl("行政島"), ap = adm && isletSpot(adm, 2.3, "frisbee");
+  if (ap) {
+    const g = zoneAt(ap, 2.3);
+    box(g, 4, 0.04, 2.3, 0x7fcf62, 0, 0, 0).castShadow = false;
+    [-1.45, 1.45].forEach((x) => box(g, 1.1, 0.045, 2.3, 0x6fc35a, x * 1.0, 0, 0).castShadow = false); // 得分區顏色深一點
+    line(g, 4, 0.05, 0, 1.13); line(g, 4, 0.05, 0, -1.13); line(g, 0.05, 2.3, 1.98, 0); line(g, 0.05, 2.3, -1.98, 0); line(g, 0.05, 2.3, 0.9, 0); line(g, 0.05, 2.3, -0.9, 0);
+    [[-1.98, 1.13], [-1.98, -1.13], [1.98, 1.13], [1.98, -1.13], [-0.9, 1.13], [-0.9, -1.13], [0.9, 1.13], [0.9, -1.13]].forEach(([x, z]) => cone(g, 0.07, 0.16, soft(0xf28c3a), x, 0.04, z, 6)); // 角錐
+    const A = [guy(g, P(0), -1.2, 0.45, Math.PI / 2), guy(g, P(0), 1.0, -0.5, -Math.PI / 2)]; // 進攻隊（同色球衣）互相傳盤
+    const B = [guy(g, P(1), -0.8, 0.2, Math.PI / 2), guy(g, P(1), 0.6, -0.25, -Math.PI / 2)]; // 防守隊跟著跑
+    const disc = cyl(g, 0.15, 0.14, 0.03, soft(0xe8b04b), 0, 0, 0, 16);
+    acts.push((t) => {
+      const T = 2.6, k = Math.floor(t / T), q = (t % T) / T, from = A[k % 2], to = A[(k + 1) % 2];
+      A[0].position.x = -1.2 + Math.sin(t * 0.7) * 0.25; A[1].position.x = 1.0 + Math.sin(t * 0.6 + 1) * 0.3;
+      A[0].position.z = 0.45 + Math.sin(t * 0.9) * 0.3; A[1].position.z = -0.5 + Math.cos(t * 0.8) * 0.3;
+      B.forEach((b, j) => { const m = A[j]; b.position.x += ((m.position.x + (j ? -0.45 : 0.45)) - b.position.x) * 0.05; b.position.z += ((m.position.z - (j ? -0.3 : 0.3)) - b.position.z) * 0.05; b.position.y = 0.05 + Math.abs(Math.sin(t * 7 + j)) * 0.05; });
+      A.forEach((p, j) => (p.position.y = 0.05 + (p === to && q > 0.85 ? Math.sin((q - 0.85) / 0.15 * Math.PI) * 0.3 : 0))); // 接盤時跳一下
+      const s = from.position, e = to.position;
+      disc.position.set(s.x + (e.x - s.x) * q, 0.75 + Math.sin(q * Math.PI) * 0.7, s.z + (e.z - s.z) * q + Math.sin(q * Math.PI) * 0.35); // 弧線飛行
+      disc.rotation.set(0.25, t * 12, Math.sin(q * Math.PI) * 0.3);
+    });
+  }
+
+  // 社團培力島：草地上的保齡球道（投球 → 球滾過球道 → 球瓶倒下 → 重新排好），旁邊一位拿著球等下一輪
+  const emp = isl("社團培力島"), ep = emp && isletSpot(emp, 1.7, "bowling", 3.9);
+  if (ep) {
+    const g = zoneAt(ep, 1.7); g.scale.setScalar(0.78);
+    box(g, 3.8, 0.05, 0.62, 0xe3b77a, 0.2, 0, 0).castShadow = false; // 木頭球道
+    [-0.34, 0.34].forEach((z) => box(g, 3.8, 0.04, 0.08, 0x8d97a5, 0.2, 0, z).castShadow = false); // 兩側的洗溝
+    box(g, 0.05, 0.012, 0.62, 0xc8443a, -1.1, 0.05, 0); // 犯規線
+    box(g, 0.12, 0.35, 0.82, 0x6b4a33, 2.15, 0, 0); // 球道底端的擋板
+    const pinGeo = new THREE.LatheGeometry([[0, 0], [0.045, 0.02], [0.06, 0.08], [0.04, 0.17], [0.03, 0.21], [0.04, 0.26], [0, 0.3]].map(([x, y]) => new THREE.Vector2(x, y)), 10);
+    const pins = [];
+    [[0, 0], [1, -0.5], [1, 0.5], [2, -1], [2, 0], [2, 1]].forEach(([row, col]) => { // 六支球瓶排成三角形
+      const pg = new THREE.Group(); pg.position.set(1.55 + row * 0.16, 0.05, col * 0.13); g.add(pg);
+      mesh(pinGeo, soft(0xfbfaf6), 0, 0, 0, pg); box(pg, 0.075, 0.022, 0.075, 0xc8443a, 0, 0.185, 0);
+      pins.push({ pg, z: col * 0.13, k: hash("pin" + row + col) });
+    });
+    const bowler = guy(g, P(4), -1.6, 0.02, Math.PI / 2), wait = guy(g, P(2, "bowling"), -1.75, 0.95, Math.PI * 0.75);
+    const bb = ball(g, 0.11, soft(0x2f3e6e), 0, 0, 0, 1);
+    acts.push((t) => {
+      const T = 4.4, q = (t % T) / T;
+      if (q < 0.2) { const u = q / 0.2; bowler.position.x = -1.6 + u * 0.4; bowler.rotation.z = 0; bowler.rotation.x = u * 0.35; bb.position.set(bowler.position.x + 0.15, 0.35 - Math.sin(u * Math.PI) * 0.18, 0.2); } // 助跑、擺臂
+      else if (q < 0.5) { const u = (q - 0.2) / 0.3; bowler.rotation.x = 0.35 * (1 - u); bb.position.set(-1.05 + u * 2.6, 0.16, 0.12 - u * 0.12); bb.rotation.z = -u * 20; } // 球滾向球瓶
+      else bb.position.set(2.0, 0.16, 0); // 球停在底端
+      bb.visible = q < 0.62;
+      const hit = q > 0.5 && q < 0.9, h = Math.min(1, (q - 0.5) / 0.06);
+      pins.forEach((p) => { p.pg.rotation.set(0, 0, hit ? -h * (1.2 + p.k * 0.4) : 0); p.pg.rotation.x = hit ? h * (p.z * 5 + (p.k - 0.5)) : 0; p.pg.position.y = 0.05 + (hit ? h * 0.02 : 0); }); // 全倒！
+      wait.position.y = 0.05 + (hit ? Math.abs(Math.sin(t * 9)) * 0.18 : 0); // 等待的隊友看到全倒跳起來歡呼
+    });
+  }
+}
+
 /* ---- 獨立小島與橋 ---- */
 const hikers = [];
 ISLETS.forEach((ISLET) => {
@@ -1047,6 +1128,7 @@ ISLETS.forEach((ISLET) => {
     // 不要種在館的正前方（鏡頭那一側），以免擋住建築
     if (ISLET.halls.some((d) => { const v = new V3(x - d.pos.x, 0, z - d.pos.z), f = v.dot(FACE_DIR); return f > -0.5 && f < 7 && Math.abs(v.x * FACE_DIR.z - v.z * FACE_DIR.x) < 3; })) continue;
     if (mtn && Math.hypot(mtn.pos.x - x, mtn.pos.z - z) < mtn.R + 0.9) continue;
+    if (ACT_ZONES.some((q) => Math.hypot(q.pos.x - x, q.pos.z - z) < q.r + 0.8)) continue; // 不種在小島的運動場地上
     const toE = new V3(x, 0, z).sub(ISLET.pos), along = toE.dot(ISLET.dir.clone().negate()); if (along > 0 && Math.abs(toE.clone().cross(ISLET.dir).y) < 1.4) continue;
     if (ISLET.roadEnd) { const v = new V3(x, 0, z).sub(ISLET.entry), al = v.dot(ISLET.dir); if (al > -1 && al < ISLET.roadEnd.distanceTo(ISLET.entry) + 1 && Math.abs(v.clone().cross(ISLET.dir).y) < 1.6) continue; } // 不種在島上的主路
     if (ISLET.halls.some((d) => d.junction && Math.hypot(x - (d.junction.x + d.pos.x) / 2, z - (d.junction.z + d.pos.z) / 2) < 1.6)) continue;
