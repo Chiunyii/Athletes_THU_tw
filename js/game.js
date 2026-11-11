@@ -1007,25 +1007,8 @@ ISL.forEach((d) => {
 });
 
 /* ---- 小島草地上的社團活動（純造景）：行政島的飛盤比賽、社團培力島的保齡球 ---- */
-// 在小島草地上找一塊空地：避開館、主路、支路、島名路牌與館的正前方（鏡頭那一側）
-function isletSpot(I, rad, seed, gap = 2.8 * HALL_S + rad * 0.6) {
-  const segs = [[I.entry, I.roadEnd || I.pos], ...I.halls.map((d) => [d.junction || I.pos, d.pos]),
-    ...ISLETS.filter((C) => C.parent === I).map((C) => [I.roadEnd || I.pos, C.coast])];
-  const segDist = (p, [a, b]) => { const ab = b.clone().sub(a), t = Math.max(0, Math.min(1, p.clone().sub(a).dot(ab) / ab.lengthSq())); return p.distanceTo(a.clone().add(ab.multiplyScalar(t))); };
-  const sign = I.entry.clone().lerp(I.pos, 0.35).add(new V3(-I.dir.z, 0, I.dir.x).multiplyScalar(1.4));
-  let best = null, bestScore = -Infinity;
-  for (let i = 0; i < 400; i++) {
-    const a = hash(seed + "a" + i) * Math.PI * 2, r = hash(seed + "r" + i) * (I.r * 0.82 - rad), p = I.pos.clone().add(new V3(Math.cos(a) * r, 0, Math.sin(a) * r));
-    if (r + rad * 0.8 > I.r * 0.82) continue;
-    if (I.halls.some((d) => p.distanceTo(d.pos) < gap)) continue;
-    if (segs.some((s) => segDist(p, s) < rad + 0.9)) continue;
-    if (p.distanceTo(sign) < rad + 1.2) continue;
-    if (I.halls.some((d) => { const v = p.clone().sub(d.pos), f = v.dot(FACE_DIR); return f > -0.5 && f < 6 && Math.abs(v.x * FACE_DIR.z - v.z * FACE_DIR.x) < 2.4 + rad * 0.5; })) continue;
-    const score = -p.clone().sub(I.pos).dot(FACE_DIR) * 0.1 - Math.abs(r - I.r * 0.45); // 偏好島的中段、稍微靠後，不擋住前方的館
-    if (score > bestScore) { bestScore = score; best = p; }
-  }
-  return best;
-}
+// 擺放位置：以小島中心為原點，x 往畫面右邊、z 往畫面下方（靠鏡頭）的距離；之後若小島上增加館，可能要再調整
+const isletSpot = (I, x, z) => I.pos.clone().add(new V3(Math.cos(FACE), 0, -Math.sin(FACE)).multiplyScalar(x)).add(FACE_DIR.clone().multiplyScalar(z));
 {
   const isl = (name) => ISLETS.find((I) => I.name === name);
   const S = ["#C8623F", "#6E8FB5", "#E8B04B", "#5F8F5A", "#9C83B5", "#D98B4E"], H = ["#3B2E26", "#2A211C", "#55463A"];
@@ -1035,13 +1018,13 @@ function isletSpot(I, rad, seed, gap = 2.8 * HALL_S + rad * 0.6) {
   const zoneAt = (p, rad) => { const g = new THREE.Group(); g.position.copy(p); g.rotation.y = FACE; world.add(g); ACT_ZONES.push({ pos: p.clone(), r: rad }); return g; };
 
   // 行政島：飛盤比賽（兩隊各兩人，飛盤在隊友之間來回傳，防守的人跟著跑；場地兩端是得分區）
-  const adm = isl("行政島"), ap = adm && isletSpot(adm, 2.3, "frisbee");
+  const adm = isl("行政島"), ap = adm && isletSpot(adm, -5.1, 7.3);
   if (ap) {
-    const g = zoneAt(ap, 2.3);
-    box(g, 4, 0.04, 2.3, 0x7fcf62, 0, 0, 0).castShadow = false;
-    [-1.45, 1.45].forEach((x) => box(g, 1.1, 0.045, 2.3, 0x6fc35a, x * 1.0, 0, 0).castShadow = false); // 得分區顏色深一點
-    line(g, 4, 0.05, 0, 1.13); line(g, 4, 0.05, 0, -1.13); line(g, 0.05, 2.3, 1.98, 0); line(g, 0.05, 2.3, -1.98, 0); line(g, 0.05, 2.3, 0.9, 0); line(g, 0.05, 2.3, -0.9, 0);
-    [[-1.98, 1.13], [-1.98, -1.13], [1.98, 1.13], [1.98, -1.13], [-0.9, 1.13], [-0.9, -1.13], [0.9, 1.13], [0.9, -1.13]].forEach(([x, z]) => cone(g, 0.07, 0.16, soft(0xf28c3a), x, 0.04, z, 6)); // 角錐
+    const g = zoneAt(ap, 2.4); g.scale.setScalar(1.1);
+    box(g, 4, 0.04, 2.3, 0x9ddc74, 0, 0, 0).castShadow = false;
+    [-1.45, 1.45].forEach((x) => box(g, 1.1, 0.045, 2.3, 0x6fbf55, x, 0, 0).castShadow = false); // 得分區顏色深一點
+    line(g, 4, 0.06, 0, 1.12); line(g, 4, 0.06, 0, -1.12); line(g, 0.06, 2.3, 1.97, 0); line(g, 0.06, 2.3, -1.97, 0); line(g, 0.06, 2.3, 0.9, 0); line(g, 0.06, 2.3, -0.9, 0);
+    [[-1.98, 1.13], [-1.98, -1.13], [1.98, 1.13], [1.98, -1.13], [-0.9, 1.13], [-0.9, -1.13], [0.9, 1.13], [0.9, -1.13]].forEach(([x, z]) => cone(g, 0.09, 0.2, soft(0xf28c3a), x, 0.04, z, 6)); // 角錐
     const A = [guy(g, P(0), -1.2, 0.45, Math.PI / 2), guy(g, P(0), 1.0, -0.5, -Math.PI / 2)]; // 進攻隊（同色球衣）互相傳盤
     const B = [guy(g, P(1), -0.8, 0.2, Math.PI / 2), guy(g, P(1), 0.6, -0.25, -Math.PI / 2)]; // 防守隊跟著跑
     const disc = cyl(g, 0.15, 0.14, 0.03, soft(0xe8b04b), 0, 0, 0, 16);
@@ -1058,9 +1041,9 @@ function isletSpot(I, rad, seed, gap = 2.8 * HALL_S + rad * 0.6) {
   }
 
   // 社團培力島：草地上的保齡球道（投球 → 球滾過球道 → 球瓶倒下 → 重新排好），旁邊一位拿著球等下一輪
-  const emp = isl("社團培力島"), ep = emp && isletSpot(emp, 1.7, "bowling", 3.9);
+  const emp = isl("社團培力島"), ep = emp && isletSpot(emp, 5.7, 3.4);
   if (ep) {
-    const g = zoneAt(ep, 1.7); g.scale.setScalar(0.78);
+    const g = zoneAt(ep, 2.8); g.scale.setScalar(1.35);
     box(g, 3.8, 0.05, 0.62, 0xe3b77a, 0.2, 0, 0).castShadow = false; // 木頭球道
     [-0.34, 0.34].forEach((z) => box(g, 3.8, 0.04, 0.08, 0x8d97a5, 0.2, 0, z).castShadow = false); // 兩側的洗溝
     box(g, 0.05, 0.012, 0.62, 0xc8443a, -1.1, 0.05, 0); // 犯規線
@@ -1193,6 +1176,7 @@ function flowerField(spots) {
       if (al > -1.5 && al < far + 1 && Math.abs(v.clone().cross(I.dir).y) < 1.2) continue;
       if (I.halls.some((d) => { const p0 = d.junction || I.pos, w = new V3(x, 0, z).sub(p0), dd = d.pos.clone().sub(p0), L = dd.length(), t2 = w.dot(dd) / L; return t2 > 0 && t2 < L && Math.abs(w.clone().cross(dd.clone().normalize()).y) < 1; })) continue;
       if (ISLET_MTN.has(I.name) && Math.hypot(I.pos.x + I.dir.x * 4.6 - x, I.pos.z + I.dir.z * 4.6 - z) < 3) continue;
+      if (ACT_ZONES.some((z2) => Math.hypot(z2.pos.x - x, z2.pos.z - z) < z2.r + 0.4)) continue; // 不開在運動場地上
       spots.push([x, z, hash("ic" + I.name + i)]); n++;
     }
   });
