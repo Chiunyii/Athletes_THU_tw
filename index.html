@@ -128,6 +128,10 @@ a { color: var(--terra); }
 .item .chev { color: var(--mut); transition: transform .2s; }
 .item [aria-expanded="true"] .chev { transform: rotate(90deg); }
 .item .more { padding: 0 16px 16px 37px; font-size: 14.5px; display: grid; gap: 10px; }
+/* 每個截止日下方一直顯示的「加入日曆」小按鈕，讓學生自己挑要加哪一項 */
+.item .cal { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 0 16px 13px 37px; margin-top: -6px; }
+.item .cal span { font: 700 12.5px/1 var(--f-body); color: var(--mut); margin-right: 2px; }
+.item .cal .btn { padding: 6px 12px; font-size: 12.5px; }
 .item .more p { margin: 0; white-space: pre-line; }
 .item ol { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
 .item ul.files { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; font-weight: 700; }

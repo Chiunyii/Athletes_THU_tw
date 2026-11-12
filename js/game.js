@@ -1651,7 +1651,8 @@ function dlItems(list, showIsle, openFirst) {
   return '<ul class="items">' + list.map((x, k) => {
     const n = daysLeft(x.at), d = isleOf(x.category), l = lvl(n), open = openFirst && k === 0;
     return `<li class="item ${l === "hot" ? "hl" : ""}" style="--c:${d ? d.color : "var(--terra)"}"><button type="button" aria-expanded="${open}"><span class="dot"></span><span class="nm">${E(x.title)}<small>${fmt(x.at)} 截止${showIsle && d ? "・" + E(d.name) : ""}</small></span><span class="meta ${l}">${n === 0 ? "今天" : "D-" + n}</span><span class="chev">›</span></button>
-      <div class="more" ${open ? "" : "hidden"}>${x.detail ? `<p>${E(x.detail)}</p>` : ""}<div class="acts"><a class="btn g" target="_blank" rel="noopener" href="${E(gcal(x))}">Google 日曆</a><button class="btn g" type="button" data-ics="${E(x.id)}">iPhone／其他</button>${x.link ? `<a class="btn g" target="_blank" rel="noopener" href="${E(x.link)}">相關文件 ↗</a>` : ""}${showIsle && d ? `<button class="btn" type="button" data-isle="${d.i}">去${E(d.name)}</button>` : ""}</div></div></li>`;
+      <div class="cal"><span>＋加入日曆</span><a class="btn g" target="_blank" rel="noopener" href="${E(gcal(x))}">Google</a><button class="btn g" type="button" data-ics="${E(x.id)}">Apple／其他</button></div>
+      <div class="more" ${open ? "" : "hidden"}>${x.detail ? `<p>${E(x.detail)}</p>` : ""}<div class="acts">${x.link ? `<a class="btn g" target="_blank" rel="noopener" href="${E(x.link)}">相關文件 ↗</a>` : ""}${showIsle && d ? `<button class="btn" type="button" data-isle="${d.i}">去${E(d.name)}</button>` : ""}</div></div></li>`.replace('<div class="acts"></div>', "");
   }).join("") + "</ul>";
 }
 function pastItems(list) {

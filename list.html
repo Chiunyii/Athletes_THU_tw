@@ -547,8 +547,8 @@ footer a { color: var(--band-fg); }
       return '<li class="lvl-' + lvl + '"><div class="days"><b class="score">' + num + "</b><small>" + unit + "</small></div><div>" +
         "<h3>" + esc(x.title) + '</h3><div class="meta"><span>' + fmt(x.at) + '</span><span class="tag">' + esc(x.category) + "</span></div>" +
         (x.detail ? "<p>" + esc(x.detail) + "</p>" : "") +
-        (isPast ? "" : '<div class="row"><a class="btn small plain" target="_blank" rel="noopener" href="' + esc(gcal(x)) + '">Google 日曆</a>' +
-          '<button type="button" class="btn small plain" data-ics="' + esc(x.id) + '">iPhone／其他行事曆</button>' +
+        (isPast ? "" : '<div class="row"><a class="btn small plain" target="_blank" rel="noopener" href="' + esc(gcal(x)) + '">＋Google 日曆</a>' +
+          '<button type="button" class="btn small plain" data-ics="' + esc(x.id) + '">＋Apple／其他行事曆</button>' +
           (x.link ? '<a class="btn small ghost" target="_blank" rel="noopener" href="' + esc(x.link) + '">相關文件</a>' : "") + "</div>") +
         "</div></li>";
     }).join("") : '<li style="display:block" class="empty">這個類別目前沒有截止日。</li>';
